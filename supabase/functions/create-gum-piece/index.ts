@@ -17,6 +17,14 @@ interface CreateGumPieceBody {
   title?: string
 }
 
+const gumShapes = [
+  'gum-strip',
+  'gum-ball',
+  'gum-chiclet',
+  'gum-block',
+  'gum-blob',
+] as const
+
 const categories: CategoryConfig[] = [
   {
     slug: 'intimate',
@@ -267,6 +275,7 @@ Deno.serve(async (request) => {
     }
 
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+    const shape = getRandomShape()
     const { data: createdPiece, error: createPieceError } = await supabase
       .from('gum_pieces')
       .insert({
@@ -275,6 +284,7 @@ Deno.serve(async (request) => {
         title,
         category: categorized.slug,
         color_hex: categorized.color_hex,
+        shape,
         status: 'placeholder',
         expires_at: expiresAt,
       })
@@ -356,4 +366,9 @@ function jsonResponse(status: number, body: unknown): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function getRandomShape(): (typeof gumShapes)[number] {
+  const index = Math.floor(Math.random() * gumShapes.length)
+  return gumShapes[index]
 }
