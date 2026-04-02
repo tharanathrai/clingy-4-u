@@ -190,7 +190,13 @@ Deno.serve(async (request) => {
     }
 
     const otherPartyId = userId === piece.creator_id ? piece.recipient_id : piece.creator_id
-    const notificationType = previousStatus === 'placeholder' ? 'invite_rejected' : 'plan_turned_down'
+    let notificationType: 'invite_rejected' | 'plan_turned_down'
+    if (previousStatus === 'placeholder') {
+      // Creator cancelling a placeholder should not read as recipient "passed".
+      notificationType = userId === piece.creator_id ? 'plan_turned_down' : 'invite_rejected'
+    } else {
+      notificationType = 'plan_turned_down'
+    }
 
     const { error: notificationError } = await supabase.from('notifications').insert({
       user_id: otherPartyId,
