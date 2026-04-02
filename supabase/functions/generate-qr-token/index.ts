@@ -20,7 +20,13 @@ Deno.serve(async (request) => {
       })
     }
 
-    const jwt = authHeader.replace('Bearer ', '')
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!jwt) {
+      return new Response(JSON.stringify({ error: 'Missing bearer token.' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
 
@@ -42,9 +48,9 @@ Deno.serve(async (request) => {
       },
     })
 
-    const { data: authData, error: authError } = await supabase.auth.getUser(jwt)
+    const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized.' }), {
+      return new Response(JSON.stringify({ error: authError?.message ?? 'Unauthorized.' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

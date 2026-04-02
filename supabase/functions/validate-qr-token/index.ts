@@ -21,7 +21,10 @@ Deno.serve(async (request) => {
       return jsonResponse(401, { error: 'Missing authorization header.' })
     }
 
-    const jwt = authHeader.replace('Bearer ', '')
+    const jwt = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!jwt) {
+      return jsonResponse(401, { error: 'Missing bearer token.' })
+    }
     const body = (await request.json()) as ValidateBody
     const token = body.token?.trim()
 
@@ -44,9 +47,9 @@ Deno.serve(async (request) => {
       },
     })
 
-    const { data: authData, error: authError } = await supabase.auth.getUser(jwt)
+    const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) {
-      return jsonResponse(401, { error: 'Unauthorized.' })
+      return jsonResponse(401, { error: authError?.message ?? 'Unauthorized.' })
     }
 
     const { data: tokenRow, error: tokenError } = await supabase
