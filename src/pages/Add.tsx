@@ -51,10 +51,8 @@ export default function Add() {
     })
 
     if (!response.ok) {
-      const responseBody = await response.text()
-      setErrorMessage(
-        `generate-qr-token failed (${response.status}): ${responseBody || 'No response body.'}`,
-      )
+      await response.text()
+      setErrorMessage('Something went wrong - try again.')
       setLoading(false)
       return
     }
