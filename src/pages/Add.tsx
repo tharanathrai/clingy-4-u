@@ -8,6 +8,11 @@ interface GenerateQrTokenResponse {
   expires_at: string
 }
 
+interface FunctionInvokeErrorWithContext {
+  message: string
+  context?: Response
+}
+
 export default function Add() {
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
@@ -24,7 +29,17 @@ export default function Add() {
     )
 
     if (error || !data) {
-      setErrorMessage(error?.message ?? 'No data returned from generate-qr-token.')
+      let details = error?.message ?? 'No data returned from generate-qr-token.'
+
+      if (error) {
+        const errorWithContext = error as FunctionInvokeErrorWithContext
+        if (errorWithContext.context) {
+          const responseBody = await errorWithContext.context.text()
+          details = `${errorWithContext.message} (${errorWithContext.context.status}): ${responseBody}`
+        }
+      }
+
+      setErrorMessage(details)
       setLoading(false)
       return
     }
