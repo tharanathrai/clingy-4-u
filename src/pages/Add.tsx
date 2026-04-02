@@ -24,8 +24,22 @@ export default function Add() {
     setLoading(true)
     setErrorMessage(null)
 
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+
+    if (sessionError || !accessToken) {
+      setErrorMessage('No active session. Please sign in again.')
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase.functions.invoke<GenerateQrTokenResponse>(
       'generate-qr-token',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
     )
 
     if (error || !data) {
