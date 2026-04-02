@@ -58,3 +58,62 @@ body {
 .safe-bottom-tab {
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .gum-morph-base {
+    will-change: border-radius;
+    animation-name: gum-morph;
+    animation-timing-function: cubic-bezier(0.34, 1.2, 0.64, 1);
+    animation-iteration-count: infinite;
+  }
+
+  .gum-morph-3 {
+    animation-duration: 3s;
+  }
+
+  .gum-morph-37 {
+    animation-duration: 3.7s;
+  }
+
+  .gum-morph-42 {
+    animation-duration: 4.2s;
+  }
+
+  .gum-placeholder-float {
+    animation: gum-float 3s ease-in-out infinite;
+  }
+}
+
+@keyframes gum-morph {
+  0% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+@keyframes gum-float {
+  0% {
+    transform: translateY(-4px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+.new-gum-blob {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .new-gum-blob {
+    animation: gum-morph 2s cubic-bezier(0.34, 1.2, 0.64, 1) infinite;
+  }
+}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useNotifications } from '../../hooks/useNotifications.ts'
 
 interface TabConfig {
   to: string
@@ -29,6 +30,7 @@ const tabs: TabConfig[] = [
 
 export function BottomTabBar() {
   const location = useLocation()
+  const { unreadCount } = useNotifications()
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-surface">
@@ -54,7 +56,7 @@ export function BottomTabBar() {
               >
                 {tab.label}
               </span>
-              {tab.hasBadge ? (
+              {tab.hasBadge && unreadCount > 0 ? (
                 <span className="absolute right-5 top-1 h-2 w-2 rounded-full bg-playful" />
               ) : null}
             </Link>
