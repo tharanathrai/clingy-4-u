@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase.ts'
+import { useAuth } from '../hooks/useAuth.ts'
 
 interface GenerateQrTokenResponse {
   token: string
@@ -14,6 +15,7 @@ interface FunctionInvokeErrorWithContext {
 }
 
 export default function Add() {
+  const { signOut } = useAuth()
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [remainingSeconds, setRemainingSeconds] = useState(60)
@@ -29,6 +31,14 @@ export default function Add() {
 
     if (sessionError || !accessToken) {
       setErrorMessage('No active session. Please sign in again.')
+      setLoading(false)
+      return
+    }
+
+    const { data: validatedUser, error: userError } = await supabase.auth.getUser(accessToken)
+    if (userError || !validatedUser.user) {
+      await signOut()
+      setErrorMessage('Session expired. Please sign in again.')
       setLoading(false)
       return
     }

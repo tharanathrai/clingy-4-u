@@ -41,8 +41,14 @@ export function useAuth(): UseAuthResult {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+      // Always re-validate with Supabase API to avoid trusting stale local tokens.
+      if (!session?.access_token) {
+        setUser(null)
+        setLoading(false)
+        return
+      }
+
+      void syncUser()
     })
 
     return () => {
