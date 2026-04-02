@@ -21,7 +21,7 @@ The design principle: **more friction on creation, zero friction on connection.*
 | Language | TypeScript | Type safety, catches errors before runtime |
 | Styling | Tailwind CSS | Utility-first, fast iteration |
 | Backend | Supabase | Auth, database, real-time, edge functions, cron — all free tier |
-| Auth | Supabase Auth (Google + Apple OAuth) | No password management, mobile-native feel |
+| Auth | Supabase Auth (Google OAuth) | No password management, mobile-native feel |
 | Database | PostgreSQL via Supabase | Relational, handles graph data with join tables |
 | Real-time | Supabase Realtime (WebSockets) | Live invite/confirmation flows |
 | Notifications | Email via Supabase (SendGrid integration) + in-app list | MVP notification layer |

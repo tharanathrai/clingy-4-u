@@ -1,0 +1,207 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth.ts'
+import { supabase } from '../lib/supabase.ts'
+
+interface PendingConnectionRequest {
+  id: string
+  requested_by: string
+  display_name: string
+  username: string
+  avatar_url: string | null
+}
+
+export default function ConnectionRequests() {
+  const { user, loading } = useAuth()
+  const [requests, setRequests] = useState<PendingConnectionRequest[]>([])
+  const [fetching, setFetching] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null)
+  const [ignoredIds, setIgnoredIds] = useState<Set<string>>(new Set())
+
+  const loadRequests = useCallback(async () => {
+    if (!user) {
+      return
+    }
+
+    setFetching(true)
+    setErrorMessage(null)
+
+    const { data: connectionRows, error: connectionError } = await supabase
+      .from('connections')
+      .select('id, requested_by, user_a_id, user_b_id')
+      .eq('status', 'pending')
+      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+
+    if (connectionError || !connectionRows) {
+      setErrorMessage('Something went wrong - try again.')
+      setFetching(false)
+      return
+    }
+
+    const incomingRows = connectionRows.filter((row) => row.requested_by !== user.id)
+    const requesterIds = incomingRows.map((row) => row.requested_by)
+
+    if (requesterIds.length === 0) {
+      setRequests([])
+      setFetching(false)
+      return
+    }
+
+    const { data: requesterRows, error: requesterError } = await supabase
+      .from('users')
+      .select('id, display_name, username, avatar_url')
+      .in('id', requesterIds)
+
+    if (requesterError || !requesterRows) {
+      setErrorMessage('Something went wrong - try again.')
+      setFetching(false)
+      return
+    }
+
+    const requesterMap = new Map(requesterRows.map((item) => [item.id, item]))
+    const mappedRequests: PendingConnectionRequest[] = incomingRows
+      .map((row) => {
+        const requester = requesterMap.get(row.requested_by)
+        if (!requester) {
+          return null
+        }
+        return {
+          id: row.id,
+          requested_by: row.requested_by,
+          display_name: requester.display_name,
+          username: requester.username,
+          avatar_url: requester.avatar_url,
+        }
+      })
+      .filter((item): item is PendingConnectionRequest => item !== null)
+
+    setRequests(mappedRequests)
+    setFetching(false)
+  }, [user])
+
+  useEffect(() => {
+    void loadRequests()
+  }, [loadRequests])
+
+  const visibleRequests = useMemo(() => {
+    return requests.filter((request) => !ignoredIds.has(request.id))
+  }, [ignoredIds, requests])
+
+  const handleAccept = async (request: PendingConnectionRequest) => {
+    setBusyRequestId(request.id)
+
+    const { error: updateError } = await supabase
+      .from('connections')
+      .update({
+        status: 'active',
+        accepted_at: new Date().toISOString(),
+      })
+      .eq('id', request.id)
+
+    if (updateError) {
+      setErrorMessage('Something went wrong - try again.')
+      setBusyRequestId(null)
+      return
+    }
+
+    const { error: notificationError } = await supabase.from('notifications').insert({
+      user_id: request.requested_by,
+      type: 'connection_request',
+      reference_id: request.id,
+      read: false,
+    })
+
+    if (notificationError) {
+      setErrorMessage('Connection accepted, but notification failed.')
+    }
+
+    setRequests((current) => current.filter((item) => item.id !== request.id))
+    setBusyRequestId(null)
+  }
+
+  const handleIgnore = (requestId: string) => {
+    setIgnoredIds((current) => new Set(current).add(requestId))
+  }
+
+  if (loading || fetching) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+        <p className="text-sm text-text-2">Loading requests...</p>
+      </main>
+    )
+  }
+
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+        <p className="text-sm text-text-2">Sign in to view requests.</p>
+      </main>
+    )
+  }
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+      <h1 className="font-display text-4xl">Connection requests</h1>
+
+      {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}
+
+      {visibleRequests.length === 0 ? (
+        <div className="mt-8 rounded-lg bg-surface p-6 text-center">
+          <p className="text-sm text-text-2">No pending requests.</p>
+        </div>
+      ) : (
+        <ul className="mt-6 space-y-3">
+          {visibleRequests.map((request) => (
+            <li
+              key={request.id}
+              className="rounded-lg border border-white/10 bg-surface p-4"
+            >
+              <div className="flex items-center gap-3">
+                {request.avatar_url ? (
+                  <img
+                    src={request.avatar_url}
+                    alt={request.display_name}
+                    className="h-11 w-11 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-2 text-sm">
+                    {request.display_name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-medium text-text">{request.display_name}</p>
+                  <p className="text-xs text-text-2">@{request.username}</p>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => void handleAccept(request)}
+                  disabled={busyRequestId === request.id}
+                >
+                  {busyRequestId === request.id ? 'Accepting...' : 'Accept'}
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2"
+                  onClick={() => handleIgnore(request.id)}
+                >
+                  Ignore
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Link
+        to="/add"
+        className="mt-auto rounded-full bg-surface-2 px-7 py-3.5 text-center text-sm font-medium text-text-2"
+      >
+        Back
+      </Link>
+    </main>
+  )
+}
