@@ -59,13 +59,11 @@ Deno.serve(async (request) => {
       .delete()
       .eq('user_id', authData.user.id)
       .gt('expires_at', now.toISOString())
-      .is('used_at', null)
 
     const { error: insertError } = await supabase.from('rotating_qr_tokens').insert({
       user_id: authData.user.id,
       token,
       expires_at: expiresAt,
-      used_at: null,
     })
 
     if (insertError) {

@@ -224,21 +224,18 @@ export interface Database {
           user_id: string
           token: string
           expires_at: string
-          used_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
           token: string
           expires_at: string
-          used_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string
           token?: string
           expires_at?: string
-          used_at?: string | null
         }
         Relationships: []
       }

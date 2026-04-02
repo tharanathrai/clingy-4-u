@@ -51,7 +51,7 @@ Deno.serve(async (request) => {
 
     const { data: tokenRow, error: tokenError } = await supabase
       .from('rotating_qr_tokens')
-      .select('id, user_id, expires_at, used_at')
+      .select('id, user_id, expires_at')
       .eq('token', token)
       .maybeSingle()
 
@@ -61,10 +61,6 @@ Deno.serve(async (request) => {
 
     if (tokenRow.user_id === authData.user.id) {
       return jsonResponse(400, { error: 'That is your own QR code.' })
-    }
-
-    if (tokenRow.used_at) {
-      return jsonResponse(400, { error: 'This code has already been used.' })
     }
 
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
@@ -89,13 +85,13 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: "You're already connected with this person." })
     }
 
-    const { error: markUsedError } = await supabase
+    const { error: consumeTokenError } = await supabase
       .from('rotating_qr_tokens')
-      .update({ used_at: new Date().toISOString() })
+      .delete()
       .eq('id', tokenRow.id)
 
-    if (markUsedError) {
-      return jsonResponse(500, { error: markUsedError.message })
+    if (consumeTokenError) {
+      return jsonResponse(500, { error: consumeTokenError.message })
     }
 
     const { data: createdConnection, error: createConnectionError } = await supabase
