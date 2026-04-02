@@ -1,0 +1,105 @@
+# Clingy 4 U — Cursor Rules
+# Read this before touching any file. Every session.
+
+## Project
+Clingy 4 U (working title: Sticky Bridges) is a mobile-first PWA that helps people make and keep plans together IRL. Every plan is a piece of gum. Completed plans form permanent bridges between people. Read PRD.md and DESIGN.md before writing any code.
+
+## Stack
+- React + Vite + TypeScript
+- Tailwind CSS (config in tailwind.config.js — use only defined tokens, never arbitrary values)
+- Supabase (auth, database, realtime, edge functions, cron)
+- react-force-graph-2d (network graph)
+- Lucide React (icons, strokeWidth={1.75}, size 20-22px)
+- Vercel (deployment)
+
+## Commands
+- `npm run dev` — start dev server
+- `npm run build` — production build
+- `npm run typecheck` — run TypeScript checker
+- `npm run lint` — run ESLint
+Always run typecheck after a series of changes. Fix all type errors before moving on.
+
+## File structure
+```
+src/
+  assets/
+    gum/           ← SVG gum shape assets (gum-strip.svg, gum-ball.svg, gum-chiclet.svg, gum-block.svg, gum-blob.svg)
+  components/
+    ui/            ← reusable primitives (Button, Card, Tag, Input, BottomSheet)
+    gum/           ← gum-specific components (GumPiece, GumPocket, GumBall)
+    network/       ← graph components (NetworkGraph, BridgeDetail)
+    feed/          ← feed components (PostCard, CommentList)
+    layout/        ← Layout, BottomTabBar, PageHeader
+  pages/           ← one file per route
+  hooks/           ← custom React hooks (useAuth, useGumPieces, useConnections)
+  lib/
+    supabase.ts    ← supabase client
+    categorizer.ts ← keyword matching logic
+    constants.ts   ← category definitions, color map, shape list
+  types/           ← TypeScript interfaces and types
+  utils/           ← helper functions
+```
+
+## Code style
+- TypeScript strict mode — no `any`, no `@ts-ignore`
+- Functional components only — no class components
+- Named exports for components, default exports for pages
+- Props interfaces defined above every component
+- Async data fetching in custom hooks, not in components directly
+- Error and loading states handled in every data-fetching hook
+- No inline styles — Tailwind classes only
+- Use CSS variables from DESIGN.md for any value not in Tailwind config
+
+## Supabase conventions
+- All DB calls go through typed supabase client
+- Row Level Security is enabled on all tables — never disable it
+- Edge functions live in `supabase/functions/`
+- Never expose service role key to the client
+- Use `supabase.auth.getUser()` not `getSession()` for auth checks
+
+## Component conventions
+- Every interactive element has a hover and active state
+- Every async action has a loading state (disable button, show spinner)
+- Every screen has an empty state — refer to DESIGN.md section 13 for copy
+- Mobile-first — design for 390px, then scale up
+- Always include `env(safe-area-inset-bottom)` padding on bottom-fixed elements
+
+## Gum piece components
+- Shapes are randomized at creation and stored in the DB — never re-randomize
+- Color is always derived from category slug via the color map in constants.ts
+- Wrapped/unwrapped state is a prop, not internal state
+- The `gum-body` layer in each SVG uses `fill="var(--gum-color)"` — set via CSS custom property
+
+## Categories (never hardcode these inline — import from constants.ts)
+```ts
+intimate  → #CF8EE8
+active    → #7DD47A
+playful   → #F07868
+explore   → #6DB8F0
+recharge  → #82C9A0
+savor     → #F0A84A
+support   → #E89AA8
+```
+
+## Animation
+- Blob morph: cubic-bezier(0.34, 1.2, 0.64, 1)
+- Screen transitions: 250ms slide-up for push, slide-down for dismiss, fade for tabs
+- Always wrap continuous animations in @media (prefers-reduced-motion: no-preference)
+- Placeholder pieces (status: placeholder) get float animation class
+- Active pieces get morph animation class
+- Graveyard pieces get no animation, desaturated filter
+
+## Slot logic (enforce server-side only — never trust client)
+- Global limit: 25 active slots per user (placeholders + active combined)
+- Per-pair limit: 5 active slots
+- Check happens in edge function before piece creation or acceptance
+- Client shows current count but never enforces the limit itself
+
+## What not to do
+- Never add features not in PRD.md — write them to BACKLOG.md instead
+- Never use arbitrary Tailwind values (e.g. w-[347px]) — use design tokens
+- Never store sensitive data in localStorage or client state
+- Never skip loading and error states
+- Never hardcode category colors — always derive from constants.ts
+- Never add console.log to committed code
+- Never modify the DB schema without updating PRD.md data model section
