@@ -25,7 +25,7 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function PieceDetail() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [piece, setPiece] = useState<PieceDetailRow | null>(null)
   const [creatorName, setCreatorName] = useState('Someone')
@@ -37,7 +37,11 @@ export default function PieceDetail() {
   const [toast, setToast] = useState<string | null>(null)
 
   const loadPiece = useCallback(async () => {
-    if (!id || !user) {
+    if (!id || authLoading) {
+      return
+    }
+
+    if (!user) {
       setLoading(false)
       return
     }
@@ -85,14 +89,14 @@ export default function PieceDetail() {
     }
 
     setLoading(false)
-  }, [id, user])
+  }, [authLoading, id, user])
 
   useEffect(() => {
     void loadPiece()
   }, [loadPiece])
 
   useEffect(() => {
-    if (!id) {
+    if (!id || authLoading) {
       return
     }
 
@@ -115,7 +119,7 @@ export default function PieceDetail() {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [id, loadPiece])
+  }, [authLoading, id, loadPiece])
 
   useEffect(() => {
     if (!toast) {
@@ -222,7 +226,7 @@ export default function PieceDetail() {
     return <Navigate to="/home" replace />
   }
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading piece...</p>
