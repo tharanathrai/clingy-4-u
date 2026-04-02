@@ -20,6 +20,9 @@ interface CategorizeResponse {
 interface CreatePieceResponse {
   gum_piece: { id: string }
 }
+interface CreatePieceErrorResponse {
+  error?: string
+}
 
 interface LocationState {
   recipientId?: string
@@ -156,49 +159,62 @@ export default function PieceNew() {
       return
     }
 
-    setSubmitting(true)
-    const { data: sessionData } = await supabase.auth.getSession()
-    const accessToken = sessionData.session?.access_token
-    if (!accessToken) {
-      setToast('Something went wrong - try again.')
-      setSubmitting(false)
-      return
-    }
-
-    const response = await fetch(`${functionsBaseUrl}/create-gum-piece`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        recipient_id: recipientId,
-        title: title.trim(),
-      }),
-    })
-
-    const payload = (await response.json()) as
-      | { error?: string }
-      | CreatePieceResponse
-
-    if (!response.ok) {
-      if ('error' in payload && payload.error === 'slot_limit_global') {
-        setToast('Your pocket is full (25/25). Complete or clear a plan first.')
-      } else if ('error' in payload && payload.error === 'slot_limit_pair') {
-        setToast('You have 5 plans with this person already.')
-      } else {
+    try {
+      setSubmitting(true)
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
         setToast('Something went wrong - try again.')
+        setSubmitting(false)
+        return
       }
 
-      setSubmitting(false)
-      return
-    }
+      const response = await fetch(`${functionsBaseUrl}/create-gum-piece`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_id: recipientId,
+          title: title.trim(),
+        }),
+      })
 
-    navigate('/home', {
-      replace: true,
-      state: { toast: `Plan sent to ${selectedRecipientName ?? 'them'}!` },
-    })
+      let payload: CreatePieceResponse | CreatePieceErrorResponse = {}
+      try {
+        payload = (await response.json()) as CreatePieceResponse | CreatePieceErrorResponse
+      } catch {
+        payload = {}
+      }
+
+      if (!response.ok) {
+        const errorCode = 'error' in payload ? payload.error : undefined
+        if (errorCode === 'slot_limit_global') {
+          setToast('Your pocket is full (25/25). Complete or clear a plan first.')
+        } else if (errorCode === 'slot_limit_pair') {
+          setToast('You have 5 plans with this person already.')
+        } else if (errorCode === 'connection_required') {
+          setToast('You can only make plans with active connections.')
+        } else if (errorCode === 'title_required') {
+          setToast('Add a title first.')
+        } else {
+          setToast(errorCode ?? 'Something went wrong - try again.')
+        }
+
+        setSubmitting(false)
+        return
+      }
+
+      navigate('/home', {
+        replace: true,
+        state: { toast: `Plan sent to ${selectedRecipientName ?? 'them'}!` },
+      })
+    } catch {
+      setToast('Something went wrong - try again.')
+      setSubmitting(false)
+    }
   }
 
   return (

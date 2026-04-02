@@ -210,16 +210,13 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: 'recipient_required' })
     }
 
-    const sortedPair = [userId, recipientId].sort()
-    const userA = sortedPair[0]
-    const userB = sortedPair[1]
-
     const { data: connection, error: connectionError } = await supabase
       .from('connections')
       .select('id')
       .eq('status', 'active')
-      .eq('user_a_id', userA)
-      .eq('user_b_id', userB)
+      .or(
+        `and(user_a_id.eq.${userId},user_b_id.eq.${recipientId}),and(user_a_id.eq.${recipientId},user_b_id.eq.${userId})`,
+      )
       .maybeSingle()
 
     if (connectionError) {
@@ -250,7 +247,7 @@ Deno.serve(async (request) => {
       })
     }
 
-    const pairFilter = `and(creator_id.eq.${userA},recipient_id.eq.${userB}),and(creator_id.eq.${userB},recipient_id.eq.${userA})`
+    const pairFilter = `and(creator_id.eq.${userId},recipient_id.eq.${recipientId}),and(creator_id.eq.${recipientId},recipient_id.eq.${userId})`
     const { count: pairCount, error: pairCountError } = await supabase
       .from('gum_pieces')
       .select('id', { count: 'exact', head: true })

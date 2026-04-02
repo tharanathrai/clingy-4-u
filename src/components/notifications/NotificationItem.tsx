@@ -14,9 +14,7 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, onPress }: NotificationItemProps) {
   const actorName = notification.actor_name ?? 'Someone'
   const copy = getNotificationCopy(notification.type, actorName)
-  const timestamp = formatDistanceToNow(new Date(notification.created_at), {
-    addSuffix: true,
-  })
+  const timestamp = getTimestamp(notification.created_at)
   const isUnread = !notification.read
 
   return (
@@ -42,6 +40,15 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
       </div>
     </button>
   )
+}
+
+function getTimestamp(createdAt: string): string {
+  const date = new Date(createdAt)
+  if (Number.isNaN(date.getTime())) {
+    return 'just now'
+  }
+
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
 function getNotificationCopy(type: Notification['type'], name: string): string {
