@@ -24,7 +24,7 @@ export default function Add() {
     )
 
     if (error || !data) {
-      setErrorMessage('Something went wrong - try again.')
+      setErrorMessage(error?.message ?? 'No data returned from generate-qr-token.')
       setLoading(false)
       return
     }
