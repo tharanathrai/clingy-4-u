@@ -9,10 +9,8 @@ interface GenerateQrTokenResponse {
   expires_at: string
 }
 
-interface FunctionInvokeErrorWithContext {
-  message: string
-  context?: Response
-}
+const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function Add() {
   const { signOut } = useAuth()
@@ -43,30 +41,25 @@ export default function Add() {
       return
     }
 
-    const { data, error } = await supabase.functions.invoke<GenerateQrTokenResponse>(
-      'generate-qr-token',
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+    const response = await fetch(`${functionsBaseUrl}/generate-qr-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${accessToken}`,
       },
-    )
+    })
 
-    if (error || !data) {
-      let details = error?.message ?? 'No data returned from generate-qr-token.'
-
-      if (error) {
-        const errorWithContext = error as FunctionInvokeErrorWithContext
-        if (errorWithContext.context) {
-          const responseBody = await errorWithContext.context.text()
-          details = `${errorWithContext.message} (${errorWithContext.context.status}): ${responseBody}`
-        }
-      }
-
-      setErrorMessage(details)
+    if (!response.ok) {
+      const responseBody = await response.text()
+      setErrorMessage(
+        `generate-qr-token failed (${response.status}): ${responseBody || 'No response body.'}`,
+      )
       setLoading(false)
       return
     }
+
+    const data = (await response.json()) as GenerateQrTokenResponse
 
     setToken(data.token)
     setExpiresAt(data.expires_at)

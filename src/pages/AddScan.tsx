@@ -12,6 +12,9 @@ interface ValidateQrResponse {
   }
 }
 
+const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
+const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 export default function AddScan() {
   const [scannedToken, setScannedToken] = useState<string | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
@@ -70,15 +73,39 @@ export default function AddScan() {
     setSubmitting(true)
     setSubmitMessage(null)
 
-    const { data, error } = await supabase.functions.invoke<ValidateQrResponse>(
-      'validate-qr-token',
-      {
-        body: { token: scannedToken },
-      },
-    )
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
 
-    if (error || !data?.success) {
-      const message = getScanErrorMessage(error?.message)
+    if (sessionError || !accessToken) {
+      setSubmitMessage('No active session. Please sign in again.')
+      setSubmitting(false)
+      return
+    }
+
+    const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: publishableKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ token: scannedToken }),
+    })
+
+    const responseText = await response.text()
+    let data: ValidateQrResponse | { error?: string } | null = null
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText) as ValidateQrResponse | { error?: string }
+      } catch {
+        data = null
+      }
+    }
+
+    if (!response.ok || !data || !('success' in data) || !data.success) {
+      const message = getScanErrorMessage(
+        typeof data === 'object' && data && 'error' in data ? data.error : responseText,
+      )
       setSubmitMessage(message)
       setSubmitting(false)
       return
