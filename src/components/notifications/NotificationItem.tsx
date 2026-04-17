@@ -67,6 +67,9 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   if (type === 'plan_expiring_soon') {
     return 'A plan is expiring soon'
   }
+  if (type === 'plan_expired') {
+    return 'A plan expired'
+  }
   if (type === 'bridge_formed') {
     return 'You formed a bridge!'
   }

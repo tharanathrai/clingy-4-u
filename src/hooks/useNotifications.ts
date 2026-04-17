@@ -8,6 +8,7 @@ export type NotificationType =
   | 'invite_rejected'
   | 'plan_turned_down'
   | 'plan_expiring_soon'
+  | 'plan_expired'
   | 'bridge_formed'
   | 'post_comment'
   | 'post_reaction'

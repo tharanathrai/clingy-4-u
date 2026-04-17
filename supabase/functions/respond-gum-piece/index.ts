@@ -15,6 +15,7 @@ type GumPieceRow = {
   id: string
   creator_id: string
   recipient_id: string
+  title: string
   status: 'placeholder' | 'active' | 'confirmed' | 'expired' | 'turned_down'
 }
 
@@ -48,8 +49,9 @@ Deno.serve(async (request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
@@ -60,6 +62,7 @@ Deno.serve(async (request) => {
         },
       },
     })
+    const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) {
@@ -69,7 +72,7 @@ Deno.serve(async (request) => {
     const userId = authData.user.id
     const { data: piece, error: pieceError } = await supabase
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, status')
+      .select('id, creator_id, recipient_id, title, status')
       .eq('id', gumPieceId)
       .maybeSingle<GumPieceRow>()
 
@@ -209,6 +212,15 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: notificationError.message })
     }
 
+    void sendTurnDownEmail({
+      serviceClient,
+      supabaseUrl,
+      serviceRoleKey: supabaseServiceRoleKey,
+      actorUserId: userId,
+      recipientUserId: otherPartyId,
+      title: piece.title,
+    }).catch(() => undefined)
+
     return jsonResponse(200, {
       success: true,
       gum_piece: updatedPiece,
@@ -224,5 +236,42 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function sendTurnDownEmail(params: {
+  serviceClient: ReturnType<typeof createClient>
+  supabaseUrl: string
+  serviceRoleKey: string
+  actorUserId: string
+  recipientUserId: string
+  title: string
+}): Promise<void> {
+  const { data: actorProfile } = await params.serviceClient
+    .from('users')
+    .select('display_name')
+    .eq('id', params.actorUserId)
+    .maybeSingle<{ display_name: string }>()
+
+  const actorName = actorProfile?.display_name ?? 'Someone'
+  const { data: authData } = await params.serviceClient.auth.admin.getUserById(
+    params.recipientUserId,
+  )
+  const recipientEmail = authData.user?.email
+  if (!recipientEmail) {
+    return
+  }
+
+  await fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      to: recipientEmail,
+      subject: 'A plan was turned down',
+      body: `${actorName} passed on '${params.title}'. Your slot is now free.`,
+    }),
   })
 }

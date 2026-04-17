@@ -195,8 +195,9 @@ Deno.serve(async (request) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
@@ -207,6 +208,7 @@ Deno.serve(async (request) => {
         },
       },
     })
+    const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     const { data: authData, error: authError } = await supabase.auth.getUser()
     if (authError || !authData.user) {
@@ -306,6 +308,15 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: notificationError.message })
     }
 
+    void sendInviteEmail({
+      serviceClient,
+      supabaseUrl,
+      serviceRoleKey: supabaseServiceRoleKey,
+      creatorId: userId,
+      recipientId,
+      title: createdPiece.title,
+    }).catch(() => undefined)
+
     return jsonResponse(200, {
       gum_piece: createdPiece,
     })
@@ -371,4 +382,41 @@ function jsonResponse(status: number, body: unknown): Response {
 function getRandomShape(): (typeof gumShapes)[number] {
   const index = Math.floor(Math.random() * gumShapes.length)
   return gumShapes[index]
+}
+
+async function sendInviteEmail(params: {
+  serviceClient: ReturnType<typeof createClient>
+  supabaseUrl: string
+  serviceRoleKey: string
+  creatorId: string
+  recipientId: string
+  title: string
+}): Promise<void> {
+  const { data: creatorProfile } = await params.serviceClient
+    .from('users')
+    .select('display_name')
+    .eq('id', params.creatorId)
+    .maybeSingle<{ display_name: string }>()
+
+  const creatorName = creatorProfile?.display_name ?? 'Someone'
+  const { data: recipientAuthData } = await params.serviceClient.auth.admin.getUserById(
+    params.recipientId,
+  )
+  const recipientEmail = recipientAuthData.user?.email
+  if (!recipientEmail) {
+    return
+  }
+
+  await fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      to: recipientEmail,
+      subject: `${creatorName} wants to make a plan with you`,
+      body: `${creatorName} sent you a plan: '${params.title}'. Open the app to accept or pass.`,
+    }),
+  })
 }

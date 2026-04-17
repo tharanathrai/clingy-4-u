@@ -143,6 +143,75 @@ export interface Database {
         }
         Relationships: []
       }
+      confirmation_sessions: {
+        Row: {
+          id: string
+          gum_piece_id: string
+          otp_code: string
+          initiator_id: string
+          initiator_confirmed: boolean
+          responder_confirmed: boolean
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          gum_piece_id: string
+          otp_code: string
+          initiator_id: string
+          initiator_confirmed?: boolean
+          responder_confirmed?: boolean
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          gum_piece_id?: string
+          otp_code?: string
+          initiator_id?: string
+          initiator_confirmed?: boolean
+          responder_confirmed?: boolean
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      graveyard: {
+        Row: {
+          id: string
+          gum_piece_id: string
+          user_a_id: string
+          user_b_id: string
+          title: string
+          category: string
+          color_hex: string
+          created_at: string
+          expired_at: string
+        }
+        Insert: {
+          id?: string
+          gum_piece_id: string
+          user_a_id: string
+          user_b_id: string
+          title: string
+          category: string
+          color_hex: string
+          created_at: string
+          expired_at?: string
+        }
+        Update: {
+          id?: string
+          gum_piece_id?: string
+          user_a_id?: string
+          user_b_id?: string
+          title?: string
+          category?: string
+          color_hex?: string
+          created_at?: string
+          expired_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           id: string
@@ -153,6 +222,7 @@ export interface Database {
             | 'invite_rejected'
             | 'plan_turned_down'
             | 'plan_expiring_soon'
+            | 'plan_expired'
             | 'bridge_formed'
             | 'post_comment'
             | 'post_reaction'
@@ -170,6 +240,7 @@ export interface Database {
             | 'invite_rejected'
             | 'plan_turned_down'
             | 'plan_expiring_soon'
+            | 'plan_expired'
             | 'bridge_formed'
             | 'post_comment'
             | 'post_reaction'
@@ -187,6 +258,7 @@ export interface Database {
             | 'invite_rejected'
             | 'plan_turned_down'
             | 'plan_expiring_soon'
+            | 'plan_expired'
             | 'bridge_formed'
             | 'post_comment'
             | 'post_reaction'
