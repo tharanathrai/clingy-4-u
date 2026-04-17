@@ -1,0 +1,26 @@
+[functions.categorize-gum]
+verify_jwt = false
+
+[functions.create-gum-piece]
+verify_jwt = false
+
+[functions.generate-qr-token]
+verify_jwt = false
+
+[functions.respond-gum-piece]
+verify_jwt = false
+
+[functions.run-expiry]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.start-confirmation]
+verify_jwt = false
+
+[functions.submit-confirmation]
+verify_jwt = false
+
+[functions.validate-qr-token]
+verify_jwt = false
