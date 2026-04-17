@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import { forceCollide } from 'd3-force'
 import ForceGraph2D, {
   type ForceGraphMethods,
 } from 'react-force-graph-2d'
@@ -119,6 +120,7 @@ export function NetworkGraph({
       | { strength?: (value: number) => void }
       | undefined
     chargeForce?.strength?.(-120)
+    graphRef.current.d3Force('collide', forceCollide(50))
 
     const linkForce = graphRef.current.d3Force('link') as
       | { distance?: (value: (link: GraphEdge) => number) => void }
@@ -268,6 +270,23 @@ export function NetworkGraph({
     ctx.fillText(node.isSelf ? 'you' : node.user.display_name, node.x ?? 0, (node.y ?? 0) + radius + 6)
   }
 
+  const nodePointerAreaPaint = (
+    node: GraphNode,
+    color: string,
+    ctx: CanvasRenderingContext2D,
+  ) => {
+    const baseRadius = node.isSelf ? 22 : 18
+    const isSelected = selectedUserId === node.id
+    const isHovered = hoveredNodeId === node.id
+    const scale = isSelected || isHovered ? 1.1 : 1
+    const radius = baseRadius * scale
+
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(node.x ?? 0, node.y ?? 0, radius + 10, 0, 2 * Math.PI, false)
+    ctx.fill()
+  }
+
   const linkCanvasObject = (link: GraphEdge, ctx: CanvasRenderingContext2D) => {
     const source = link.source as GraphNode
     const target = link.target as GraphNode
@@ -344,7 +363,11 @@ export function NetworkGraph({
         return sourceId === selectedUserId || targetId === selectedUserId
       }}
       nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
+      nodePointerAreaPaint={(node, color, ctx) =>
+        nodePointerAreaPaint(node as GraphNode, color, ctx)
+      }
       linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
+      linkHoverPrecision={8}
       onNodeClick={(node) => {
         const selectedNode = node as GraphNode
         onNodeSelect(selectedNode.id)
