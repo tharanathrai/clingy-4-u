@@ -190,26 +190,20 @@ export default function PieceDetail() {
     }
 
     setBusyAction(action)
-    const { data: sessionData } = await supabase.auth.getSession()
-    const accessToken = sessionData.session?.access_token
+    let accessToken = await getValidAccessToken()
     if (!accessToken) {
       setToast('Something went wrong - try again.')
       setBusyAction(null)
       return
     }
 
-    const response = await fetch(`${functionsBaseUrl}/respond-gum-piece`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        gum_piece_id: piece.id,
-        action,
-      }),
-    })
+    let response = await callRespondFunction(piece.id, action, accessToken)
+    if (response.status === 401) {
+      accessToken = await getValidAccessToken(true)
+      if (accessToken) {
+        response = await callRespondFunction(piece.id, action, accessToken)
+      }
+    }
 
     if (!response.ok) {
       setToast('Something went wrong - try again.')
@@ -368,4 +362,39 @@ function toCategorySlug(value?: string): CategorySlug {
   }
 
   return 'explore'
+}
+
+async function callRespondFunction(
+  gumPieceId: string,
+  action: 'accept' | 'turn_down',
+  accessToken: string,
+): Promise<Response> {
+  return fetch(`${functionsBaseUrl}/respond-gum-piece`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      gum_piece_id: gumPieceId,
+      action,
+    }),
+  })
+}
+
+async function getValidAccessToken(forceRefresh = false): Promise<string | null> {
+  if (forceRefresh) {
+    const { data: refreshData } = await supabase.auth.refreshSession()
+    return refreshData.session?.access_token ?? null
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession()
+  const existingToken = sessionData.session?.access_token
+  if (existingToken) {
+    return existingToken
+  }
+
+  const { data: refreshData } = await supabase.auth.refreshSession()
+  return refreshData.session?.access_token ?? null
 }
