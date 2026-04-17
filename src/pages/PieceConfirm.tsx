@@ -126,7 +126,13 @@ export default function PieceConfirm() {
       setRecipientName(recipient.display_name)
     }
 
-    await startOrJoinSession(id)
+    await startOrJoinSession(
+      id,
+      false,
+      setFallbackSession,
+      setFlowState,
+      setError,
+    )
   }, [id, user])
 
   useEffect(() => {
@@ -260,6 +266,7 @@ async function startOrJoinSession(
 
     if (existingError) {
       setError?.(existingError.message)
+      setFlowState?.('expired')
       return
     }
 
@@ -274,6 +281,7 @@ async function startOrJoinSession(
   const accessToken = sessionData.session?.access_token
   if (!accessToken) {
     setError?.('Authentication expired. Please sign in again.')
+    setFlowState?.('expired')
     return
   }
 
@@ -298,6 +306,7 @@ async function startOrJoinSession(
 
   if (!response.ok || !payload?.session_id || !payload.otp_code || !payload.expires_at) {
     setError?.('Could not start confirmation right now.')
+    setFlowState?.('expired')
     return
   }
 
@@ -311,6 +320,7 @@ async function startOrJoinSession(
 
   if (createdError) {
     setError?.(createdError.message)
+    setFlowState?.('expired')
     return
   }
 
