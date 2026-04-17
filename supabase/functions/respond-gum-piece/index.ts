@@ -48,29 +48,21 @@ Deno.serve(async (request) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    })
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const { data: authData, error: authError } = await serviceClient.auth.getUser(jwt)
     if (authError || !authData.user) {
       return jsonResponse(401, { error: authError?.message ?? 'Unauthorized.' })
     }
 
     const userId = authData.user.id
-    const { data: piece, error: pieceError } = await supabase
+    const { data: piece, error: pieceError } = await serviceClient
       .from('gum_pieces')
       .select('id, creator_id, recipient_id, title, status')
       .eq('id', gumPieceId)
@@ -97,7 +89,7 @@ Deno.serve(async (request) => {
         return jsonResponse(403, { error: 'forbidden' })
       }
 
-      const { count: globalCount, error: globalCountError } = await supabase
+      const { count: globalCount, error: globalCountError } = await serviceClient
         .from('gum_pieces')
         .select('id', { count: 'exact', head: true })
         .in('status', ['placeholder', 'active'])
@@ -121,7 +113,7 @@ Deno.serve(async (request) => {
       const userB = sortedPair[1]
       const pairFilter = `and(creator_id.eq.${userA},recipient_id.eq.${userB}),and(creator_id.eq.${userB},recipient_id.eq.${userA})`
 
-      const { count: pairCount, error: pairCountError } = await supabase
+      const { count: pairCount, error: pairCountError } = await serviceClient
         .from('gum_pieces')
         .select('id', { count: 'exact', head: true })
         .in('status', ['placeholder', 'active'])
@@ -142,7 +134,7 @@ Deno.serve(async (request) => {
 
       const acceptedAt = new Date().toISOString()
       const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-      const { data: updatedPiece, error: updateError } = await supabase
+      const { data: updatedPiece, error: updateError } = await serviceClient
         .from('gum_pieces')
         .update({
           status: 'active',
@@ -157,7 +149,7 @@ Deno.serve(async (request) => {
         return jsonResponse(500, { error: updateError?.message ?? 'Failed to accept piece.' })
       }
 
-      const { error: notificationError } = await supabase.from('notifications').insert({
+      const { error: notificationError } = await serviceClient.from('notifications').insert({
         user_id: piece.creator_id,
         type: 'invite_accepted',
         reference_id: piece.id,
@@ -179,7 +171,7 @@ Deno.serve(async (request) => {
     }
 
     const previousStatus = piece.status
-    const { data: updatedPiece, error: updateError } = await supabase
+    const { data: updatedPiece, error: updateError } = await serviceClient
       .from('gum_pieces')
       .update({
         status: 'turned_down',
@@ -201,7 +193,7 @@ Deno.serve(async (request) => {
       notificationType = 'plan_turned_down'
     }
 
-    const { error: notificationError } = await supabase.from('notifications').insert({
+    const { error: notificationError } = await serviceClient.from('notifications').insert({
       user_id: otherPartyId,
       type: notificationType,
       reference_id: piece.id,

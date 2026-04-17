@@ -176,21 +176,15 @@ Deno.serve(async (request) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    })
+    const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const { data: authData, error: authError } = await serviceClient.auth.getUser(jwt)
     if (authError || !authData.user) {
       return jsonResponse(401, { error: authError?.message ?? 'Unauthorized.' })
     }

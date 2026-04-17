@@ -22,9 +22,6 @@ interface GumPiece {
   status: 'placeholder' | 'active' | 'confirmed' | 'expired' | 'turned_down'
 }
 
-const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
-const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
 type FlowState = 'loading' | 'waiting' | 'bridge_formed' | 'expired'
 
 export default function PieceConfirm() {
@@ -265,9 +262,8 @@ async function startOrJoinSession(
       .maybeSingle()
 
     if (existingError) {
-      setError?.(existingError.message)
-      setFlowState?.('expired')
-      return
+      // If client-side RLS blocks this query, the edge function can still
+      // return an active session, so continue instead of hard-failing.
     }
 
     if (existingSession) {
@@ -277,56 +273,30 @@ async function startOrJoinSession(
     }
   }
 
-  const { data: sessionData } = await supabase.auth.getSession()
-  const accessToken = sessionData.session?.access_token
-  if (!accessToken) {
-    setError?.('Authentication expired. Please sign in again.')
-    setFlowState?.('expired')
-    return
-  }
-
-  const response = await fetch(`${functionsBaseUrl}/start-confirmation`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: publishableKey,
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({
+  const { data, error } = await supabase.functions.invoke('start-confirmation', {
+    body: {
       gum_piece_id: gumPieceId,
-    }),
+    },
   })
-  const payload = (await response.json().catch(() => null)) as
+  const payload = (data ?? null) as
     | {
         session_id?: string
         otp_code?: string
         expires_at?: string
+        error?: string
       }
     | null
 
-  if (!response.ok || !payload?.session_id || !payload.otp_code || !payload.expires_at) {
-    setError?.('Could not start confirmation right now.')
+  if (error || !payload?.session_id || !payload.otp_code || !payload.expires_at) {
+    const reason = payload?.error ?? error?.message
+    if (reason === 'invalid_status') {
+      setError?.('This plan can no longer be confirmed.')
+    } else if (reason === 'forbidden') {
+      setError?.('You do not have access to this plan.')
+    } else {
+      setError?.('Could not start confirmation right now.')
+    }
     setFlowState?.('expired')
-    return
-  }
-
-  const { data: createdSession, error: createdError } = await supabase
-    .from('confirmation_sessions')
-    .select(
-      'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
-    )
-    .eq('id', payload.session_id)
-    .maybeSingle()
-
-  if (createdError) {
-    setError?.(createdError.message)
-    setFlowState?.('expired')
-    return
-  }
-
-  if (createdSession) {
-    setFallbackSession?.(createdSession as ConfirmationSession)
-    setFlowState?.('waiting')
     return
   }
 

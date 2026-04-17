@@ -28,9 +28,9 @@ Deno.serve(async (request) => {
       })
     }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return new Response(
         JSON.stringify({ error: 'Supabase environment is not configured.' }),
         {
@@ -40,15 +40,9 @@ Deno.serve(async (request) => {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    })
+    const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const { data: authData, error: authError } = await serviceClient.auth.getUser(jwt)
     if (authError || !authData.user) {
       return new Response(JSON.stringify({ error: authError?.message ?? 'Unauthorized.' }), {
         status: 401,
@@ -60,13 +54,13 @@ Deno.serve(async (request) => {
     const expiresAt = new Date(now.getTime() + 60 * 1000).toISOString()
     const token = createRandomToken(32)
 
-    await supabase
+    await serviceClient
       .from('rotating_qr_tokens')
       .delete()
       .eq('user_id', authData.user.id)
       .gt('expires_at', now.toISOString())
 
-    const { error: insertError } = await supabase.from('rotating_qr_tokens').insert({
+    const { error: insertError } = await serviceClient.from('rotating_qr_tokens').insert({
       user_id: authData.user.id,
       token,
       expires_at: expiresAt,

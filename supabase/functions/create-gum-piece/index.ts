@@ -194,23 +194,15 @@ Deno.serve(async (request) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    })
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const { data: authData, error: authError } = await serviceClient.auth.getUser(jwt)
     if (authError || !authData.user) {
       return jsonResponse(401, { error: authError?.message ?? 'Unauthorized.' })
     }
@@ -220,7 +212,7 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: 'recipient_required' })
     }
 
-    const { data: connection, error: connectionError } = await supabase
+    const { data: connection, error: connectionError } = await serviceClient
       .from('connections')
       .select('id')
       .eq('status', 'active')
@@ -239,7 +231,7 @@ Deno.serve(async (request) => {
 
     const categorized = categorizeTitle(title)
 
-    const { count: globalCount, error: globalCountError } = await supabase
+    const { count: globalCount, error: globalCountError } = await serviceClient
       .from('gum_pieces')
       .select('id', { count: 'exact', head: true })
       .in('status', ['placeholder', 'active'])
@@ -258,7 +250,7 @@ Deno.serve(async (request) => {
     }
 
     const pairFilter = `and(creator_id.eq.${userId},recipient_id.eq.${recipientId}),and(creator_id.eq.${recipientId},recipient_id.eq.${userId})`
-    const { count: pairCount, error: pairCountError } = await supabase
+    const { count: pairCount, error: pairCountError } = await serviceClient
       .from('gum_pieces')
       .select('id', { count: 'exact', head: true })
       .in('status', ['placeholder', 'active'])
@@ -278,7 +270,7 @@ Deno.serve(async (request) => {
 
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const shape = getRandomShape()
-    const { data: createdPiece, error: createPieceError } = await supabase
+    const { data: createdPiece, error: createPieceError } = await serviceClient
       .from('gum_pieces')
       .insert({
         creator_id: userId,
@@ -297,7 +289,7 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: createPieceError?.message ?? 'Failed to create gum piece.' })
     }
 
-    const { error: notificationError } = await supabase.from('notifications').insert({
+    const { error: notificationError } = await serviceClient.from('notifications').insert({
       user_id: recipientId,
       type: 'invite_received',
       reference_id: createdPiece.id,

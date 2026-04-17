@@ -33,26 +33,20 @@ Deno.serve(async (request) => {
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
-      },
-    })
+    const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    const { data: authData, error: authError } = await serviceClient.auth.getUser(jwt)
     if (authError || !authData.user) {
       return jsonResponse(401, { error: authError?.message ?? 'Unauthorized.' })
     }
 
-    const { data: tokenRow, error: tokenError } = await supabase
+    const { data: tokenRow, error: tokenError } = await serviceClient
       .from('rotating_qr_tokens')
       .select('id, user_id, expires_at')
       .eq('token', token)
@@ -73,7 +67,7 @@ Deno.serve(async (request) => {
     const userA = [authData.user.id, tokenRow.user_id].sort()[0]
     const userB = [authData.user.id, tokenRow.user_id].sort()[1]
 
-    const { data: existingConnection, error: existingConnectionError } = await supabase
+    const { data: existingConnection, error: existingConnectionError } = await serviceClient
       .from('connections')
       .select('id')
       .eq('user_a_id', userA)
@@ -88,7 +82,7 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: "You're already connected with this person." })
     }
 
-    const { error: consumeTokenError } = await supabase
+    const { error: consumeTokenError } = await serviceClient
       .from('rotating_qr_tokens')
       .delete()
       .eq('id', tokenRow.id)
@@ -97,7 +91,7 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: consumeTokenError.message })
     }
 
-    const { data: createdConnection, error: createConnectionError } = await supabase
+    const { data: createdConnection, error: createConnectionError } = await serviceClient
       .from('connections')
       .insert({
         user_a_id: userA,
@@ -112,7 +106,7 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: createConnectionError?.message ?? 'Failed to connect.' })
     }
 
-    const { data: scannedUser, error: scannedUserError } = await supabase
+    const { data: scannedUser, error: scannedUserError } = await serviceClient
       .from('users')
       .select('display_name, username, avatar_url')
       .eq('id', tokenRow.user_id)
