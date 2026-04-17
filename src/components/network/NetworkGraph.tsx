@@ -74,6 +74,7 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
+  const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
 
@@ -85,10 +86,36 @@ export function NetworkGraph({
       }
 
       const image = new Image()
+      image.crossOrigin = 'anonymous'
       image.src = url
       avatarCacheRef.current[url] = image
     }
   }, [nodes])
+
+  useEffect(() => {
+    if (!graphContainerRef.current) {
+      return
+    }
+
+    const element = graphContainerRef.current
+    const updateSize = () => {
+      setGraphSize({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      })
+    }
+
+    updateSize()
+
+    const observer = new ResizeObserver(() => {
+      updateSize()
+    })
+    observer.observe(element)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
 
   useEffect(() => {
     if (!graphRef.current) {
@@ -108,7 +135,7 @@ export function NetworkGraph({
       const pairCount = meta?.pairCount ?? 1
       return Math.max(60, 200 - pairCount * 20)
     })
-  }, [nodes.length])
+  }, [edges.length, nodes.length])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -307,8 +334,8 @@ export function NetworkGraph({
     <div ref={graphContainerRef} className="h-full w-full">
     <ForceGraph2D<GraphNode, GraphEdge>
       ref={graphRef}
-      width={window.innerWidth}
-      height={window.innerHeight}
+      width={Math.max(1, graphSize.width)}
+      height={Math.max(1, graphSize.height)}
       graphData={graphData}
       backgroundColor="#12101A"
       d3AlphaDecay={0.02}

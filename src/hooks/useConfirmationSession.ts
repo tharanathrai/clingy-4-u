@@ -30,14 +30,14 @@ export function useConfirmationSession({
   const [session, setSession] = useState<ConfirmationSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const hasSeenSessionRef = useRef(false)
+  const hadSessionRef = useRef(false)
 
   const loadSession = useCallback(async () => {
     if (!gumPieceId) {
       setSession(null)
       setError(null)
       setLoading(false)
-      hasSeenSessionRef.current = false
+      hadSessionRef.current = false
       return
     }
 
@@ -64,9 +64,14 @@ export function useConfirmationSession({
 
     const nextSession = (data ?? null) as ConfirmationSession | null
     setSession(nextSession)
-    hasSeenSessionRef.current = nextSession !== null
+    if (nextSession) {
+      hadSessionRef.current = true
+    }
+    if (!nextSession && hadSessionRef.current) {
+      onBridgeFormed?.()
+    }
     setLoading(false)
-  }, [gumPieceId])
+  }, [gumPieceId, onBridgeFormed])
 
   useEffect(() => {
     void loadSession()
@@ -89,7 +94,7 @@ export function useConfirmationSession({
         },
         (payload) => {
           setSession(payload.new as ConfirmationSession)
-          hasSeenSessionRef.current = true
+          hadSessionRef.current = true
         },
       )
       .on(
@@ -102,7 +107,7 @@ export function useConfirmationSession({
         },
         (payload) => {
           setSession(payload.new as ConfirmationSession)
-          hasSeenSessionRef.current = true
+          hadSessionRef.current = true
         },
       )
       .on(
@@ -115,9 +120,8 @@ export function useConfirmationSession({
         },
         () => {
           setSession(null)
-          if (hasSeenSessionRef.current) {
-            onBridgeFormed?.()
-          }
+          hadSessionRef.current = false
+          onBridgeFormed?.()
         },
       )
       .subscribe()

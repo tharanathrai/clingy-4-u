@@ -114,6 +114,22 @@ export function useNetworkGraph(): UseNetworkGraphResult {
         return accumulator
       }, {})
 
+      // Keep graph usable even when profile rows are missing for some ids.
+      for (const id of userIds) {
+        if (mappedUsers[id]) {
+          continue
+        }
+
+        mappedUsers[id] = {
+          id,
+          display_name: id === user.id ? 'You' : 'Unknown',
+          username: id === user.id ? 'me' : 'unknown',
+          avatar_url: null,
+          bio: null,
+          created_at: new Date().toISOString(),
+        }
+      }
+
       setConnections(activeConnections)
       setUsersById(mappedUsers)
       setBridges((bridgeRows ?? []) as Bridge[])

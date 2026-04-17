@@ -1,4 +1,3 @@
-import html2canvas from 'html2canvas'
 import { Download } from 'lucide-react'
 import { useState, type RefObject } from 'react'
 
@@ -30,10 +29,18 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
         window.setTimeout(resolve, 100)
       })
 
-      const snapshot = await html2canvas(graphRef.current, {
-        backgroundColor: '#12101A',
-        useCORS: true,
-      })
+      const sourceCanvas = graphRef.current
+      const snapshot = document.createElement('canvas')
+      snapshot.width = sourceCanvas.width
+      snapshot.height = sourceCanvas.height
+      const context = snapshot.getContext('2d')
+      if (!context) {
+        return
+      }
+
+      context.fillStyle = '#12101A'
+      context.fillRect(0, 0, snapshot.width, snapshot.height)
+      context.drawImage(sourceCanvas, 0, 0)
 
       const downloadLink = document.createElement('a')
       downloadLink.href = snapshot.toDataURL('image/png')

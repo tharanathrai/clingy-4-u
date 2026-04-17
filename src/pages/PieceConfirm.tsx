@@ -151,6 +151,32 @@ export default function PieceConfirm() {
     }
   }, [liveSession])
 
+  useEffect(() => {
+    if (!id || flowState !== 'waiting' || !activeSession) {
+      return
+    }
+
+    let cancelled = false
+
+    const checkBridgeFallback = async () => {
+      const bridgeRow = await loadBridgeForPiece(id)
+      if (!cancelled && bridgeRow) {
+        setBridge(bridgeRow)
+        setFlowState('bridge_formed')
+        setFallbackSession(null)
+      }
+    }
+
+    const intervalId = window.setInterval(() => {
+      void checkBridgeFallback()
+    }, 2500)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+    }
+  }, [activeSession, flowState, id])
+
   const handleStartOver = useCallback(async () => {
     if (!id) {
       return
