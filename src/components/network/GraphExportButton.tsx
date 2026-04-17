@@ -30,9 +30,10 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
       })
 
       const sourceCanvas = graphRef.current
+      const side = Math.max(sourceCanvas.width, sourceCanvas.height)
       const snapshot = document.createElement('canvas')
-      snapshot.width = sourceCanvas.width
-      snapshot.height = sourceCanvas.height
+      snapshot.width = side
+      snapshot.height = side
       const context = snapshot.getContext('2d')
       if (!context) {
         return
@@ -40,7 +41,9 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
 
       context.fillStyle = '#12101A'
       context.fillRect(0, 0, snapshot.width, snapshot.height)
-      context.drawImage(sourceCanvas, 0, 0)
+      const offsetX = (side - sourceCanvas.width) / 2
+      const offsetY = (side - sourceCanvas.height) / 2
+      context.drawImage(sourceCanvas, offsetX, offsetY)
 
       const downloadLink = document.createElement('a')
       downloadLink.href = snapshot.toDataURL('image/png')

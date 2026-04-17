@@ -211,7 +211,15 @@ export function NetworkGraph({
 
   const graphData = useMemo(
     () => ({
-      nodes: nodes as GraphNode[],
+      nodes: nodes.map((node, index) => {
+        const angle = (index / Math.max(nodes.length, 1)) * 2 * Math.PI
+        const radius = 140
+        return {
+          ...node,
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+        }
+      }) as GraphNode[],
       links: edges as GraphEdge[],
     }),
     [edges, nodes],

@@ -26,6 +26,8 @@ export function NodeProfileSheet({
 }: NodeProfileSheetProps) {
   const [otherUser, setOtherUser] = useState<User | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [touchStartY, setTouchStartY] = useState<number | null>(null)
   const { bridges, loading: loadingBridges } = useBridgesByPair({
     otherUserId: userId ?? '',
   })
@@ -88,8 +90,40 @@ export function NodeProfileSheet({
   }
 
   return (
-    <section className="absolute inset-x-0 bottom-0 z-20 rounded-t-xl border-t border-white/10 bg-surface p-5 pb-8 shadow-card">
-      <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-white/20" />
+    <section
+      className={`absolute inset-x-0 bottom-0 z-20 rounded-t-xl border-t border-white/10 bg-surface shadow-card transition-[height] duration-200 ${
+        expanded ? 'h-[72vh]' : 'h-[40vh]'
+      }`}
+    >
+      <button
+        type="button"
+        aria-label="Expand profile preview"
+        className="flex w-full justify-center py-3"
+        onClick={() => {
+          setExpanded((previous) => !previous)
+        }}
+        onTouchStart={(event) => {
+          setTouchStartY(event.touches[0]?.clientY ?? null)
+        }}
+        onTouchEnd={(event) => {
+          const startY = touchStartY
+          const endY = event.changedTouches[0]?.clientY
+          if (startY === null || typeof endY !== 'number') {
+            return
+          }
+          const deltaY = endY - startY
+          if (deltaY < -30) {
+            setExpanded(true)
+          } else if (deltaY > 30) {
+            setExpanded(false)
+          }
+          setTouchStartY(null)
+        }}
+      >
+        <span className="h-1 w-9 rounded-full bg-white/20" />
+      </button>
+
+      <div className="h-full overflow-y-auto px-5 pb-8">
       <button
         type="button"
         onClick={onClose}
@@ -155,6 +189,7 @@ export function NodeProfileSheet({
           </button>
         </>
       )}
+      </div>
     </section>
   )
 }
