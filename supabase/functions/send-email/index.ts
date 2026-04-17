@@ -54,6 +54,12 @@ Deno.serve(async (request) => {
 
     if (!response.ok) {
       const resendBody = await response.text()
+      console.error('send-email resend_error', {
+        status: response.status,
+        to,
+        fromEmail,
+        details: resendBody,
+      })
       return jsonResponse(500, {
         error: 'resend_error',
         details: resendBody,

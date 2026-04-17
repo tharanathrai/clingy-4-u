@@ -219,7 +219,11 @@ Deno.serve(async (request) => {
       actorUserId: userId,
       recipientUserId: otherPartyId,
       title: piece.title,
-    }).catch(() => undefined)
+    }).catch((error) => {
+      console.error('respond-gum-piece sendTurnDownEmail failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
 
     return jsonResponse(200, {
       success: true,
@@ -262,7 +266,7 @@ async function sendTurnDownEmail(params: {
     return
   }
 
-  await fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
+  const response = await fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -274,4 +278,9 @@ async function sendTurnDownEmail(params: {
       body: `${actorName} passed on '${params.title}'. Your slot is now free.`,
     }),
   })
+
+  if (!response.ok) {
+    const details = await response.text()
+    throw new Error(`send-email failed (${response.status}): ${details}`)
+  }
 }
