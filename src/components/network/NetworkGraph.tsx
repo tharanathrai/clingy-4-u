@@ -62,6 +62,13 @@ const getLinkWidth = (count: number): number => {
   return 1.5
 }
 
+const getEndpointId = (endpoint: string | GraphNode): string => {
+  if (typeof endpoint === 'string') {
+    return endpoint
+  }
+  return endpoint.id
+}
+
 export function NetworkGraph({
   onNodeSelect,
   selectedUserId,
@@ -123,12 +130,30 @@ export function NetworkGraph({
     graphRef.current.d3Force('collide', forceCollide(50))
 
     const linkForce = graphRef.current.d3Force('link') as
-      | { distance?: (value: (link: GraphEdge) => number) => void }
+      | {
+          distance?: (value: (link: GraphEdge) => number) => void
+          strength?: (value: (link: GraphEdge) => number) => void
+        }
       | undefined
     linkForce?.distance?.((link) => {
-      const meta = pairMeta[link.id]
-      const pairCount = meta?.pairCount ?? 1
+      const sourceId = getEndpointId(link.source)
+      const targetId = getEndpointId(link.target)
+      const pairCount = edges.filter((edge) => {
+        const edgeSourceId = getEndpointId(edge.source)
+        const edgeTargetId = getEndpointId(edge.target)
+        return normalizePair(edgeSourceId, edgeTargetId) === normalizePair(sourceId, targetId)
+      }).length
       return Math.max(60, 200 - pairCount * 20)
+    })
+    linkForce?.strength?.((link) => {
+      const sourceId = getEndpointId(link.source)
+      const targetId = getEndpointId(link.target)
+      const pairCount = edges.filter((edge) => {
+        const edgeSourceId = getEndpointId(edge.source)
+        const edgeTargetId = getEndpointId(edge.target)
+        return normalizePair(edgeSourceId, edgeTargetId) === normalizePair(sourceId, targetId)
+      }).length
+      return Math.min(0.35, 0.12 + pairCount * 0.04)
     })
   }, [edges.length, nodes.length])
 
@@ -334,6 +359,36 @@ export function NetworkGraph({
     ctx.stroke()
   }
 
+  const enforceMinimumNodeSeparation = () => {
+    const positionedNodes = graphData.nodes.filter(
+      (node) => typeof node.x === 'number' && typeof node.y === 'number',
+    )
+    const minimumDistance = 110
+
+    for (let i = 0; i < positionedNodes.length; i += 1) {
+      for (let j = i + 1; j < positionedNodes.length; j += 1) {
+        const first = positionedNodes[i]
+        const second = positionedNodes[j]
+        const dx = (second.x ?? 0) - (first.x ?? 0)
+        const dy = (second.y ?? 0) - (first.y ?? 0)
+        const distance = Math.hypot(dx, dy)
+        if (distance >= minimumDistance) {
+          continue
+        }
+
+        const safeDistance = distance || 0.0001
+        const overlap = (minimumDistance - safeDistance) / 2
+        const ux = dx / safeDistance
+        const uy = dy / safeDistance
+
+        first.x = (first.x ?? 0) - ux * overlap
+        first.y = (first.y ?? 0) - uy * overlap
+        second.x = (second.x ?? 0) + ux * overlap
+        second.y = (second.y ?? 0) + uy * overlap
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
@@ -395,6 +450,7 @@ export function NetworkGraph({
         onNodeSelect(null)
         onBridgeSelect?.(null)
       }}
+      onEngineTick={enforceMinimumNodeSeparation}
     />
     </div>
   )
