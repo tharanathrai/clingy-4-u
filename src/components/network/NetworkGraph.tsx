@@ -15,17 +15,13 @@ type GraphNode = NetworkGraphNode & {
   y?: number
   vx?: number
   vy?: number
+  fx?: number
+  fy?: number
 }
 
 type GraphEdge = Omit<NetworkGraphEdge, 'source' | 'target'> & {
   source: string | GraphNode
   target: string | GraphNode
-}
-
-interface GraphCameraState {
-  x: number
-  y: number
-  k: number
 }
 
 interface NetworkGraphProps {
@@ -39,10 +35,6 @@ interface NetworkGraphProps {
     error: string | null
   }) => void
   graphCanvasRef?: MutableRefObject<HTMLCanvasElement | null>
-}
-
-const graphCameraCache: { value: GraphCameraState | null } = {
-  value: null,
 }
 
 const normalizePair = (left: string, right: string): string => {
@@ -92,6 +84,7 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
+  const nodePositionCacheRef = useRef<Record<string, { x: number; y: number }>>({})
   const hasAppliedInitialCameraRef = useRef(false)
   const [graphSize, setGraphSize] = useState({
     width: window.innerWidth,
@@ -182,6 +175,16 @@ export function NetworkGraph({
     })
   }, [edges.length, nodes.length])
 
+  const maxSelfRadius = useMemo(() => {
+    return nodes.reduce((maxRadius, node) => {
+      if (node.isSelf) {
+        return maxRadius
+      }
+      const radius = Math.max(90, 240 - node.bridgeCount * 24)
+      return Math.max(maxRadius, radius)
+    }, 120)
+  }, [nodes])
+
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
@@ -192,14 +195,14 @@ export function NetworkGraph({
         return
       }
 
-      if (graphCameraCache.value) {
-        graphRef.current?.centerAt(graphCameraCache.value.x, graphCameraCache.value.y, 0)
-        graphRef.current?.zoom(graphCameraCache.value.k, 0)
-      } else {
-        const isMobile = graphSize.width < 640
-        graphRef.current?.centerAt(0, 0, 0)
-        graphRef.current?.zoomToFit(300, isMobile ? 80 : 120)
-      }
+      const padding = graphSize.width < 640 ? 28 : 80
+      const usableWidth = Math.max(1, graphSize.width - padding * 2)
+      const usableHeight = Math.max(1, graphSize.height - padding * 2)
+      const diameter = Math.max(120, maxSelfRadius * 2)
+      const zoom = Math.max(0.55, Math.min(1.3, Math.min(usableWidth / diameter, usableHeight / diameter)))
+
+      graphRef.current?.centerAt(0, 0, 0)
+      graphRef.current?.zoom(zoom, 0)
 
       hasAppliedInitialCameraRef.current = true
     }, 60)
@@ -207,27 +210,7 @@ export function NetworkGraph({
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [error, graphSize.width, loading, nodes.length, edges.length])
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState !== 'visible' ||
-        !graphRef.current ||
-        !graphCameraCache.value
-      ) {
-        return
-      }
-
-      graphRef.current.centerAt(graphCameraCache.value.x, graphCameraCache.value.y, 0)
-      graphRef.current.zoom(graphCameraCache.value.k, 0)
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-    }
-  }, [])
+  }, [error, graphSize.height, graphSize.width, loading, maxSelfRadius, nodes.length])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -306,21 +289,47 @@ export function NetworkGraph({
     return dominantColorByNode
   }, [edges, nodes])
 
-  const graphData = useMemo(
-    () => ({
-      nodes: nodes.map((node, index) => {
-        const angle = (index / Math.max(nodes.length, 1)) * 2 * Math.PI
-        const radius = 140
+  const graphData = useMemo(() => {
+    const selfNode = nodes.find((node) => node.isSelf)
+    const others = nodes.filter((node) => !node.isSelf)
+
+    const graphNodes = nodes.map((node) => {
+      const cached = nodePositionCacheRef.current[node.id]
+      if (cached) {
         return {
           ...node,
-          x: Math.cos(angle) * radius,
-          y: Math.sin(angle) * radius,
+          x: cached.x,
+          y: cached.y,
+          fx: node.isSelf ? 0 : undefined,
+          fy: node.isSelf ? 0 : undefined,
         }
-      }) as GraphNode[],
+      }
+
+      if (node.isSelf || !selfNode) {
+        return {
+          ...node,
+          x: 0,
+          y: 0,
+          fx: node.isSelf ? 0 : undefined,
+          fy: node.isSelf ? 0 : undefined,
+        }
+      }
+
+      const index = others.findIndex((other) => other.id === node.id)
+      const angle = (index / Math.max(others.length, 1)) * 2 * Math.PI
+      const radius = Math.max(90, 240 - node.bridgeCount * 24)
+      return {
+        ...node,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+      }
+    }) as GraphNode[]
+
+    return {
+      nodes: graphNodes,
       links: edges as GraphEdge[],
-    }),
-    [edges, nodes],
-  )
+    }
+  }, [edges, nodes])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 22 : 18
@@ -459,6 +468,15 @@ export function NetworkGraph({
         second.y = (second.y ?? 0) + uy * overlap
       }
     }
+
+    for (const node of positionedNodes) {
+      if (typeof node.x === 'number' && typeof node.y === 'number') {
+        nodePositionCacheRef.current[node.id] = {
+          x: node.x,
+          y: node.y,
+        }
+      }
+    }
   }
 
   if (loading) {
@@ -525,9 +543,6 @@ export function NetworkGraph({
         onBridgeSelect?.(null)
       }}
       onEngineTick={enforceMinimumNodeSeparation}
-      onZoomEnd={({ k, x, y }) => {
-        graphCameraCache.value = { x, y, k }
-      }}
     />
     </div>
   )
