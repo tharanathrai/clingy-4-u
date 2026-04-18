@@ -20,4 +20,5 @@
 
 4. App appears to refresh/reload when switching tabs/windows or navigating between pages. ✅ Addressed
    - Reworked auth state handling into a shared store in `useAuth` so pages/hooks do not repeatedly re-enter loading on remount.
+   - Added stale-while-revalidate caches in `useNotifications`, `useGumPieces`, `useNetworkGraph`, and home connection count fetch to avoid loading flashes on tab/page switches.
    - Goal is preserved route/UI state without disruptive "session checking" flashes when switching tabs/windows.

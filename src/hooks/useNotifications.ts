@@ -31,6 +31,8 @@ interface UseNotificationsResult {
   loading: boolean
 }
 
+const notificationsCache = new Map<string, Notification[]>()
+
 export function useNotifications(): UseNotificationsResult {
   const { user, loading: authLoading } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -44,14 +46,22 @@ export function useNotifications(): UseNotificationsResult {
       return
     }
 
-    setLoading(true)
+    const cached = notificationsCache.get(user.id)
+    if (cached) {
+      setNotifications(cached)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     const { data } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
-    setNotifications((data ?? []) as Notification[])
+    const nextNotifications = (data ?? []) as Notification[]
+    notificationsCache.set(user.id, nextNotifications)
+    setNotifications(nextNotifications)
     setLoading(false)
   }, [user])
 
@@ -80,7 +90,13 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const inserted = payload.new as Notification
-          setNotifications((current) => [inserted, ...current])
+          setNotifications((current) => {
+            const next = [inserted, ...current]
+            if (user) {
+              notificationsCache.set(user.id, next)
+            }
+            return next
+          })
         },
       )
       .on(
@@ -93,11 +109,15 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const updated = payload.new as Notification
-          setNotifications((current) =>
-            current.map((notification) =>
+          setNotifications((current) => {
+            const next = current.map((notification) =>
               notification.id === updated.id ? updated : notification,
-            ),
-          )
+            )
+            if (user) {
+              notificationsCache.set(user.id, next)
+            }
+            return next
+          })
         },
       )
       .subscribe()
@@ -113,11 +133,13 @@ export function useNotifications(): UseNotificationsResult {
         return
       }
 
-      setNotifications((current) =>
-        current.map((notification) =>
+      setNotifications((current) => {
+        const next = current.map((notification) =>
           notification.id === id ? { ...notification, read: true } : notification,
-        ),
-      )
+        )
+        notificationsCache.set(user.id, next)
+        return next
+      })
 
       await supabase
         .from('notifications')
@@ -133,9 +155,11 @@ export function useNotifications(): UseNotificationsResult {
       return
     }
 
-    setNotifications((current) =>
-      current.map((notification) => ({ ...notification, read: true })),
-    )
+    setNotifications((current) => {
+      const next = current.map((notification) => ({ ...notification, read: true }))
+      notificationsCache.set(user.id, next)
+      return next
+    })
 
     await supabase
       .from('notifications')

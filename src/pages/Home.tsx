@@ -6,6 +6,8 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { supabase } from '../lib/supabase.ts'
 
+const connectionsCountCache = new Map<string, number>()
+
 export default function Home() {
   const { user } = useAuth()
   const { pieces, loading, error, refetch } = useGumPieces()
@@ -22,14 +24,22 @@ export default function Home() {
       return
     }
 
-    setLoadingConnections(true)
+    const cachedCount = connectionsCountCache.get(user.id)
+    if (typeof cachedCount === 'number') {
+      setConnectionsCount(cachedCount)
+      setLoadingConnections(false)
+    } else {
+      setLoadingConnections(true)
+    }
     const { count } = await supabase
       .from('connections')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
       .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
 
-    setConnectionsCount(count ?? 0)
+    const nextCount = count ?? 0
+    connectionsCountCache.set(user.id, nextCount)
+    setConnectionsCount(nextCount)
     setLoadingConnections(false)
   }, [user])
 

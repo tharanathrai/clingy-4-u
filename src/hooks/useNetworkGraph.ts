@@ -24,6 +24,14 @@ interface UseNetworkGraphResult {
   error: string | null
 }
 
+interface NetworkGraphCacheEntry {
+  connections: Connection[]
+  usersById: Record<string, User>
+  bridges: Bridge[]
+}
+
+const networkGraphCache = new Map<string, NetworkGraphCacheEntry>()
+
 export function useNetworkGraph(): UseNetworkGraphResult {
   const { user, loading: authLoading } = useAuth()
   const [connections, setConnections] = useState<Connection[]>([])
@@ -49,7 +57,15 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     let cancelled = false
 
     const loadGraphData = async () => {
-      setLoading(true)
+      const cached = networkGraphCache.get(user.id)
+      if (cached) {
+        setConnections(cached.connections)
+        setUsersById(cached.usersById)
+        setBridges(cached.bridges)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
       setError(null)
 
       const { data: connectionRows, error: connectionError } = await supabase
@@ -133,6 +149,11 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       setConnections(activeConnections)
       setUsersById(mappedUsers)
       setBridges((bridgeRows ?? []) as Bridge[])
+      networkGraphCache.set(user.id, {
+        connections: activeConnections,
+        usersById: mappedUsers,
+        bridges: (bridgeRows ?? []) as Bridge[],
+      })
       setLoading(false)
     }
 

@@ -23,6 +23,8 @@ interface UseGumPiecesResult {
   refetch: () => Promise<void>
 }
 
+const gumPiecesCache = new Map<string, GumPiece[]>()
+
 export function useGumPieces(): UseGumPiecesResult {
   const { user, loading: authLoading } = useAuth()
   const [pieces, setPieces] = useState<GumPiece[]>([])
@@ -37,7 +39,13 @@ export function useGumPieces(): UseGumPiecesResult {
       return
     }
 
-    setLoading(true)
+    const cached = gumPiecesCache.get(user.id)
+    if (cached) {
+      setPieces(cached)
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setError(null)
 
     const { data, error: queryError } = await supabase
@@ -49,12 +57,16 @@ export function useGumPieces(): UseGumPiecesResult {
 
     if (queryError) {
       setError(queryError.message)
-      setPieces([])
+      if (!cached) {
+        setPieces([])
+      }
       setLoading(false)
       return
     }
 
-    setPieces((data ?? []) as GumPiece[])
+    const nextPieces = (data ?? []) as GumPiece[]
+    gumPiecesCache.set(user.id, nextPieces)
+    setPieces(nextPieces)
     setLoading(false)
   }, [user])
 
