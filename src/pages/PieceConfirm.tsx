@@ -51,15 +51,17 @@ export default function PieceConfirm() {
     setFlowState('expired')
   }, [id])
 
+  const handleBridgeFormedFromSession = useCallback(() => {
+    void handleSessionDeleted()
+  }, [handleSessionDeleted])
+
   const {
     session: liveSession,
     loading: sessionLoading,
     error: sessionError,
   } = useConfirmationSession({
     gumPieceId: piece?.id ?? null,
-    onBridgeFormed: () => {
-      void handleSessionDeleted()
-    },
+    onBridgeFormed: handleBridgeFormedFromSession,
   })
 
   const activeSession = liveSession ?? fallbackSession

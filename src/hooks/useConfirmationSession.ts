@@ -31,6 +31,11 @@ export function useConfirmationSession({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const hadSessionRef = useRef(false)
+  const onBridgeFormedRef = useRef(onBridgeFormed)
+
+  useEffect(() => {
+    onBridgeFormedRef.current = onBridgeFormed
+  }, [onBridgeFormed])
 
   const loadSession = useCallback(async () => {
     if (!gumPieceId) {
@@ -68,10 +73,10 @@ export function useConfirmationSession({
       hadSessionRef.current = true
     }
     if (!nextSession && hadSessionRef.current) {
-      onBridgeFormed?.()
+      onBridgeFormedRef.current?.()
     }
     setLoading(false)
-  }, [gumPieceId, onBridgeFormed])
+  }, [gumPieceId])
 
   useEffect(() => {
     void loadSession()
@@ -121,7 +126,7 @@ export function useConfirmationSession({
         () => {
           setSession(null)
           hadSessionRef.current = false
-          onBridgeFormed?.()
+          onBridgeFormedRef.current?.()
         },
       )
       .subscribe()
@@ -129,7 +134,7 @@ export function useConfirmationSession({
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [gumPieceId, onBridgeFormed])
+  }, [gumPieceId])
 
   return {
     session,
