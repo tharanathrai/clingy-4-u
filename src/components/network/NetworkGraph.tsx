@@ -355,13 +355,23 @@ export function NetworkGraph({
 
     const avatarUrl = node.user.avatar_url
     if (avatarUrl && avatarCacheRef.current[avatarUrl]?.complete) {
+      const image = avatarCacheRef.current[avatarUrl]
       const imageRadius = radius - 3
+      const sourceWidth = image.naturalWidth || image.width
+      const sourceHeight = image.naturalHeight || image.height
+      const sourceSize = Math.min(sourceWidth, sourceHeight)
+      const sourceX = (sourceWidth - sourceSize) / 2
+      const sourceY = (sourceHeight - sourceSize) / 2
       ctx.save()
       ctx.beginPath()
       ctx.arc(node.x ?? 0, node.y ?? 0, imageRadius, 0, 2 * Math.PI, false)
       ctx.clip()
       ctx.drawImage(
-        avatarCacheRef.current[avatarUrl],
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
         (node.x ?? 0) - imageRadius,
         (node.y ?? 0) - imageRadius,
         imageRadius * 2,
