@@ -25,6 +25,7 @@ interface ConfirmationSessionRow {
   initiator_confirmed: boolean
   responder_confirmed: boolean
   expires_at: string
+  created_at: string
 }
 
 Deno.serve(async (request) => {
@@ -88,26 +89,38 @@ Deno.serve(async (request) => {
     }
 
     const nowIso = new Date().toISOString()
-    const { data: existingSession, error: existingSessionError } = await serviceClient
+    const existingSessionsResult = await serviceClient
       .from('confirmation_sessions')
       .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at',
+        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
       )
       .eq('gum_piece_id', gumPieceId)
       .gt('expires_at', nowIso)
-      .order('expires_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<ConfirmationSessionRow>()
+      .order('created_at', { ascending: true })
 
-    if (existingSessionError) {
-      return jsonResponse(500, { error: existingSessionError.message })
+    if (existingSessionsResult.error) {
+      return jsonResponse(500, { error: existingSessionsResult.error.message })
     }
 
-    if (existingSession) {
+    const existingSessions = (existingSessionsResult.data ?? []) as ConfirmationSessionRow[]
+    if (existingSessions.length > 0) {
+      const canonicalSession = existingSessions[0]
+      if (existingSessions.length > 1) {
+        const duplicateIds = existingSessions.slice(1).map((session) => session.id)
+        const { error: dedupeError } = await serviceClient
+          .from('confirmation_sessions')
+          .delete()
+          .in('id', duplicateIds)
+        if (dedupeError) {
+          return jsonResponse(500, { error: dedupeError.message })
+        }
+      }
+
       return jsonResponse(200, {
-        session_id: existingSession.id,
-        otp_code: existingSession.otp_code,
-        expires_at: existingSession.expires_at,
+        session_id: canonicalSession.id,
+        otp_code: canonicalSession.otp_code,
+        expires_at: canonicalSession.expires_at,
+        initiator_id: canonicalSession.initiator_id,
       })
     }
 
@@ -126,7 +139,7 @@ Deno.serve(async (request) => {
         responder_confirmed: false,
         expires_at: expiresAt,
       })
-      .select('id, otp_code, expires_at')
+      .select('id, otp_code, expires_at, initiator_id, created_at')
       .single()
 
     if (createSessionError || !createdSession) {
@@ -135,10 +148,41 @@ Deno.serve(async (request) => {
       })
     }
 
+    const activeSessionsResult = await serviceClient
+      .from('confirmation_sessions')
+      .select(
+        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
+      )
+      .eq('gum_piece_id', gumPieceId)
+      .gt('expires_at', nowIso)
+      .order('created_at', { ascending: true })
+
+    if (activeSessionsResult.error) {
+      return jsonResponse(500, { error: activeSessionsResult.error.message })
+    }
+
+    const activeSessions = (activeSessionsResult.data ?? []) as ConfirmationSessionRow[]
+    const canonicalSession = activeSessions[0]
+    if (!canonicalSession) {
+      return jsonResponse(500, { error: 'Failed to load confirmation session.' })
+    }
+
+    if (activeSessions.length > 1) {
+      const duplicateIds = activeSessions.slice(1).map((session) => session.id)
+      const { error: dedupeError } = await serviceClient
+        .from('confirmation_sessions')
+        .delete()
+        .in('id', duplicateIds)
+      if (dedupeError) {
+        return jsonResponse(500, { error: dedupeError.message })
+      }
+    }
+
     return jsonResponse(200, {
-      session_id: createdSession.id,
-      otp_code: createdSession.otp_code,
-      expires_at: createdSession.expires_at,
+      session_id: canonicalSession.id,
+      otp_code: canonicalSession.otp_code,
+      expires_at: canonicalSession.expires_at,
+      initiator_id: canonicalSession.initiator_id,
     })
   } catch (error) {
     return jsonResponse(500, {

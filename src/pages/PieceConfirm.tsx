@@ -311,6 +311,7 @@ async function startOrJoinSession(
         session_id?: string
         otp_code?: string
         expires_at?: string
+        initiator_id?: string
         error?: string
       }
     | null
@@ -332,7 +333,7 @@ async function startOrJoinSession(
     id: payload.session_id,
     gum_piece_id: gumPieceId,
     otp_code: payload.otp_code,
-    initiator_id: '',
+    initiator_id: payload.initiator_id ?? '',
     initiator_confirmed: false,
     responder_confirmed: false,
     expires_at: payload.expires_at,
