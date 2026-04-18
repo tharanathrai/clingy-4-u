@@ -13,47 +13,90 @@ const getAuthRedirectUrl = (): string => {
   return `${window.location.origin}/auth/callback`
 }
 
-export function useAuth(): UseAuthResult {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+type AuthListener = (next: { user: User | null; loading: boolean }) => void
 
-  useEffect(() => {
-    let mounted = true
+const authStore = {
+  user: null as User | null,
+  loading: true,
+  initialized: false,
+  listeners: new Set<AuthListener>(),
+  unsubscribe: null as (() => void) | null,
+}
 
-    const syncUser = async () => {
-      const { data, error } = await supabase.auth.getUser()
-      if (error) {
-        if (mounted) {
-          setUser(null)
-          setLoading(false)
-        }
-        return
-      }
+const notifyAuthListeners = () => {
+  for (const listener of authStore.listeners) {
+    listener({
+      user: authStore.user,
+      loading: authStore.loading,
+    })
+  }
+}
 
-      if (mounted) {
-        setUser(data.user)
-        setLoading(false)
-      }
+const setAuthState = (next: { user: User | null; loading: boolean }) => {
+  authStore.user = next.user
+  authStore.loading = next.loading
+  notifyAuthListeners()
+}
+
+const ensureAuthSubscription = () => {
+  if (authStore.unsubscribe) {
+    return
+  }
+
+  const syncUser = async () => {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      authStore.initialized = true
+      setAuthState({ user: null, loading: false })
+      return
+    }
+
+    authStore.initialized = true
+    setAuthState({ user: data.user, loading: false })
+  }
+
+  void syncUser()
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (!session?.access_token) {
+      authStore.initialized = true
+      setAuthState({ user: null, loading: false })
+      return
     }
 
     void syncUser()
+  })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Always re-validate with Supabase API to avoid trusting stale local tokens.
-      if (!session?.access_token) {
-        setUser(null)
-        setLoading(false)
-        return
-      }
+  authStore.unsubscribe = () => {
+    subscription.unsubscribe()
+    authStore.unsubscribe = null
+  }
+}
 
-      void syncUser()
-    })
+export function useAuth(): UseAuthResult {
+  const [user, setUser] = useState<User | null>(authStore.user)
+  const [loading, setLoading] = useState<boolean>(
+    authStore.initialized ? authStore.loading : true,
+  )
+
+  useEffect(() => {
+    ensureAuthSubscription()
+
+    const listener: AuthListener = ({ user: nextUser, loading: nextLoading }) => {
+      setUser(nextUser)
+      setLoading(nextLoading)
+    }
+    authStore.listeners.add(listener)
+
+    if (authStore.initialized) {
+      setUser(authStore.user)
+      setLoading(authStore.loading)
+    }
 
     return () => {
-      mounted = false
-      subscription.unsubscribe()
+      authStore.listeners.delete(listener)
     }
   }, [])
 

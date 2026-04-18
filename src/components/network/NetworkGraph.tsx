@@ -105,16 +105,30 @@ export function NetworkGraph({
 
   useEffect(() => {
     const updateSize = () => {
+      const container = graphContainerRef.current
+      if (!container) {
+        setGraphSize({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        })
+        return
+      }
+
+      const bounds = container.getBoundingClientRect()
+      const width = Math.round(bounds.width)
+      const height = Math.round(bounds.height)
       setGraphSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
+        width: width > 0 ? width : window.innerWidth,
+        height: height > 0 ? height : window.innerHeight,
       })
     }
 
-    updateSize()
+    window.requestAnimationFrame(updateSize)
     window.addEventListener('resize', updateSize)
+    window.addEventListener('orientationchange', updateSize)
     return () => {
       window.removeEventListener('resize', updateSize)
+      window.removeEventListener('orientationchange', updateSize)
     }
   }, [])
 
@@ -156,6 +170,22 @@ export function NetworkGraph({
       return Math.min(0.35, 0.12 + pairCount * 0.04)
     })
   }, [edges.length, nodes.length])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const isMobile = graphSize.width < 640
+      graphRef.current?.centerAt(0, 0, 0)
+      graphRef.current?.zoomToFit(300, isMobile ? 80 : 120)
+    }, 60)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [error, graphSize.width, loading, nodes, edges.length])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -415,6 +445,8 @@ export function NetworkGraph({
       backgroundColor="#12101A"
       d3AlphaDecay={0.02}
       d3VelocityDecay={0.3}
+      minZoom={0.45}
+      maxZoom={4}
       linkVisibility={(link) => {
         if (!selectedUserId) {
           return false
