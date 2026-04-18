@@ -22,6 +22,12 @@ type GraphEdge = Omit<NetworkGraphEdge, 'source' | 'target'> & {
   target: string | GraphNode
 }
 
+interface GraphCameraState {
+  x: number
+  y: number
+  k: number
+}
+
 interface NetworkGraphProps {
   onNodeSelect: (userId: string | null) => void
   selectedUserId: string | null
@@ -33,6 +39,10 @@ interface NetworkGraphProps {
     error: string | null
   }) => void
   graphCanvasRef?: MutableRefObject<HTMLCanvasElement | null>
+}
+
+const graphCameraCache: { value: GraphCameraState | null } = {
+  value: null,
 }
 
 const normalizePair = (left: string, right: string): string => {
@@ -82,6 +92,7 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
+  const hasAppliedInitialCameraRef = useRef(false)
   const [graphSize, setGraphSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -177,15 +188,46 @@ export function NetworkGraph({
     }
 
     const timeoutId = window.setTimeout(() => {
-      const isMobile = graphSize.width < 640
-      graphRef.current?.centerAt(0, 0, 0)
-      graphRef.current?.zoomToFit(300, isMobile ? 80 : 120)
+      if (hasAppliedInitialCameraRef.current) {
+        return
+      }
+
+      if (graphCameraCache.value) {
+        graphRef.current?.centerAt(graphCameraCache.value.x, graphCameraCache.value.y, 0)
+        graphRef.current?.zoom(graphCameraCache.value.k, 0)
+      } else {
+        const isMobile = graphSize.width < 640
+        graphRef.current?.centerAt(0, 0, 0)
+        graphRef.current?.zoomToFit(300, isMobile ? 80 : 120)
+      }
+
+      hasAppliedInitialCameraRef.current = true
     }, 60)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [error, graphSize.width, loading, nodes, edges.length])
+  }, [error, graphSize.width, loading, nodes.length, edges.length])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState !== 'visible' ||
+        !graphRef.current ||
+        !graphCameraCache.value
+      ) {
+        return
+      }
+
+      graphRef.current.centerAt(graphCameraCache.value.x, graphCameraCache.value.y, 0)
+      graphRef.current.zoom(graphCameraCache.value.k, 0)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -483,6 +525,9 @@ export function NetworkGraph({
         onBridgeSelect?.(null)
       }}
       onEngineTick={enforceMinimumNodeSeparation}
+      onZoomEnd={({ k, x, y }) => {
+        graphCameraCache.value = { x, y, k }
+      }}
     />
     </div>
   )
