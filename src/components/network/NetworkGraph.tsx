@@ -96,6 +96,7 @@ export function NetworkGraph({
   const hasAppliedInitialCameraRef = useRef<null | string>(null)
   const programmaticCameraUntilRef = useRef(0)
   const zoomEventCountRef = useRef(0)
+  const hasMountedRecenterEffectRef = useRef(false)
   const [graphSize, setGraphSize] = useState({
     width: 0,
     height: 0,
@@ -263,8 +264,15 @@ export function NetworkGraph({
       return
     }
 
+    if (!hasMountedRecenterEffectRef.current) {
+      hasMountedRecenterEffectRef.current = true
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H6',location:'NetworkGraph.tsx:recenterEffect',message:'Skipped initial recenter on mount',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return
+    }
     // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current',hypothesisId:'H6',location:'NetworkGraph.tsx:recenterEffect',message:'Recenter effect fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H6',location:'NetworkGraph.tsx:recenterEffect',message:'Recenter effect fired from explicit trigger',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     recenterGraph(220)
   }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterTrigger])
@@ -566,14 +574,18 @@ export function NetworkGraph({
             }
             const maxPanX = maxOrbitRadius + 120
             const maxPanY = maxOrbitRadius + 90
-            if (Math.abs(cameraPosition.x) > maxPanX || Math.abs(cameraPosition.y) > maxPanY) {
+            const clampedX = Math.max(-maxPanX, Math.min(maxPanX, cameraPosition.x))
+            const clampedY = Math.max(-maxPanY, Math.min(maxPanY, cameraPosition.y))
+            if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
+              programmaticCameraUntilRef.current = Date.now() + 120
+              graphRef.current?.centerAt(clampedX, clampedY, 80)
               // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current',hypothesisId:'H7',location:'NetworkGraph.tsx:onZoom',message:'Camera exceeded soft viewport bounds',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,maxPanX,maxPanY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H7',location:'NetworkGraph.tsx:onZoom',message:'Clamped camera to viewport bounds',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,clampedX,clampedY,cameraK:cameraPosition.k,maxPanX,maxPanY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
               // #endregion
             }
             graphCameraCacheByUserId.set(selfUserId, {
-              x: cameraPosition.x,
-              y: cameraPosition.y,
+              x: clampedX,
+              y: clampedY,
               k: cameraPosition.k,
             })
           }}
