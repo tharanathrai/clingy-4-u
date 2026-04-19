@@ -73,6 +73,18 @@ export function NetworkGraph({
   const zoomClampLogCountRef = useRef(0)
   const interactionLogCountRef = useRef(0)
   const hasAppliedInitialRecenterRef = useRef(false)
+  const containerPointerLogCountRef = useRef(0)
+
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H10',location:'NetworkGraph.tsx:mountEffect',message:'NetworkGraph mounted',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    return () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H10',location:'NetworkGraph.tsx:mountEffect',message:'NetworkGraph unmounted',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
+  }, [])
 
   useEffect(() => {
     for (const node of nodes) {
@@ -217,6 +229,9 @@ export function NetworkGraph({
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H12',location:'NetworkGraph.tsx:recenterTriggerEffect',message:'Recenter effect entered',data:{recenterTrigger,hasGraphRef:Boolean(graphRef.current),loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     // #region agent log
     fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:recenterTriggerEffect',message:'Recenter trigger effect fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
@@ -437,7 +452,19 @@ export function NetworkGraph({
   }
 
   return (
-    <div ref={graphContainerRef} className="h-full w-full">
+    <div
+      ref={graphContainerRef}
+      className="h-full w-full"
+      onPointerDown={() => {
+        if (containerPointerLogCountRef.current >= 6) {
+          return
+        }
+        containerPointerLogCountRef.current += 1
+        // #region agent log
+        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H11',location:'NetworkGraph.tsx:containerPointerDown',message:'Graph container pointer down',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }}
+    >
       <ForceGraph2D<GraphNode, GraphEdge>
         ref={graphRef}
         width={graphSize.width}

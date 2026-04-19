@@ -30,6 +30,12 @@ export default function Network() {
   }, [selectedBridge, selectedUserId])
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H11',location:'Network.tsx:graphStateEffect',message:'Graph state changed',data:{loading:graphState.loading,error:graphState.error,hasConnections:graphState.hasConnections,hasBridges:graphState.hasBridges},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [graphState.error, graphState.hasBridges, graphState.hasConnections, graphState.loading])
+
+  useEffect(() => {
     if (!selectedUserId) {
       setSelectedUser(null)
       return
