@@ -45,6 +45,13 @@ interface GraphCameraState {
 
 const graphCameraCacheByUserId = new Map<string, GraphCameraState>()
 
+const MIN_GRAPH_ZOOM = 0.45
+const MAX_GRAPH_ZOOM = 4
+
+const isFiniteCameraState = (camera: GraphCameraState): boolean => {
+  return Number.isFinite(camera.x) && Number.isFinite(camera.y) && Number.isFinite(camera.k)
+}
+
 const normalizePair = (left: string, right: string): string => {
   return [left, right].sort().join(':')
 }
@@ -87,6 +94,7 @@ export function NetworkGraph({
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
   const hasAppliedInitialCameraRef = useRef<null | string>(null)
+  const programmaticCameraUntilRef = useRef(0)
   const [graphSize, setGraphSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -166,10 +174,10 @@ export function NetworkGraph({
     const usableHeight = Math.max(1, graphSize.height - padding * 2)
     const diameter = Math.max(120, maxOrbitRadius * 2 + 80)
     const zoom = Math.max(
-      0.45,
+      MIN_GRAPH_ZOOM,
       Math.min(1.25, Math.min(usableWidth / diameter, usableHeight / diameter)),
     )
-
+    programmaticCameraUntilRef.current = Date.now() + duration + 120
     graphRef.current?.centerAt(0, 0, duration)
     graphRef.current?.zoom(zoom, duration)
     if (selfUserId) {
@@ -191,7 +199,17 @@ export function NetworkGraph({
       const cachedCamera = selfUserId
         ? graphCameraCacheByUserId.get(selfUserId)
         : null
-      if (cachedCamera) {
+      const maxAllowedPan = Math.max(260, maxOrbitRadius * 2.4)
+      const hasValidCamera =
+        !!cachedCamera &&
+        isFiniteCameraState(cachedCamera) &&
+        cachedCamera.k >= MIN_GRAPH_ZOOM &&
+        cachedCamera.k <= MAX_GRAPH_ZOOM &&
+        Math.abs(cachedCamera.x) <= maxAllowedPan &&
+        Math.abs(cachedCamera.y) <= maxAllowedPan
+
+      if (hasValidCamera && cachedCamera) {
+        programmaticCameraUntilRef.current = Date.now() + 200
         graphRef.current?.centerAt(cachedCamera.x, cachedCamera.y, 0)
         graphRef.current?.zoom(cachedCamera.k, 0)
       } else {
@@ -494,10 +512,13 @@ export function NetworkGraph({
       backgroundColor="#12101A"
       d3AlphaDecay={0.02}
       d3VelocityDecay={0.3}
-      minZoom={0.45}
-      maxZoom={4}
+      minZoom={MIN_GRAPH_ZOOM}
+      maxZoom={MAX_GRAPH_ZOOM}
       onZoom={(cameraPosition) => {
         if (!selfUserId) {
+          return
+        }
+        if (Date.now() < programmaticCameraUntilRef.current) {
           return
         }
         graphCameraCacheByUserId.set(selfUserId, {
