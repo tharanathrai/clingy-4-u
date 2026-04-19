@@ -70,6 +70,7 @@ export function NetworkGraph({
   const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
+  const overlapLogCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -117,6 +118,33 @@ export function NetworkGraph({
       window.removeEventListener('orientationchange', updateSize)
     }
   }, [])
+
+  useEffect(() => {
+    const logFocusState = (source: 'visibilitychange' | 'focus' | 'blur') => {
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H1',location:'NetworkGraph.tsx:focusEvents',message:'Window focus/visibility state changed',data:{source,visibility:document.visibilityState,graphWidth:graphSize.width,graphHeight:graphSize.height,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+    }
+
+    const onVisibilityChange = () => {
+      logFocusState('visibilitychange')
+    }
+    const onFocus = () => {
+      logFocusState('focus')
+    }
+    const onBlur = () => {
+      logFocusState('blur')
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [graphSize.height, graphSize.width, nodes.length])
 
   const worldBounds = useMemo(() => {
     const nonSelfCount = nodes.filter((node) => !node.isSelf).length
@@ -285,6 +313,14 @@ export function NetworkGraph({
       links: edges as GraphEdge[],
     }
   }, [edges, nodes, worldBounds.maxRadius])
+
+  useEffect(() => {
+    const selfNode = graphData.nodes.find((node) => node.isSelf)
+    const firstOtherNode = graphData.nodes.find((node) => !node.isSelf)
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H2',location:'NetworkGraph.tsx:graphDataSnapshot',message:'Graph node coordinates snapshot after build',data:{nodesCount:graphData.nodes.length,self:{id:selfNode?.id??null,x:selfNode?.x??null,y:selfNode?.y??null},firstOther:{id:firstOtherNode?.id??null,x:firstOtherNode?.x??null,y:firstOtherNode?.y??null}},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [graphData])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 22 : 18
@@ -467,6 +503,8 @@ export function NetworkGraph({
         }}
         onEngineTick={() => {
           const graphNodes = graphData.nodes
+          const selfNode = graphNodes.find((node) => node.isSelf)
+          const otherNodes = graphNodes.filter((node) => !node.isSelf)
           for (const node of graphNodes) {
             if (node.isSelf) {
               node.x = 0
@@ -491,6 +529,33 @@ export function NetworkGraph({
             if (clampedY !== node.y) {
               node.y = clampedY
               node.vy = (node.vy ?? 0) * -0.45
+            }
+          }
+
+          if (
+            selfNode &&
+            typeof selfNode.x === 'number' &&
+            typeof selfNode.y === 'number' &&
+            overlapLogCountRef.current < 8
+          ) {
+            let nearestDistance = Number.POSITIVE_INFINITY
+            let nearestNodeId: string | null = null
+            for (const node of otherNodes) {
+              if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+                continue
+              }
+              const distance = Math.hypot(node.x - selfNode.x, node.y - selfNode.y)
+              if (distance < nearestDistance) {
+                nearestDistance = distance
+                nearestNodeId = node.id
+              }
+            }
+
+            if (nearestDistance < 40) {
+              overlapLogCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H3',location:'NetworkGraph.tsx:onEngineTick',message:'Detected near-overlap with self node',data:{nearestDistance,nearestNodeId,selfX:selfNode.x,selfY:selfNode.y,otherCount:otherNodes.length},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
             }
           }
         }}
