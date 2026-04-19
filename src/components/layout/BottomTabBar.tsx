@@ -33,8 +33,8 @@ export function BottomTabBar() {
   const { unreadCount } = useNotifications()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-surface">
-      <div className="safe-bottom-tab mx-auto flex w-full max-w-md items-end justify-between px-5 pb-2 pt-2">
+    <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-white/10 bg-surface">
+      <div className="safe-bottom-tab flex w-full items-end justify-between px-5 pb-2 pt-2">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.to
           const Icon = tab.icon

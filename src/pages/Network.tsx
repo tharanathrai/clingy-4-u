@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BottomTabBar } from '../components/layout/BottomTabBar.tsx'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
@@ -59,7 +58,7 @@ export default function Network() {
   return (
     <div className="relative mx-auto h-screen w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 pt-6">
-        <h1 className="font-display text-2xl text-text">your network</h1>
+        <h1 className="app-page-title">your network</h1>
         <div className="relative flex items-center gap-2">
           <RecenterGraphButton
             onRecenter={handleRecenter}
@@ -131,8 +130,6 @@ export default function Network() {
           }}
         />
       ) : null}
-
-      <BottomTabBar />
     </div>
   )
 }

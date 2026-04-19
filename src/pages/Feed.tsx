@@ -4,6 +4,7 @@ import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
 import { useFeed } from '../hooks/useFeed.ts'
+import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
@@ -13,6 +14,11 @@ export default function Feed() {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
   const knownPostIdsRef = useRef<Set<string>>(new Set())
+  const {
+    visibleItems: visiblePosts,
+    hasMore,
+    loadMore,
+  } = usePaginatedItems(localPosts, 6)
 
   useEffect(() => {
     setLocalPosts(posts)
@@ -67,7 +73,7 @@ export default function Feed() {
   return (
     <Layout>
       <main className="pb-28">
-        <h1 className="font-display text-4xl text-text">feed</h1>
+        <h1 className="app-page-title">feed</h1>
 
         {loading ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
@@ -92,7 +98,7 @@ export default function Feed() {
 
         {!loading && !error && localPosts.length > 0 ? (
           <ul className="mt-5 space-y-3">
-            {localPosts.map((post) => (
+            {visiblePosts.map((post) => (
               <li
                 key={post.id}
                 className={animatedPostIds.has(post.id) ? 'feed-post-enter' : undefined}
@@ -106,6 +112,18 @@ export default function Feed() {
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {!loading && !error && hasMore ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={loadMore}
+              className="rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Load more
+            </button>
+          </div>
         ) : null}
       </main>
 

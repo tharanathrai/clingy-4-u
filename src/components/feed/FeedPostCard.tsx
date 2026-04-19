@@ -16,6 +16,7 @@ interface FeedPostCardProps {
   onReact: () => void
   onComment: () => void
   onAuthorPress?: () => void
+  onOtherParticipantPress?: () => void
   hideActions?: boolean
 }
 
@@ -34,6 +35,7 @@ export function FeedPostCard({
   onReact,
   onComment,
   onAuthorPress,
+  onOtherParticipantPress,
   hideActions = false,
 }: FeedPostCardProps) {
   const category = toCategorySlug(post.bridge.category)
@@ -76,7 +78,14 @@ export function FeedPostCard({
 
         <div className="mt-3 flex items-center gap-2 text-xs text-text-2">
           <CategoryChip category={category} size="sm" />
-          <span>with {post.otherParticipantName ?? 'someone'}</span>
+          <button
+            type="button"
+            onClick={onOtherParticipantPress}
+            disabled={!onOtherParticipantPress}
+            className="disabled:cursor-default"
+          >
+            with {post.otherParticipantName ?? 'someone'}
+          </button>
         </div>
 
         {hideActions ? null : (

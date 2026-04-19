@@ -2,7 +2,7 @@ import { Heart, Send } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
-import { usePost } from '../../hooks/usePost.ts'
+import { type CommentWithUser, usePost } from '../../hooks/usePost.ts'
 import { supabase } from '../../lib/supabase.ts'
 import { CommentItem } from './CommentItem.tsx'
 import { FeedPostCard } from './FeedPostCard.tsx'
@@ -37,11 +37,13 @@ export function PostDetailSheet({
   )
   const [optimisticHasReacted, setOptimisticHasReacted] = useState<boolean | null>(null)
   const [optimisticCommentCount, setOptimisticCommentCount] = useState<number | null>(null)
+  const [optimisticComments, setOptimisticComments] = useState<CommentWithUser[]>([])
 
   useEffect(() => {
     setOptimisticReactionCount(null)
     setOptimisticHasReacted(null)
     setOptimisticCommentCount(null)
+    setOptimisticComments([])
   }, [postId])
 
   const hasReacted = useMemo(() => {
@@ -60,6 +62,13 @@ export function PostDetailSheet({
 
   const reactionCount = optimisticReactionCount ?? reactions.length
   const commentCount = optimisticCommentCount ?? comments.length
+  const displayedComments = useMemo(() => {
+    const serverCommentIds = new Set(comments.map((comment) => comment.id))
+    return [
+      ...comments,
+      ...optimisticComments.filter((comment) => !serverCommentIds.has(comment.id)),
+    ]
+  }, [comments, optimisticComments])
 
   if (!postId) {
     return null
@@ -101,6 +110,40 @@ export function PostDetailSheet({
     setSubmittingComment(true)
     const nextCommentCount = commentCount + 1
     setOptimisticCommentCount(nextCommentCount)
+    const tempCommentId = `temp-${crypto.randomUUID()}`
+    const nowIso = new Date().toISOString()
+    const authorProfile = post?.author
+    const optimisticUser =
+      authorProfile && authorProfile.id === user.id
+        ? {
+            id: authorProfile.id,
+            display_name: authorProfile.display_name,
+            username: authorProfile.username,
+            avatar_url: authorProfile.avatar_url,
+            bio: authorProfile.bio,
+            created_at: authorProfile.created_at,
+          }
+        : {
+            id: user.id,
+            display_name: 'You',
+            username: 'me',
+            avatar_url: null,
+            bio: null,
+            created_at: nowIso,
+          }
+
+    setOptimisticComments((current) => [
+      ...current,
+      {
+        id: tempCommentId,
+        post_id: postId,
+        user_id: user.id,
+        body: trimmedComment,
+        created_at: nowIso,
+        user: optimisticUser,
+      },
+    ])
+
     onPostMetricsChange?.({
       postId,
       reactionCount,
@@ -108,11 +151,36 @@ export function PostDetailSheet({
       hasReacted,
     })
 
-    await supabase.from('comments').insert({
-      post_id: postId,
-      user_id: user.id,
-      body: trimmedComment,
-    })
+    const { data: insertedComment, error: insertError } = await supabase
+      .from('comments')
+      .insert({
+        post_id: postId,
+        user_id: user.id,
+        body: trimmedComment,
+      })
+      .select('*')
+      .single()
+
+    if (insertError || !insertedComment) {
+      setOptimisticComments((current) =>
+        current.filter((comment) => comment.id !== tempCommentId),
+      )
+      setSubmittingComment(false)
+      return
+    }
+
+    setOptimisticComments((current) =>
+      current.map((comment) =>
+        comment.id === tempCommentId
+          ? {
+              ...comment,
+              id: insertedComment.id,
+              created_at: insertedComment.created_at,
+            }
+          : comment,
+      ),
+    )
+
     setCommentBody('')
     setSubmittingComment(false)
   }
@@ -151,6 +219,11 @@ export function PostDetailSheet({
                 }}
                 onReact={() => void handleToggleReaction()}
                 onComment={() => undefined}
+                onOtherParticipantPress={
+                  post.otherParticipant?.username
+                    ? () => navigate(`/profile/${post.otherParticipant?.username}`)
+                    : undefined
+                }
                 hideActions
               />
 
@@ -195,14 +268,14 @@ export function PostDetailSheet({
               </div>
 
               <div className="mt-4 space-y-3">
-                {comments.map((comment) => (
+                {displayedComments.map((comment) => (
                   <CommentItem
                     key={comment.id}
                     comment={comment}
                     onUserPress={() => navigate(`/profile/${comment.user.username}`)}
                   />
                 ))}
-                {comments.length === 0 ? (
+                {displayedComments.length === 0 ? (
                   <p className="text-sm text-text-2">No comments yet.</p>
                 ) : null}
               </div>

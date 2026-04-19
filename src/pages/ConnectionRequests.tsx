@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 
 interface PendingConnectionRequest {
@@ -88,6 +89,11 @@ export default function ConnectionRequests() {
   const visibleRequests = useMemo(() => {
     return requests.filter((request) => !ignoredIds.has(request.id))
   }, [ignoredIds, requests])
+  const {
+    visibleItems: paginatedRequests,
+    hasMore,
+    loadMore,
+  } = usePaginatedItems(visibleRequests, 6)
 
   const handleAccept = async (request: PendingConnectionRequest) => {
     setBusyRequestId(request.id)
@@ -143,7 +149,7 @@ export default function ConnectionRequests() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
-      <h1 className="font-display text-4xl">Connection requests</h1>
+      <h1 className="app-page-title">Connection requests</h1>
 
       {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}
 
@@ -153,7 +159,7 @@ export default function ConnectionRequests() {
         </div>
       ) : (
         <ul className="mt-6 space-y-3">
-          {visibleRequests.map((request) => (
+          {paginatedRequests.map((request) => (
             <li
               key={request.id}
               className="rounded-lg border border-white/10 bg-surface p-4"
@@ -196,6 +202,16 @@ export default function ConnectionRequests() {
           ))}
         </ul>
       )}
+
+      {!fetching && hasMore ? (
+        <button
+          type="button"
+          onClick={loadMore}
+          className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+        >
+          Load more
+        </button>
+      ) : null}
 
       <Link
         to="/add"

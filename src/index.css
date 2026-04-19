@@ -23,9 +23,31 @@ body,
 
 body {
   margin: 0;
-  background-color: #12101a;
+  background-color: #000000;
   color: #f2eff8;
   font-family: "DM Sans", sans-serif;
+}
+
+.app-device-frame {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  background: #000;
+}
+
+.app-device-screen {
+  width: min(100vw, 390px);
+  min-height: 100vh;
+  background: #12101a;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.app-page-title {
+  font-family: "Bagel Fat One", cursive;
+  font-size: 2.25rem;
+  line-height: 1;
+  color: #f2eff8;
 }
 
 .grain-overlay {

@@ -10,6 +10,8 @@ interface UsePostProps {
 export interface PostWithDetails extends Post {
   author: User
   bridge: Bridge
+  otherParticipant: User | null
+  otherParticipantName: string
 }
 
 export interface ReactionWithUser extends Reaction {
@@ -100,10 +102,24 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
         return
       }
 
+      const bridge = bridgeData as Bridge
+      const otherParticipantId =
+        bridge.user_a_id === rawPost.author_id ? bridge.user_b_id : bridge.user_a_id
+
+      const { data: otherParticipantData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', otherParticipantId)
+        .maybeSingle()
+
+      const otherParticipant = (otherParticipantData ?? null) as User | null
+
       setPost({
         ...rawPost,
         author: authorData as User,
-        bridge: bridgeData as Bridge,
+        bridge,
+        otherParticipant,
+        otherParticipantName: otherParticipant?.display_name ?? 'someone',
       })
 
       const [{ data: reactionsData, error: reactionsError }, { data: commentsData, error: commentsError }] =

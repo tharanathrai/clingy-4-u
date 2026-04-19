@@ -4,6 +4,7 @@ import { Layout } from '../components/layout/Layout.tsx'
 import { GumPieceCard } from '../components/gum/GumPieceCard.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
+import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 
 const connectionsCountCache = new Map<string, number>()
@@ -82,6 +83,11 @@ export default function Home() {
       return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
     })
   }, [pieces])
+  const {
+    visibleItems: visiblePieces,
+    hasMore,
+    loadMore,
+  } = usePaginatedItems(sortedPieces, 6)
 
   const handleNewGum = () => {
     if (connectionsCount < 1) {
@@ -96,7 +102,7 @@ export default function Home() {
     <Layout>
       <main className="pb-28">
         <header>
-          <h1 className="font-display text-4xl text-text">your pocket</h1>
+          <h1 className="app-page-title">your pocket</h1>
           <p className="mt-2 text-xs text-text-3">{pieces.length} / 25 slots used</p>
         </header>
 
@@ -157,7 +163,7 @@ export default function Home() {
 
         {!loading && !loadingConnections && !error && sortedPieces.length > 0 ? (
           <ul className="mt-6 space-y-3">
-            {sortedPieces.map((piece) => (
+            {visiblePieces.map((piece) => (
               <li key={piece.id}>
                 <GumPieceCard
                   piece={piece}
@@ -167,6 +173,18 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {!loading && !loadingConnections && !error && hasMore ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={loadMore}
+              className="rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Load more
+            </button>
+          </div>
         ) : null}
 
         {toast ? (

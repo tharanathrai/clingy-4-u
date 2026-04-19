@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 
 interface GraveyardEntry {
@@ -90,6 +91,10 @@ export default function Graveyard() {
   }, [authLoading, userId])
 
   const empty = useMemo(() => !loading && entries.length === 0, [entries.length, loading])
+  const { visibleItems: visibleEntries, hasMore, loadMore } = usePaginatedItems(
+    entries,
+    6,
+  )
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 py-8 text-text">
@@ -97,7 +102,7 @@ export default function Graveyard() {
         <ArrowLeft size={18} strokeWidth={1.75} />
         back
       </Link>
-      <h1 className="mt-6 font-display text-4xl text-text">graveyard</h1>
+      <h1 className="app-page-title mt-6">graveyard</h1>
       <p className="mt-3 text-sm text-text-2">Plans that didn&apos;t happen.</p>
 
       {loading ? <p className="mt-8 text-sm text-text-2">Loading...</p> : null}
@@ -111,7 +116,7 @@ export default function Graveyard() {
       ) : null}
 
       <section className="mt-8 space-y-3 pb-10">
-        {entries.map((entry) => {
+        {visibleEntries.map((entry) => {
           const partnerId = userId === entry.user_a_id ? entry.user_b_id : entry.user_a_id
           const partnerName = namesById[partnerId] ?? 'Someone'
           const createdAgo = formatDistanceToNow(new Date(entry.created_at), {
@@ -141,6 +146,18 @@ export default function Graveyard() {
           )
         })}
       </section>
+
+      {!loading && !error && hasMore ? (
+        <div className="pb-10">
+          <button
+            type="button"
+            onClick={loadMore}
+            className="w-full rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+          >
+            Load more
+          </button>
+        </div>
+      ) : null}
     </main>
   )
 }

@@ -227,7 +227,7 @@ export default function PieceNew() {
         </Link>
       </div>
 
-      <h1 className="font-display text-4xl text-text">new gum</h1>
+      <h1 className="app-page-title">new gum</h1>
 
       {connectionsLoading ? (
         <p className="mt-6 text-sm text-text-2">Loading connections...</p>
