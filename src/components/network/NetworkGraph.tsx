@@ -183,7 +183,7 @@ export function NetworkGraph({
 
     graphRef.current.d3Force(
       'collide',
-      forceCollide<GraphNode>((node) => (node.isSelf ? 34 : 28)).strength(0.98),
+      forceCollide<GraphNode>((node) => (node.isSelf ? 48 : 28)).strength(0.98),
     )
   }, [error, loading, nodes.length])
 
@@ -287,7 +287,7 @@ export function NetworkGraph({
   }, [edges, nodes, worldBounds.maxRadius])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
-    const baseRadius = node.isSelf ? 22 : 18
+    const baseRadius = node.isSelf ? 36 : 18
     const isSelected = selectedUserId === node.id
     const isHovered = hoveredNodeId === node.id
     const radius = baseRadius * (isSelected || isHovered ? 1.1 : 1)
@@ -346,7 +346,7 @@ export function NetworkGraph({
     color: string,
     ctx: CanvasRenderingContext2D,
   ) => {
-    const radius = node.isSelf ? 26 : 22
+    const radius = node.isSelf ? 40 : 22
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI)
@@ -526,7 +526,7 @@ export function NetworkGraph({
             typeof selfNode.x === 'number' &&
             typeof selfNode.y === 'number'
           ) {
-            const minimumDistanceFromSelf = 74
+            const minimumDistanceFromSelf = 92
             for (const node of otherNodes) {
               if (typeof node.x !== 'number' || typeof node.y !== 'number') {
                 continue
@@ -554,6 +554,11 @@ export function NetworkGraph({
             dragged.fx = 0
             dragged.fy = 0
             return
+          }
+
+          if (selectedUserId !== dragged.id) {
+            onNodeSelect(dragged.id)
+            onBridgeSelect?.(null)
           }
 
           const nextX = Math.max(worldBounds.left, Math.min(worldBounds.right, dragged.x ?? 0))
