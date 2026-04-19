@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
-import { forceCollide } from 'd3-force'
 import ForceGraph2D, {
   type ForceGraphMethods,
 } from 'react-force-graph-2d'
@@ -35,7 +34,16 @@ interface NetworkGraphProps {
     error: string | null
   }) => void
   graphCanvasRef?: MutableRefObject<HTMLCanvasElement | null>
+  recenterTrigger?: number
 }
+
+interface GraphCameraState {
+  x: number
+  y: number
+  k: number
+}
+
+const graphCameraCacheByUserId = new Map<string, GraphCameraState>()
 
 const normalizePair = (left: string, right: string): string => {
   return [left, right].sort().join(':')
@@ -64,19 +72,13 @@ const getLinkWidth = (count: number): number => {
   return 1.5
 }
 
-const getEndpointId = (endpoint: string | GraphNode): string => {
-  if (typeof endpoint === 'string') {
-    return endpoint
-  }
-  return endpoint.id
-}
-
 export function NetworkGraph({
   onNodeSelect,
   selectedUserId,
   onBridgeSelect,
   onGraphStateChange,
   graphCanvasRef,
+  recenterTrigger = 0,
 }: NetworkGraphProps) {
   const { nodes, edges, loading, error } = useNetworkGraph()
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphEdge> | undefined>(
@@ -84,8 +86,7 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
-  const nodePositionCacheRef = useRef<Record<string, { x: number; y: number }>>({})
-  const hasAppliedInitialCameraRef = useRef(false)
+  const hasAppliedInitialCameraRef = useRef<null | string>(null)
   const [graphSize, setGraphSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -136,69 +137,68 @@ export function NetworkGraph({
     }
   }, [])
 
-  useEffect(() => {
-    if (!graphRef.current) {
-      return
+  const selfUserId = useMemo(() => {
+    return nodes.find((node) => node.isSelf)?.id ?? null
+  }, [nodes])
+
+  const maxOrbitRadius = useMemo(() => {
+    const orbitNodes = nodes.filter((node) => !node.isSelf).length
+    if (orbitNodes === 0) {
+      return 120
     }
 
-    const chargeForce = graphRef.current.d3Force('charge') as
-      | { strength?: (value: number) => void }
-      | undefined
-    chargeForce?.strength?.(-120)
-    graphRef.current.d3Force('collide', forceCollide(50))
+    let ringIndex = 0
+    let usedSlots = 0
+    let slotsInRing = 6
 
-    const linkForce = graphRef.current.d3Force('link') as
-      | {
-          distance?: (value: (link: GraphEdge) => number) => void
-          strength?: (value: (link: GraphEdge) => number) => void
-        }
-      | undefined
-    linkForce?.distance?.((link) => {
-      const sourceId = getEndpointId(link.source)
-      const targetId = getEndpointId(link.target)
-      const pairCount = edges.filter((edge) => {
-        const edgeSourceId = getEndpointId(edge.source)
-        const edgeTargetId = getEndpointId(edge.target)
-        return normalizePair(edgeSourceId, edgeTargetId) === normalizePair(sourceId, targetId)
-      }).length
-      return Math.max(60, 200 - pairCount * 20)
-    })
-    linkForce?.strength?.((link) => {
-      const sourceId = getEndpointId(link.source)
-      const targetId = getEndpointId(link.target)
-      const pairCount = edges.filter((edge) => {
-        const edgeSourceId = getEndpointId(edge.source)
-        const edgeTargetId = getEndpointId(edge.target)
-        return normalizePair(edgeSourceId, edgeTargetId) === normalizePair(sourceId, targetId)
-      }).length
-      return Math.min(0.35, 0.12 + pairCount * 0.04)
-    })
-  }, [edges.length, nodes.length])
+    while (usedSlots + slotsInRing < orbitNodes) {
+      usedSlots += slotsInRing
+      ringIndex += 1
+      slotsInRing = 6 + ringIndex * 4
+    }
 
-  const maxSelfRadius = useMemo(() => {
-    return nodes.reduce((maxRadius, node) => {
-      if (node.isSelf) {
-        return maxRadius
-      }
-      const radius = Math.max(90, 240 - node.bridgeCount * 24)
-      return Math.max(maxRadius, radius)
-    }, 120)
+    return 140 + ringIndex * 115
   }, [nodes])
+
+  const recenterGraph = (duration = 250) => {
+    const padding = graphSize.width < 640 ? 26 : 72
+    const usableWidth = Math.max(1, graphSize.width - padding * 2)
+    const usableHeight = Math.max(1, graphSize.height - padding * 2)
+    const diameter = Math.max(120, maxOrbitRadius * 2 + 80)
+    const zoom = Math.max(
+      0.45,
+      Math.min(1.25, Math.min(usableWidth / diameter, usableHeight / diameter)),
+    )
+
+    graphRef.current?.centerAt(0, 0, duration)
+    graphRef.current?.zoom(zoom, duration)
+    if (selfUserId) {
+      graphCameraCacheByUserId.set(selfUserId, { x: 0, y: 0, k: zoom })
+    }
+  }
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
 
+    const cacheKey = selfUserId ?? 'anonymous'
     const fitCamera = (force = false) => {
-      if (hasAppliedInitialCameraRef.current && !force) {
+      if (hasAppliedInitialCameraRef.current === cacheKey && !force) {
         return
       }
 
-      const padding = graphSize.width < 640 ? 30 : 80
-      graphRef.current?.zoomToFit(250, padding)
+      const cachedCamera = selfUserId
+        ? graphCameraCacheByUserId.get(selfUserId)
+        : null
+      if (cachedCamera) {
+        graphRef.current?.centerAt(cachedCamera.x, cachedCamera.y, 0)
+        graphRef.current?.zoom(cachedCamera.k, 0)
+      } else {
+        recenterGraph(0)
+      }
 
-      hasAppliedInitialCameraRef.current = true
+      hasAppliedInitialCameraRef.current = cacheKey
     }
 
     const timeoutId = window.setTimeout(() => fitCamera(false), 80)
@@ -208,7 +208,15 @@ export function NetworkGraph({
       window.clearTimeout(timeoutId)
       window.clearTimeout(secondPassTimeoutId)
     }
-  }, [error, graphSize.height, graphSize.width, loading, maxSelfRadius, nodes.length])
+  }, [error, graphSize.height, graphSize.width, loading, maxOrbitRadius, nodes.length, selfUserId])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+
+    recenterGraph(220)
+  }, [error, loading, nodes.length, recenterTrigger])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -289,20 +297,31 @@ export function NetworkGraph({
 
   const graphData = useMemo(() => {
     const selfNode = nodes.find((node) => node.isSelf)
-    const others = nodes.filter((node) => !node.isSelf)
+    const others = nodes
+      .filter((node) => !node.isSelf)
+      .sort((a, b) => b.bridgeCount - a.bridgeCount || a.id.localeCompare(b.id))
 
-    const graphNodes = nodes.map((node) => {
-      const cached = nodePositionCacheRef.current[node.id]
-      if (cached) {
-        return {
-          ...node,
-          x: cached.x,
-          y: cached.y,
-          fx: node.isSelf ? 0 : undefined,
-          fy: node.isSelf ? 0 : undefined,
-        }
+    const getOrbitPlacement = (index: number) => {
+      let ring = 0
+      let consumedSlots = 0
+      let slotsInRing = 6
+      while (index >= consumedSlots + slotsInRing) {
+        consumedSlots += slotsInRing
+        ring += 1
+        slotsInRing = 6 + ring * 4
       }
 
+      const slot = index - consumedSlots
+      const angle = (slot / slotsInRing) * Math.PI * 2 - Math.PI / 2
+      const radius = 140 + ring * 115
+
+      return {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+      }
+    }
+
+    const graphNodes = nodes.map((node) => {
       if (node.isSelf || !selfNode) {
         return {
           ...node,
@@ -314,12 +333,13 @@ export function NetworkGraph({
       }
 
       const index = others.findIndex((other) => other.id === node.id)
-      const angle = (index / Math.max(others.length, 1)) * 2 * Math.PI
-      const radius = Math.max(90, 240 - node.bridgeCount * 24)
+      const position = getOrbitPlacement(Math.max(0, index))
       return {
         ...node,
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
+        x: position.x,
+        y: position.y,
+        fx: position.x,
+        fy: position.y,
       }
     }) as GraphNode[]
 
@@ -448,55 +468,6 @@ export function NetworkGraph({
     ctx.stroke()
   }
 
-  const enforceMinimumNodeSeparation = () => {
-    const positionedNodes = graphData.nodes.filter(
-      (node) => typeof node.x === 'number' && typeof node.y === 'number',
-    )
-    const minimumDistance = 110
-    const maxDistanceFromCenter = Math.max(220, maxSelfRadius + 120)
-
-    for (let i = 0; i < positionedNodes.length; i += 1) {
-      for (let j = i + 1; j < positionedNodes.length; j += 1) {
-        const first = positionedNodes[i]
-        const second = positionedNodes[j]
-        const dx = (second.x ?? 0) - (first.x ?? 0)
-        const dy = (second.y ?? 0) - (first.y ?? 0)
-        const distance = Math.hypot(dx, dy)
-        if (distance >= minimumDistance) {
-          continue
-        }
-
-        const safeDistance = distance || 0.0001
-        const overlap = (minimumDistance - safeDistance) / 2
-        const ux = dx / safeDistance
-        const uy = dy / safeDistance
-
-        first.x = (first.x ?? 0) - ux * overlap
-        first.y = (first.y ?? 0) - uy * overlap
-        second.x = (second.x ?? 0) + ux * overlap
-        second.y = (second.y ?? 0) + uy * overlap
-      }
-    }
-
-    for (const node of positionedNodes) {
-      if (!node.isSelf && typeof node.x === 'number' && typeof node.y === 'number') {
-        const distanceFromCenter = Math.hypot(node.x, node.y)
-        if (distanceFromCenter > maxDistanceFromCenter) {
-          const ratio = maxDistanceFromCenter / distanceFromCenter
-          node.x *= ratio
-          node.y *= ratio
-        }
-      }
-
-      if (typeof node.x === 'number' && typeof node.y === 'number') {
-        nodePositionCacheRef.current[node.id] = {
-          x: node.x,
-          y: node.y,
-        }
-      }
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
@@ -525,6 +496,16 @@ export function NetworkGraph({
       d3VelocityDecay={0.3}
       minZoom={0.45}
       maxZoom={4}
+      onZoom={(cameraPosition) => {
+        if (!selfUserId) {
+          return
+        }
+        graphCameraCacheByUserId.set(selfUserId, {
+          x: cameraPosition.x,
+          y: cameraPosition.y,
+          k: cameraPosition.k,
+        })
+      }}
       linkVisibility={(link) => {
         if (!selectedUserId) {
           return false
@@ -560,7 +541,6 @@ export function NetworkGraph({
         onNodeSelect(null)
         onBridgeSelect?.(null)
       }}
-      onEngineTick={enforceMinimumNodeSeparation}
     />
     </div>
   )

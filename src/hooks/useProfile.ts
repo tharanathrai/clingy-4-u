@@ -21,6 +21,15 @@ interface UseProfileResult {
   refetch: () => void
 }
 
+interface ProfileCacheEntry {
+  profile: User | null
+  bridgeCount: number
+  connectionCount: number
+  categoryBreakdown: Record<CategorySlug, number>
+  sharedBridges: Bridge[]
+  isConnected: boolean
+}
+
 const createEmptyCategoryBreakdown = (): Record<CategorySlug, number> => ({
   intimate: 0,
   active: 0,
@@ -32,6 +41,8 @@ const createEmptyCategoryBreakdown = (): Record<CategorySlug, number> => ({
 })
 
 const isCategorySlug = (value: string): value is CategorySlug => value in CATEGORIES
+
+const profileCache = new Map<string, ProfileCacheEntry>()
 
 export function useProfile({
   username,
@@ -52,6 +63,11 @@ export function useProfile({
 
   const normalizedUsername = useMemo(() => username?.trim().toLowerCase() ?? '', [username])
   const normalizedUserId = useMemo(() => userId?.trim() ?? '', [userId])
+  const cacheKey = useMemo(() => {
+    const target = normalizedUserId || normalizedUsername || 'self'
+    const viewerId = viewer?.id ?? 'viewer-anon'
+    return `${target}::${viewerId}`
+  }, [normalizedUserId, normalizedUsername, viewer?.id])
 
   useEffect(() => {
     if (authLoading) {
@@ -61,7 +77,18 @@ export function useProfile({
     let cancelled = false
 
     const loadProfile = async () => {
-      setLoading(true)
+      const cached = profileCache.get(cacheKey)
+      if (cached) {
+        setProfile(cached.profile)
+        setBridgeCount(cached.bridgeCount)
+        setConnectionCount(cached.connectionCount)
+        setCategoryBreakdown(cached.categoryBreakdown)
+        setSharedBridges(cached.sharedBridges)
+        setIsConnected(cached.isConnected)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
       setError(null)
 
       const fallbackProfileId = !normalizedUsername ? viewer?.id ?? '' : ''
@@ -145,6 +172,14 @@ export function useProfile({
 
       if (!viewer || viewer.id === resolvedProfile.id) {
         setIsConnected(viewer?.id === resolvedProfile.id)
+        profileCache.set(cacheKey, {
+          profile: resolvedProfile,
+          bridgeCount: profileBridges.length,
+          connectionCount: uniquePartners.size,
+          categoryBreakdown: breakdown,
+          sharedBridges: [],
+          isConnected: viewer?.id === resolvedProfile.id,
+        })
         setLoading(false)
         return
       }
@@ -172,6 +207,14 @@ export function useProfile({
       setIsConnected(connected)
 
       if (!connected) {
+        profileCache.set(cacheKey, {
+          profile: resolvedProfile,
+          bridgeCount: profileBridges.length,
+          connectionCount: uniquePartners.size,
+          categoryBreakdown: breakdown,
+          sharedBridges: [],
+          isConnected: false,
+        })
         setLoading(false)
         return
       }
@@ -195,6 +238,14 @@ export function useProfile({
       }
 
       setSharedBridges((sharedBridgesData ?? []) as Bridge[])
+      profileCache.set(cacheKey, {
+        profile: resolvedProfile,
+        bridgeCount: profileBridges.length,
+        connectionCount: uniquePartners.size,
+        categoryBreakdown: breakdown,
+        sharedBridges: (sharedBridgesData ?? []) as Bridge[],
+        isConnected: connected,
+      })
       setLoading(false)
     }
 
@@ -203,7 +254,7 @@ export function useProfile({
     return () => {
       cancelled = true
     }
-  }, [authLoading, normalizedUserId, normalizedUsername, refreshIndex, viewer])
+  }, [authLoading, cacheKey, normalizedUserId, normalizedUsername, refreshIndex, viewer])
 
   const refetch = useCallback(() => {
     setRefreshIndex((previous) => previous + 1)

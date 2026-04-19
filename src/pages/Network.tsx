@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { LocateFixed } from 'lucide-react'
 import { BottomTabBar } from '../components/layout/BottomTabBar.tsx'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
@@ -14,6 +15,7 @@ export default function Network() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [recenterTrigger, setRecenterTrigger] = useState(0)
   const [graphState, setGraphState] = useState({
     hasConnections: false,
     hasBridges: false,
@@ -52,7 +54,17 @@ export default function Network() {
     <div className="relative mx-auto h-screen w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 pt-6">
         <h1 className="font-display text-2xl text-text">your network</h1>
-        <div className="relative">
+        <div className="relative flex items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-3 py-2 text-xs text-text-2 transition hover:text-text active:scale-95"
+            onClick={() => {
+              setRecenterTrigger((value) => value + 1)
+            }}
+          >
+            <LocateFixed size={14} strokeWidth={1.75} />
+            Recenter
+          </button>
           <GraphExportButton graphRef={graphCanvasRef} />
         </div>
       </header>
@@ -69,6 +81,7 @@ export default function Network() {
           }}
           onGraphStateChange={setGraphState}
           graphCanvasRef={graphCanvasRef}
+          recenterTrigger={recenterTrigger}
         />
 
         {!graphState.loading && !graphState.hasConnections ? (
