@@ -9,12 +9,26 @@ interface UsePaginatedItemsResult<T> {
 export function usePaginatedItems<T>(
   items: T[],
   pageSize = 6,
+  storageKey?: string,
 ): UsePaginatedItemsResult<T> {
-  const [visibleCount, setVisibleCount] = useState(pageSize)
+  const [visibleCount, setVisibleCount] = useState(() => {
+    if (!storageKey) {
+      return pageSize
+    }
+    const saved = window.sessionStorage.getItem(storageKey)
+    const parsed = saved ? Number(saved) : Number.NaN
+    if (!Number.isFinite(parsed) || parsed < pageSize) {
+      return pageSize
+    }
+    return parsed
+  })
 
   useEffect(() => {
-    setVisibleCount(pageSize)
-  }, [items, pageSize])
+    if (!storageKey) {
+      return
+    }
+    window.sessionStorage.setItem(storageKey, String(visibleCount))
+  }, [storageKey, visibleCount])
 
   const visibleItems = useMemo(() => {
     return items.slice(0, visibleCount)

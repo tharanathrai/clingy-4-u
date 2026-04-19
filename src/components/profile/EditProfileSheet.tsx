@@ -176,8 +176,14 @@ export function EditProfileSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60">
-      <section className="absolute inset-x-0 bottom-0 rounded-t-xl border-t border-white/10 bg-surface px-5 pb-8 pt-4">
+    <section className="app-fixed-viewport z-50">
+      <button
+        type="button"
+        aria-label="Close edit profile"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60"
+      />
+      <div className="absolute inset-x-0 bottom-0 app-fixed-frame-inner rounded-t-xl border-t border-white/10 bg-surface px-5 pb-8 pt-4">
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
         <h2 className="font-display text-2xl text-text">Edit profile</h2>
 
@@ -276,7 +282,7 @@ export function EditProfileSheet({
             {saving ? 'Saving...' : 'Save'}
           </button>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   )
 }

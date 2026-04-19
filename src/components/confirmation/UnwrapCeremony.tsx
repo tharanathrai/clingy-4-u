@@ -174,40 +174,42 @@ export function UnwrapCeremony({
         Bridge formed.
       </p>
 
-      <div
-        className={`fixed inset-x-5 bottom-24 z-40 rounded-xl border border-white/10 bg-surface p-4 shadow-card transition-all duration-300 ${
-          showPrompt ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'
-        }`}
-      >
-        <h2 className="font-display text-xl text-text">Share this?</h2>
-        <textarea
-          value={postBody}
-          onChange={(event) => setPostBody(event.target.value)}
-          maxLength={500}
-          className="post-optin-textarea mt-3 w-full rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-3 focus:outline-none"
-          placeholder="Write your post..."
-          disabled={loadingDraft}
-        />
-        <p className="mt-1 text-right text-xs text-text-3">{postBody.length} / 500</p>
-        {error ? <p className="mt-2 text-sm text-playful">{error}</p> : null}
+      <div className="app-fixed-frame bottom-24 z-40 px-5">
+        <div
+          className={`app-fixed-frame-inner rounded-xl border border-white/10 bg-surface p-4 shadow-card transition-all duration-300 ${
+            showPrompt ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'
+          }`}
+        >
+          <h2 className="font-display text-xl text-text">Share this?</h2>
+          <textarea
+            value={postBody}
+            onChange={(event) => setPostBody(event.target.value)}
+            maxLength={500}
+            className="post-optin-textarea mt-3 w-full rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-3 focus:outline-none"
+            placeholder="Write your post..."
+            disabled={loadingDraft}
+          />
+          <p className="mt-1 text-right text-xs text-text-3">{postBody.length} / 500</p>
+          {error ? <p className="mt-2 text-sm text-playful">{error}</p> : null}
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => void handlePostIt()}
-            disabled={submitting || postBody.trim().length === 0 || postBody.length > 500}
-            className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {submitting ? 'Saving...' : 'Post it'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSkip()}
-            disabled={submitting}
-            className="rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-60"
-          >
-            Skip
-          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => void handlePostIt()}
+              disabled={submitting || postBody.trim().length === 0 || postBody.length > 500}
+              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+            >
+              {submitting ? 'Saving...' : 'Post it'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSkip()}
+              disabled={submitting}
+              className="rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-60"
+            >
+              Skip
+            </button>
+          </div>
         </div>
       </div>
     </section>

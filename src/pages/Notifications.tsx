@@ -6,7 +6,6 @@ import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 
 export default function Notifications() {
-  useScrollRestore('scroll:/notifications')
   const navigate = useNavigate()
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } =
     useNotifications()
@@ -14,7 +13,11 @@ export default function Notifications() {
     visibleItems: visibleNotifications,
     hasMore,
     loadMore,
-  } = usePaginatedItems(notifications, 6)
+  } = usePaginatedItems(notifications, 6, 'pagination:/notifications')
+  useScrollRestore(
+    'scroll:/notifications',
+    `${loading ? 'loading' : 'ready'}:${visibleNotifications.length}`,
+  )
 
   const handleNotificationPress = async (id: string, type: string, referenceId: string) => {
     await markAsRead(id)

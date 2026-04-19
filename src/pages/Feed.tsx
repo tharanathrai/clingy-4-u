@@ -9,7 +9,6 @@ import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
-  useScrollRestore('scroll:/feed')
   const { posts, loading, error } = useFeed()
   const navigate = useNavigate()
   const [localPosts, setLocalPosts] = useState(posts)
@@ -20,7 +19,8 @@ export default function Feed() {
     visibleItems: visiblePosts,
     hasMore,
     loadMore,
-  } = usePaginatedItems(localPosts, 6)
+  } = usePaginatedItems(localPosts, 6, 'pagination:/feed')
+  useScrollRestore('scroll:/feed', `${loading ? 'loading' : 'ready'}:${visiblePosts.length}`)
 
   useEffect(() => {
     setLocalPosts(posts)

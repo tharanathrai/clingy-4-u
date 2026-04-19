@@ -172,9 +172,11 @@ export default function ProfileMe() {
       </div>
 
       {toast ? (
-        <p className="fixed inset-x-5 bottom-24 rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
-          {toast}
-        </p>
+        <div className="app-fixed-frame bottom-24 px-5">
+          <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
+            {toast}
+          </p>
+        </div>
       ) : null}
 
       <EditProfileSheet

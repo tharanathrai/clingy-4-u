@@ -188,9 +188,11 @@ export default function Home() {
         ) : null}
 
         {toast ? (
-          <p className="fixed inset-x-5 bottom-28 z-40 rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
-            {toast}
-          </p>
+          <div className="app-fixed-frame bottom-28 z-40 px-5">
+            <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
+              {toast}
+            </p>
+          </div>
         ) : null}
 
         <div className="app-fixed-frame bottom-24 z-30 px-5">

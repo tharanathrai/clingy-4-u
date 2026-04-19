@@ -55,7 +55,7 @@ export function BridgeListItem({ bridge, otherUser }: BridgeListItemProps) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-black/55">
+        <div className="app-fixed-viewport z-50 bg-black/55">
           <BridgeDetailSheet
             bridge={bridge}
             otherUser={otherUser}
