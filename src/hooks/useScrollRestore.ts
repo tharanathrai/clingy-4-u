@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react'
 
+const reloadClearedKeys = new Set<string>()
+
 export function useScrollRestore(storageKey: string, restoreTrigger?: unknown) {
   const lastScrollYRef = useRef(0)
-  const shouldResetOnMountRef = useRef(isReloadNavigation())
+  const shouldResetOnMountRef = useRef(shouldResetForReload(storageKey))
 
   useEffect(() => {
     if (shouldResetOnMountRef.current) {
@@ -65,4 +67,15 @@ function isReloadNavigation(): boolean {
     window.performance as Performance & { navigation?: { type?: number } }
   ).navigation
   return legacyNavigation?.type === 1
+}
+
+function shouldResetForReload(storageKey: string): boolean {
+  if (!isReloadNavigation()) {
+    return false
+  }
+  if (reloadClearedKeys.has(storageKey)) {
+    return false
+  }
+  reloadClearedKeys.add(storageKey)
+  return true
 }

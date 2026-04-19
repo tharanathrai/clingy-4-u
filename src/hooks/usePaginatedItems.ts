@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
+const reloadClearedKeys = new Set<string>()
+
 interface UsePaginatedItemsResult<T> {
   visibleItems: T[]
   hasMore: boolean
@@ -11,7 +13,7 @@ export function usePaginatedItems<T>(
   pageSize = 6,
   storageKey?: string,
 ): UsePaginatedItemsResult<T> {
-  const resetFromReload = isReloadNavigation()
+  const resetFromReload = storageKey ? shouldResetForReload(storageKey) : false
 
   const [visibleCount, setVisibleCount] = useState(() => {
     if (!storageKey) {
@@ -64,4 +66,15 @@ function isReloadNavigation(): boolean {
     window.performance as Performance & { navigation?: { type?: number } }
   ).navigation
   return legacyNavigation?.type === 1
+}
+
+function shouldResetForReload(storageKey: string): boolean {
+  if (!isReloadNavigation()) {
+    return false
+  }
+  if (reloadClearedKeys.has(storageKey)) {
+    return false
+  }
+  reloadClearedKeys.add(storageKey)
+  return true
 }
