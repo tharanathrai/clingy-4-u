@@ -38,6 +38,7 @@ interface NetworkGraphProps {
 
 const MIN_GRAPH_ZOOM = 0.45
 const MAX_GRAPH_ZOOM = 3.25
+const CAMERA_CLAMP_EPSILON = 0.5
 
 const getLinkWidth = (count: number): number => {
   if (count >= 5) {
@@ -499,7 +500,11 @@ export function NetworkGraph({
               ? Math.max(minCameraY, Math.min(maxCameraY, cameraPosition.y))
               : 20
 
-          if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
+          const needsClamp =
+            Math.abs(clampedX - cameraPosition.x) > CAMERA_CLAMP_EPSILON ||
+            Math.abs(clampedY - cameraPosition.y) > CAMERA_CLAMP_EPSILON
+
+          if (needsClamp) {
             centerAtInvokeCountRef.current += 1
             if (zoomLoopLogCountRef.current < 6) {
               zoomLoopLogCountRef.current += 1
