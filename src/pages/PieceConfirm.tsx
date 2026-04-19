@@ -39,19 +39,21 @@ export default function PieceConfirm() {
   const [recipientName, setRecipientName] = useState('Someone')
 
   const handleSessionDeleted = useCallback(async () => {
-    if (!id) {
+    if (!id || !userId) {
       return
     }
 
     const bridgeRow = await loadBridgeForPiece(id)
     if (bridgeRow) {
+      const nextDraftPostId = await loadDraftPostIdForBridge(bridgeRow.id, userId)
+      setDraftPostId(nextDraftPostId)
       setBridge(bridgeRow)
       setFlowState('bridge_formed')
       return
     }
 
     setFlowState('expired')
-  }, [id])
+  }, [id, userId])
 
   const handleBridgeFormedFromSession = useCallback(() => {
     void handleSessionDeleted()
@@ -372,6 +374,23 @@ async function loadBridgeForPiece(gumPieceId: string): Promise<Bridge | null> {
   }
 
   return null
+}
+
+async function loadDraftPostIdForBridge(
+  bridgeId: string,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('bridge_id', bridgeId)
+    .eq('author_id', userId)
+    .eq('is_public', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>()
+
+  return data?.id ?? null
 }
 
 function sleep(durationMs: number): Promise<void> {

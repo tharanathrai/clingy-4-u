@@ -38,6 +38,11 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const channelIdRef = useRef(crypto.randomUUID())
+  const hasLoadedRef = useRef(false)
+
+  useEffect(() => {
+    hasLoadedRef.current = false
+  }, [postId, userId])
 
   const loadPost = useCallback(async () => {
     if (!userId || !postId) {
@@ -49,7 +54,9 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
       return
     }
 
-    setLoading(true)
+    if (!hasLoadedRef.current) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -67,6 +74,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
         setReactions([])
         setComments([])
         setLoading(false)
+        hasLoadedRef.current = true
         return
       }
 
@@ -88,6 +96,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
         setReactions([])
         setComments([])
         setLoading(false)
+        hasLoadedRef.current = true
         return
       }
 
@@ -167,12 +176,14 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
       )
 
       setLoading(false)
+      hasLoadedRef.current = true
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to load post.')
       setPost(null)
       setReactions([])
       setComments([])
       setLoading(false)
+      hasLoadedRef.current = true
     }
   }, [postId, userId])
 

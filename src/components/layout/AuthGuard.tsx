@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
+import { BottomTabBar } from './BottomTabBar.tsx'
 
 interface AuthGuardProps {
   children: ReactNode
@@ -22,5 +23,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <Navigate to="/" replace state={{ from: location.pathname }} />
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <BottomTabBar />
+    </>
+  )
 }

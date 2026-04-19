@@ -65,6 +65,8 @@ export function OTPDisplay({
   const hasConfirmed =
     localConfirmed ||
     (isInitiator ? confirmed.initiator : confirmed.responder)
+  const currentUserConfirmed = hasConfirmed
+  const partnerConfirmed = isInitiator ? confirmed.responder : confirmed.initiator
   const isWarning = secondsLeft <= 60
 
   const handleConfirm = async () => {
@@ -142,11 +144,11 @@ export function OTPDisplay({
         <div className="mt-6 grid grid-cols-2 gap-3">
           <AvatarChip
             label={currentUserName}
-            confirmed={isInitiator ? confirmed.initiator : confirmed.responder}
+            confirmed={currentUserConfirmed}
           />
           <AvatarChip
             label={partnerName}
-            confirmed={isInitiator ? confirmed.responder : confirmed.initiator}
+            confirmed={partnerConfirmed}
           />
         </div>
 

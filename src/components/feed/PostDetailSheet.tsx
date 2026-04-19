@@ -1,5 +1,5 @@
 import { Heart, Send } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { usePost } from '../../hooks/usePost.ts'
@@ -10,13 +10,18 @@ import { FeedPostCard } from './FeedPostCard.tsx'
 interface PostDetailSheetProps {
   postId: string | null
   onClose: () => void
-  onActivityChange?: () => void
+  onPostMetricsChange?: (next: {
+    postId: string
+    reactionCount: number
+    commentCount: number
+    hasReacted: boolean
+  }) => void
 }
 
 export function PostDetailSheet({
   postId,
   onClose,
-  onActivityChange,
+  onPostMetricsChange,
 }: PostDetailSheetProps) {
   const { user } = useAuth()
   const userId = user?.id ?? null
@@ -24,20 +29,37 @@ export function PostDetailSheet({
   const [commentBody, setCommentBody] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const [submittingReaction, setSubmittingReaction] = useState(false)
-  const { post, reactions, comments, loading, error, refetch } = usePost({
+  const { post, reactions, comments, loading, error } = usePost({
     postId: postId ?? '',
   })
+  const [optimisticReactionCount, setOptimisticReactionCount] = useState<number | null>(
+    null,
+  )
+  const [optimisticHasReacted, setOptimisticHasReacted] = useState<boolean | null>(null)
+  const [optimisticCommentCount, setOptimisticCommentCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    setOptimisticReactionCount(null)
+    setOptimisticHasReacted(null)
+    setOptimisticCommentCount(null)
+  }, [postId])
 
   const hasReacted = useMemo(() => {
+    if (optimisticHasReacted !== null) {
+      return optimisticHasReacted
+    }
     if (!userId) {
       return false
     }
     return reactions.some((reaction) => reaction.user_id === userId)
-  }, [reactions, userId])
+  }, [optimisticHasReacted, reactions, userId])
 
   const recentReactors = useMemo(() => {
     return reactions.slice(0, 5)
   }, [reactions])
+
+  const reactionCount = optimisticReactionCount ?? reactions.length
+  const commentCount = optimisticCommentCount ?? comments.length
 
   if (!postId) {
     return null
@@ -48,11 +70,23 @@ export function PostDetailSheet({
       return
     }
     setSubmittingReaction(true)
+    const nextHasReacted = !hasReacted
+    const nextReactionCount = Math.max(
+      0,
+      reactionCount + (nextHasReacted ? 1 : -1),
+    )
+    setOptimisticHasReacted(nextHasReacted)
+    setOptimisticReactionCount(nextReactionCount)
+    onPostMetricsChange?.({
+      postId,
+      reactionCount: nextReactionCount,
+      commentCount,
+      hasReacted: nextHasReacted,
+    })
+
     await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
     })
-    await refetch()
-    onActivityChange?.()
     setSubmittingReaction(false)
   }
 
@@ -65,13 +99,20 @@ export function PostDetailSheet({
       return
     }
     setSubmittingComment(true)
+    const nextCommentCount = commentCount + 1
+    setOptimisticCommentCount(nextCommentCount)
+    onPostMetricsChange?.({
+      postId,
+      reactionCount,
+      commentCount: nextCommentCount,
+      hasReacted,
+    })
+
     await supabase.from('comments').insert({
       post_id: postId,
       user_id: user.id,
       body: trimmedComment,
     })
-    await refetch()
-    onActivityChange?.()
     setCommentBody('')
     setSubmittingComment(false)
   }
@@ -86,9 +127,14 @@ export function PostDetailSheet({
       />
 
       <div className="absolute inset-x-0 bottom-0 top-6 flex flex-col rounded-t-xl border-t border-white/10 bg-surface">
-        <div className="flex justify-center py-3">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close post details"
+          className="flex justify-center py-3"
+        >
           <span className="h-1 w-9 rounded-full bg-white/20" />
-        </div>
+        </button>
 
         <div className="flex-1 overflow-y-auto px-5 pb-5">
           {loading ? <p className="text-sm text-text-2">Loading post...</p> : null}
@@ -99,8 +145,8 @@ export function PostDetailSheet({
               <FeedPostCard
                 post={{
                   ...post,
-                  reactionCount: reactions.length,
-                  commentCount: comments.length,
+                  reactionCount,
+                  commentCount,
                   hasReacted,
                 }}
                 onReact={() => void handleToggleReaction()}
@@ -144,7 +190,7 @@ export function PostDetailSheet({
                     className={hasReacted ? 'text-accent' : 'text-text-2'}
                     fill={hasReacted ? 'currentColor' : 'none'}
                   />
-                  <span>{reactions.length}</span>
+                  <span>{reactionCount}</span>
                 </button>
               </div>
 

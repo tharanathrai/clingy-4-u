@@ -7,14 +7,19 @@ import { useFeed } from '../hooks/useFeed.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
-  const { posts, loading, error, refetch } = useFeed()
+  const { posts, loading, error } = useFeed()
   const navigate = useNavigate()
+  const [localPosts, setLocalPosts] = useState(posts)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
   const knownPostIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    const currentIds = posts.map((post) => post.id)
+    setLocalPosts(posts)
+  }, [posts])
+
+  useEffect(() => {
+    const currentIds = localPosts.map((post) => post.id)
     const knownIds = knownPostIdsRef.current
     const isFirstPaint = knownIds.size === 0
     const newIds = currentIds.filter((id) => !knownIds.has(id))
@@ -33,13 +38,30 @@ export default function Feed() {
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [posts])
+  }, [localPosts])
 
   const handleReact = async (postId: string) => {
+    setLocalPosts((current) =>
+      current.map((post) => {
+        if (post.id !== postId) {
+          return post
+        }
+
+        const nextHasReacted = !post.hasReacted
+        return {
+          ...post,
+          hasReacted: nextHasReacted,
+          reactionCount: Math.max(
+            0,
+            post.reactionCount + (nextHasReacted ? 1 : -1),
+          ),
+        }
+      }),
+    )
+
     await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
     })
-    await refetch()
   }
 
   return (
@@ -59,7 +81,7 @@ export default function Feed() {
           </section>
         ) : null}
 
-        {!loading && !error && posts.length === 0 ? (
+        {!loading && !error && localPosts.length === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <h2 className="font-display text-2xl text-text">Nothing here yet.</h2>
             <p className="mt-2 text-sm text-text-2">
@@ -68,9 +90,9 @@ export default function Feed() {
           </section>
         ) : null}
 
-        {!loading && !error && posts.length > 0 ? (
+        {!loading && !error && localPosts.length > 0 ? (
           <ul className="mt-5 space-y-3">
-            {posts.map((post) => (
+            {localPosts.map((post) => (
               <li
                 key={post.id}
                 className={animatedPostIds.has(post.id) ? 'feed-post-enter' : undefined}
@@ -90,8 +112,19 @@ export default function Feed() {
       <PostDetailSheet
         postId={selectedPostId}
         onClose={() => setSelectedPostId(null)}
-        onActivityChange={() => {
-          void refetch()
+        onPostMetricsChange={(next) => {
+          setLocalPosts((current) =>
+            current.map((post) =>
+              post.id === next.postId
+                ? {
+                    ...post,
+                    reactionCount: next.reactionCount,
+                    commentCount: next.commentCount,
+                    hasReacted: next.hasReacted,
+                  }
+                : post,
+            ),
+          )
         }}
       />
     </Layout>

@@ -31,6 +31,11 @@ export function useFeed(): UseFeedResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const channelIdRef = useRef(crypto.randomUUID())
+  const hasLoadedRef = useRef(false)
+
+  useEffect(() => {
+    hasLoadedRef.current = false
+  }, [userId])
 
   const loadFeed = useCallback(async () => {
     if (!userId) {
@@ -40,7 +45,9 @@ export function useFeed(): UseFeedResult {
       return
     }
 
-    setLoading(true)
+    if (!hasLoadedRef.current) {
+      setLoading(true)
+    }
     setError(null)
 
     try {
@@ -101,6 +108,7 @@ export function useFeed(): UseFeedResult {
       if (dedupedPosts.length === 0) {
         setPosts([])
         setLoading(false)
+        hasLoadedRef.current = true
         return
       }
 
@@ -198,10 +206,12 @@ export function useFeed(): UseFeedResult {
 
       setPosts(nextPosts)
       setLoading(false)
+      hasLoadedRef.current = true
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to load feed.')
       setPosts([])
       setLoading(false)
+      hasLoadedRef.current = true
     }
   }, [userId])
 
