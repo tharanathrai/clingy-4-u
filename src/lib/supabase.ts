@@ -143,6 +143,78 @@ export interface Database {
         }
         Relationships: []
       }
+      posts: {
+        Row: {
+          id: string
+          bridge_id: string
+          author_id: string
+          body: string
+          is_public: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          bridge_id: string
+          author_id: string
+          body: string
+          is_public?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          bridge_id?: string
+          author_id?: string
+          body?: string
+          is_public?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      reactions: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      comments: {
+        Row: {
+          id: string
+          post_id: string
+          user_id: string
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          user_id: string
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          user_id?: string
+          body?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       confirmation_sessions: {
         Row: {
           id: string

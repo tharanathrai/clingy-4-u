@@ -14,7 +14,7 @@ interface OTPDisplayProps {
   sessionId: string
   partnerName: string
   currentUserName: string
-  onBridgeFormed: (bridge: Bridge) => void
+  onBridgeFormed: (bridge: Bridge, draftPostId: string | null) => void
   onSessionExpired: () => void
   onStartOver: () => Promise<void>
 }
@@ -98,6 +98,7 @@ export function OTPDisplay({
           error?: string
           bridge_formed?: boolean
           bridge?: Bridge
+          draft_post_id?: string
         }
       | null
 
@@ -114,7 +115,7 @@ export function OTPDisplay({
     }
 
     if (payload?.bridge_formed && payload.bridge) {
-      onBridgeFormed(payload.bridge)
+      onBridgeFormed(payload.bridge, payload.draft_post_id ?? null)
     }
 
     setSubmitting(false)

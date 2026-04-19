@@ -39,6 +39,11 @@ interface BridgeRow {
   formed_at: string
 }
 
+interface UserNameRow {
+  id: string
+  display_name: string
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -252,6 +257,19 @@ Deno.serve(async (request) => {
       }
     }
 
+    const draftPostId = await ensureDraftPost({
+      serviceClient,
+      bridgeId: bridge.id,
+      authorId: userId,
+      creatorId: piece.creator_id,
+      recipientId: piece.recipient_id,
+      category: piece.category,
+      title: piece.title,
+    })
+    if (!draftPostId) {
+      return jsonResponse(500, { error: 'Failed to create draft post.' })
+    }
+
     const { error: deleteSessionError } = await serviceClient
       .from('confirmation_sessions')
       .delete()
@@ -264,6 +282,7 @@ Deno.serve(async (request) => {
       success: true,
       bridge_formed: true,
       bridge,
+      draft_post_id: draftPostId,
     })
   } catch (error) {
     return jsonResponse(500, {
@@ -277,4 +296,90 @@ function jsonResponse(status: number, body: unknown): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+async function ensureDraftPost(params: {
+  serviceClient: ReturnType<typeof createClient>
+  bridgeId: string
+  authorId: string
+  creatorId: string
+  recipientId: string
+  category: string
+  title: string
+}): Promise<string | null> {
+  const { data: existingDraft, error: existingDraftError } = await params.serviceClient
+    .from('posts')
+    .select('id')
+    .eq('bridge_id', params.bridgeId)
+    .eq('author_id', params.authorId)
+    .eq('is_public', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>()
+
+  if (existingDraftError) {
+    return null
+  }
+  if (existingDraft?.id) {
+    return existingDraft.id
+  }
+
+  const { data: users, error: usersError } = await params.serviceClient
+    .from('users')
+    .select('id, display_name')
+    .in('id', [params.creatorId, params.recipientId])
+
+  if (usersError) {
+    return null
+  }
+
+  const userRows = (users ?? []) as UserNameRow[]
+  const authorName =
+    userRows.find((user) => user.id === params.authorId)?.display_name ?? 'Someone'
+  const otherUserId =
+    params.authorId === params.creatorId ? params.recipientId : params.creatorId
+  const otherName =
+    userRows.find((user) => user.id === otherUserId)?.display_name ?? 'someone'
+
+  const body = buildDraftBody({
+    authorName,
+    otherName,
+    title: params.title,
+    category: params.category,
+  })
+
+  const { data: createdPost, error: createPostError } = await params.serviceClient
+    .from('posts')
+    .insert({
+      bridge_id: params.bridgeId,
+      author_id: params.authorId,
+      body,
+      is_public: false,
+    })
+    .select('id')
+    .single<{ id: string }>()
+
+  if (createPostError || !createdPost) {
+    return null
+  }
+
+  return createdPost.id
+}
+
+function buildDraftBody(params: {
+  authorName: string
+  otherName: string
+  title: string
+  category: string
+}): string {
+  const cleanedTitle = params.title.trim().replace(/[.!?]+$/g, '')
+  const names = `${params.authorName} and ${params.otherName}`
+  if (params.category === 'active') return `${names} went ${cleanedTitle}.`
+  if (params.category === 'savor') return `${names} shared ${cleanedTitle}.`
+  if (params.category === 'intimate') return `${names} had ${cleanedTitle}.`
+  if (params.category === 'explore') return `${names} explored ${cleanedTitle}.`
+  if (params.category === 'recharge') return `${names} did ${cleanedTitle}.`
+  if (params.category === 'playful') return `${names} made ${cleanedTitle}.`
+  if (params.category === 'support') return `${names} showed up for ${cleanedTitle}.`
+  return `${names}: ${cleanedTitle}.`
 }

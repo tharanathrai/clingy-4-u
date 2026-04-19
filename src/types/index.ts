@@ -78,3 +78,27 @@ export interface Category {
   color_hex: string
   keywords: string[]
 }
+
+export interface Post {
+  id: string
+  bridge_id: string
+  author_id: string
+  body: string
+  is_public: boolean
+  created_at: string
+}
+
+export interface Reaction {
+  id: string
+  post_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface Comment {
+  id: string
+  post_id: string
+  user_id: string
+  body: string
+  created_at: string
+}

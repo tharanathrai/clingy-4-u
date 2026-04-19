@@ -32,6 +32,7 @@ export default function PieceConfirm() {
   const [piece, setPiece] = useState<GumPiece | null>(null)
   const [fallbackSession, setFallbackSession] = useState<ConfirmationSession | null>(null)
   const [bridge, setBridge] = useState<Bridge | null>(null)
+  const [draftPostId, setDraftPostId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [creatorName, setCreatorName] = useState('Someone')
   const [recipientName, setRecipientName] = useState('Someone')
@@ -203,7 +204,18 @@ export default function PieceConfirm() {
   }
 
   if (flowState === 'bridge_formed' && bridge) {
-    return <UnwrapCeremony bridge={bridge} onComplete={() => navigate('/home')} />
+    return (
+      <UnwrapCeremony
+        bridge={bridge}
+        draftPostId={draftPostId}
+        onComplete={(toast) =>
+          navigate('/home', {
+            replace: true,
+            state: toast ? { toast } : undefined,
+          })
+        }
+      />
+    )
   }
 
   return (
@@ -253,7 +265,8 @@ export default function PieceConfirm() {
             sessionId={activeSession.id}
             partnerName={partnerName}
             currentUserName={currentUserName}
-            onBridgeFormed={(nextBridge) => {
+            onBridgeFormed={(nextBridge, nextDraftPostId) => {
+              setDraftPostId(nextDraftPostId)
               setBridge(nextBridge)
               setFlowState('bridge_formed')
             }}
