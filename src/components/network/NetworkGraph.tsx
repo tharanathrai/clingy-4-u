@@ -71,6 +71,7 @@ export function NetworkGraph({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
   const zoomClampLogCountRef = useRef(0)
+  const interactionLogCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -493,6 +494,12 @@ export function NetworkGraph({
         linkHoverPrecision={8}
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
+          if (interactionLogCountRef.current < 8) {
+            interactionLogCountRef.current += 1
+            // #region agent log
+            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeClick',message:'Node click received',data:{nodeId:selectedNode.id,isSelf:selectedNode.isSelf,recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+          }
           if (selectedNode.isSelf) {
             onNodeSelect(null)
             onBridgeSelect?.(null)
@@ -511,6 +518,12 @@ export function NetworkGraph({
           onBridgeSelect?.((link as GraphEdge).bridge)
         }}
         onBackgroundClick={() => {
+          if (interactionLogCountRef.current < 8) {
+            interactionLogCountRef.current += 1
+            // #region agent log
+            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H6',location:'NetworkGraph.tsx:onBackgroundClick',message:'Background click received',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+          }
           onNodeSelect(null)
           onBridgeSelect?.(null)
         }}
@@ -580,6 +593,13 @@ export function NetworkGraph({
             return
           }
 
+          if (interactionLogCountRef.current < 8) {
+            interactionLogCountRef.current += 1
+            // #region agent log
+            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDrag',message:'Node drag received',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+          }
+
           if (selectedUserId !== dragged.id) {
             onNodeSelect(dragged.id)
             onBridgeSelect?.(null)
@@ -598,6 +618,13 @@ export function NetworkGraph({
             dragged.fx = 0
             dragged.fy = 0
             return
+          }
+
+          if (interactionLogCountRef.current < 8) {
+            interactionLogCountRef.current += 1
+            // #region agent log
+            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDragEnd',message:'Node drag ended',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
           }
 
           dragged.fx = undefined

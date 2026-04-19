@@ -24,6 +24,12 @@ export default function Network() {
   })
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H7',location:'Network.tsx:selectedStateEffect',message:'Selection state changed',data:{selectedUserId,hasSelectedBridge:Boolean(selectedBridge)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [selectedBridge, selectedUserId])
+
+  useEffect(() => {
     if (!selectedUserId) {
       setSelectedUser(null)
       return
@@ -51,6 +57,9 @@ export default function Network() {
   }, [selectedUserId])
 
   const handleRecenter = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H5',location:'Network.tsx:handleRecenter',message:'Recenter requested',data:{selectedUserIdBefore:selectedUserId,hadBridgeBefore:Boolean(selectedBridge),recenterTriggerBefore:recenterTrigger},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     setSelectedUserId(null)
     setSelectedBridge(null)
     setRecenterTrigger((value) => value + 1)
