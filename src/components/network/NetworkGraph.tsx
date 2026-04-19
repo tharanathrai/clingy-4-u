@@ -37,20 +37,8 @@ interface NetworkGraphProps {
   recenterTrigger?: number
 }
 
-interface GraphCameraState {
-  x: number
-  y: number
-  k: number
-}
-
-const graphCameraCacheByUserId = new Map<string, GraphCameraState>()
-
 const MIN_GRAPH_ZOOM = 0.45
 const MAX_GRAPH_ZOOM = 4
-
-const isFiniteCameraState = (camera: GraphCameraState): boolean => {
-  return Number.isFinite(camera.x) && Number.isFinite(camera.y) && Number.isFinite(camera.k)
-}
 
 const normalizePair = (left: string, right: string): string => {
   return [left, right].sort().join(':')
@@ -93,10 +81,8 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
-  const hasAppliedInitialCameraRef = useRef<null | string>(null)
-  const programmaticCameraUntilRef = useRef(0)
-  const zoomEventCountRef = useRef(0)
-  const hasMountedRecenterEffectRef = useRef(false)
+  const initialViewAppliedRef = useRef(false)
+  const clampedTickLogCountRef = useRef(0)
   const [graphSize, setGraphSize] = useState({
     width: 0,
     height: 0,
@@ -179,6 +165,41 @@ export function NetworkGraph({
     return 140 + ringIndex * 115
   }, [nodes])
 
+  useEffect(() => {
+    if (!graphRef.current) {
+      return
+    }
+
+    const linkForce = graphRef.current.d3Force('link') as
+      | {
+          distance?: (value: (link: GraphEdge) => number) => void
+          strength?: (value: (link: GraphEdge) => number) => void
+        }
+      | undefined
+    linkForce?.distance?.(() => {
+      const pairCount = 1
+      return Math.max(36, 104 - pairCount * 12)
+    })
+    linkForce?.strength?.(() => {
+      const pairCount = 1
+      return Math.min(0.85, 0.36 + pairCount * 0.08)
+    })
+
+    const chargeForce = graphRef.current.d3Force('charge') as
+      | { strength?: (value: number) => void }
+      | undefined
+    chargeForce?.strength?.(-110)
+
+    const centerForce = graphRef.current.d3Force('center') as
+      | {
+          x?: (value: number) => void
+          y?: (value: number) => void
+        }
+      | undefined
+    centerForce?.x?.(0)
+    centerForce?.y?.(0)
+  }, [])
+
   const recenterGraph = (duration = 250) => {
     const bounds = graphContainerRef.current?.getBoundingClientRect()
     const containerWidth = Math.round(bounds?.width ?? graphSize.width)
@@ -191,15 +212,11 @@ export function NetworkGraph({
       MIN_GRAPH_ZOOM,
       Math.min(1.25, Math.min(usableWidth / diameter, usableHeight / diameter)),
     )
-    programmaticCameraUntilRef.current = Date.now() + duration + 120
     // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter computed camera from measured container',data:{duration,containerWidth,containerHeight,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius,selfUserId},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H9',location:'NetworkGraph.tsx:recenterGraph',message:'Applying deterministic bird-eye camera',data:{duration,containerWidth,containerHeight,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
-    graphRef.current?.centerAt(0, 0, duration)
+    graphRef.current?.centerAt(0, 24, duration)
     graphRef.current?.zoom(zoom, duration)
-    if (selfUserId) {
-      graphCameraCacheByUserId.set(selfUserId, { x: 0, y: 0, k: zoom })
-    }
   }
 
   useEffect(() => {
@@ -207,50 +224,15 @@ export function NetworkGraph({
       return
     }
 
-    const cacheKey = selfUserId ?? 'anonymous'
-    const fitCamera = (force = false) => {
-      if (hasAppliedInitialCameraRef.current === cacheKey && !force) {
-        return
-      }
-
-      const cachedCamera = selfUserId
-        ? graphCameraCacheByUserId.get(selfUserId)
-        : null
-      const hasValidCamera =
-        !!cachedCamera &&
-        isFiniteCameraState(cachedCamera) &&
-        cachedCamera.k >= MIN_GRAPH_ZOOM &&
-        cachedCamera.k <= MAX_GRAPH_ZOOM
-
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Evaluated cached camera for restore',data:{cacheKey,force,selfUserId,cachedCamera:cachedCamera??null,hasValidCamera,hasAppliedInitialCamera:hasAppliedInitialCameraRef.current,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-
-      if (hasValidCamera && cachedCamera) {
-        programmaticCameraUntilRef.current = Date.now() + 200
-        graphRef.current?.centerAt(cachedCamera.x, cachedCamera.y, 0)
-        graphRef.current?.zoom(cachedCamera.k, 0)
-        // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Applied cached camera',data:{cameraX:cachedCamera.x,cameraY:cachedCamera.y,cameraK:cachedCamera.k},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-      } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H4',location:'NetworkGraph.tsx:fitCamera',message:'Falling back to recenter',data:{reason:'invalid-or-missing-cache',selfUserId,cachedCamera:cachedCamera??null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-        recenterGraph(0)
-      }
-
-      hasAppliedInitialCameraRef.current = cacheKey
-    }
-
-    const timeoutId = window.setTimeout(() => fitCamera(false), 80)
-    const secondPassTimeoutId = window.setTimeout(() => fitCamera(true), 420)
+    const timeoutId = window.setTimeout(() => {
+      recenterGraph(0)
+      initialViewAppliedRef.current = true
+    }, 80)
 
     return () => {
       window.clearTimeout(timeoutId)
-      window.clearTimeout(secondPassTimeoutId)
     }
-  }, [error, graphSize.height, graphSize.width, loading, maxOrbitRadius, nodes.length, selfUserId])
+  }, [error, graphSize.height, graphSize.width, loading, maxOrbitRadius, nodes.length])
 
   useEffect(() => {
     if (
@@ -264,15 +246,11 @@ export function NetworkGraph({
       return
     }
 
-    if (!hasMountedRecenterEffectRef.current) {
-      hasMountedRecenterEffectRef.current = true
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H6',location:'NetworkGraph.tsx:recenterEffect',message:'Skipped initial recenter on mount',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
+    if (!initialViewAppliedRef.current) {
       return
     }
     // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H6',location:'NetworkGraph.tsx:recenterEffect',message:'Recenter effect fired from explicit trigger',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H9',location:'NetworkGraph.tsx:recenterEffect',message:'Explicit recenter trigger fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     recenterGraph(220)
   }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterTrigger])
@@ -397,8 +375,6 @@ export function NetworkGraph({
         ...node,
         x: position.x,
         y: position.y,
-        fx: position.x,
-        fy: position.y,
       }
     }) as GraphNode[]
 
@@ -553,41 +529,9 @@ export function NetworkGraph({
           d3VelocityDecay={0.3}
           minZoom={MIN_GRAPH_ZOOM}
           maxZoom={MAX_GRAPH_ZOOM}
+          cooldownTicks={Infinity}
           onZoom={(cameraPosition) => {
-            if (!selfUserId) {
-              return
-            }
-            if (Date.now() < programmaticCameraUntilRef.current) {
-              if (zoomEventCountRef.current < 5) {
-                zoomEventCountRef.current += 1
-                // #region agent log
-                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Ignored programmatic zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,programmaticUntil:programmaticCameraUntilRef.current,now:Date.now()},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
-              }
-              return
-            }
-            if (zoomEventCountRef.current < 10) {
-              zoomEventCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Persisting user zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,graphWidth:graphSize.width,graphHeight:graphSize.height,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
-            }
-            const maxPanX = maxOrbitRadius + 120
-            const maxPanY = maxOrbitRadius + 90
-            const clampedX = Math.max(-maxPanX, Math.min(maxPanX, cameraPosition.x))
-            const clampedY = Math.max(-maxPanY, Math.min(maxPanY, cameraPosition.y))
-            if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
-              programmaticCameraUntilRef.current = Date.now() + 120
-              graphRef.current?.centerAt(clampedX, clampedY, 80)
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H7',location:'NetworkGraph.tsx:onZoom',message:'Clamped camera to viewport bounds',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,clampedX,clampedY,cameraK:cameraPosition.k,maxPanX,maxPanY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
-            }
-            graphCameraCacheByUserId.set(selfUserId, {
-              x: clampedX,
-              y: clampedY,
-              k: cameraPosition.k,
-            })
+            void cameraPosition
           }}
           linkVisibility={(link) => {
             if (!selectedUserId) {
@@ -623,6 +567,78 @@ export function NetworkGraph({
           onBackgroundClick={() => {
             onNodeSelect(null)
             onBridgeSelect?.(null)
+          }}
+          onEngineTick={() => {
+            const graphNodes = graphData.nodes
+            const maxNodeX = maxOrbitRadius + 120
+            const minNodeY = -(maxOrbitRadius + 80)
+            const maxNodeY = maxOrbitRadius + 130
+            let clampedCount = 0
+
+            for (const node of graphNodes) {
+              if (node.isSelf) {
+                node.x = 0
+                node.y = 0
+                node.vx = 0
+                node.vy = 0
+                node.fx = 0
+                node.fy = 0
+                continue
+              }
+
+              if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+                continue
+              }
+
+              const clampedX = Math.max(-maxNodeX, Math.min(maxNodeX, node.x))
+              const clampedY = Math.max(minNodeY, Math.min(maxNodeY, node.y))
+              if (clampedX !== node.x) {
+                node.x = clampedX
+                node.vx = (node.vx ?? 0) * -0.35
+                clampedCount += 1
+              }
+              if (clampedY !== node.y) {
+                node.y = clampedY
+                node.vy = (node.vy ?? 0) * -0.35
+                clampedCount += 1
+              }
+            }
+
+            if (clampedCount > 0 && clampedTickLogCountRef.current < 6) {
+              clampedTickLogCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H11',location:'NetworkGraph.tsx:onEngineTick',message:'Clamped nodes inside world bounds',data:{clampedCount,maxNodeX,minNodeY,maxNodeY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
+          }}
+          onNodeDrag={(node) => {
+            const dragged = node as GraphNode
+            if (dragged.isSelf) {
+              dragged.x = 0
+              dragged.y = 0
+              dragged.fx = 0
+              dragged.fy = 0
+              return
+            }
+            const maxNodeX = maxOrbitRadius + 120
+            const minNodeY = -(maxOrbitRadius + 80)
+            const maxNodeY = maxOrbitRadius + 130
+            const nextX = Math.max(-maxNodeX, Math.min(maxNodeX, dragged.x ?? 0))
+            const nextY = Math.max(minNodeY, Math.min(maxNodeY, dragged.y ?? 0))
+            dragged.x = nextX
+            dragged.y = nextY
+            dragged.fx = nextX
+            dragged.fy = nextY
+          }}
+          onNodeDragEnd={(node) => {
+            const dragged = node as GraphNode
+            if (dragged.isSelf) {
+              dragged.fx = 0
+              dragged.fy = 0
+              return
+            }
+            dragged.fx = undefined
+            dragged.fy = undefined
           }}
         />
       )}
