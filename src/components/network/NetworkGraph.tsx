@@ -74,6 +74,8 @@ export function NetworkGraph({
   const sizeLogCountRef = useRef(0)
   const earlyReturnLoggedRef = useRef(false)
   const firstTickLoggedRef = useRef(false)
+  const zoomLoopLogCountRef = useRef(0)
+  const centerAtInvokeCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -498,6 +500,13 @@ export function NetworkGraph({
               : 20
 
           if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
+            centerAtInvokeCountRef.current += 1
+            if (zoomLoopLogCountRef.current < 6) {
+              zoomLoopLogCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas-zoom',hypothesisId:'H6',location:'NetworkGraph.tsx:onZoom',message:'onZoom clamp requested centerAt',data:{cameraPosition,clampedX,clampedY,centerAtInvokeCount:centerAtInvokeCountRef.current,graphSize,worldBounds},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
