@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LocateFixed } from 'lucide-react'
 import { BottomTabBar } from '../components/layout/BottomTabBar.tsx'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
+import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, User } from '../types/index.ts'
 
@@ -50,23 +50,21 @@ export default function Network() {
     }
   }, [selectedUserId])
 
+  const handleRecenter = () => {
+    setSelectedUserId(null)
+    setSelectedBridge(null)
+    setRecenterTrigger((value) => value + 1)
+  }
+
   return (
     <div className="relative mx-auto h-screen w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 pt-6">
         <h1 className="font-display text-2xl text-text">your network</h1>
         <div className="relative flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-3 py-2 text-xs text-text-2 transition hover:text-text active:scale-95"
-            onClick={() => {
-              setSelectedUserId(null)
-              setSelectedBridge(null)
-              setRecenterTrigger((value) => value + 1)
-            }}
-          >
-            <LocateFixed size={14} strokeWidth={1.75} />
-            Recenter
-          </button>
+          <RecenterGraphButton
+            onRecenter={handleRecenter}
+            disabled={graphState.loading || !!graphState.error}
+          />
           <GraphExportButton graphRef={graphCanvasRef} />
         </div>
       </header>

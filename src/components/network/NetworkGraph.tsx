@@ -70,6 +70,7 @@ export function NetworkGraph({
   const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
+  const zoomClampLogCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -91,6 +92,9 @@ export function NetworkGraph({
         return
       }
       const bounds = container.getBoundingClientRect()
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H2',location:'NetworkGraph.tsx:updateSize',message:'Graph container measured',data:{width:Math.round(bounds.width),height:Math.round(bounds.height)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setGraphSize({
         width: Math.max(0, Math.round(bounds.width)),
         height: Math.max(0, Math.round(bounds.height)),
@@ -131,7 +135,7 @@ export function NetworkGraph({
     }
   }, [nodes])
 
-  const recenterGraph = (duration = 240) => {
+  const recenterGraph = (duration = 240, reason = 'unknown') => {
     const bounds = graphContainerRef.current?.getBoundingClientRect()
     const width = Math.round(bounds?.width ?? graphSize.width)
     const height = Math.round(bounds?.height ?? graphSize.height)
@@ -151,6 +155,10 @@ export function NetworkGraph({
         Math.min(usableWidth / Math.max(1, worldWidth), usableHeight / Math.max(1, worldHeight)),
       ),
     )
+
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter invoked',data:{reason,duration,width,height,zoom,worldBounds,loading,error,nodesCount:nodes.length,recenterTrigger},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     graphRef.current?.centerAt(0, 20, duration)
     graphRef.current?.zoom(zoom, duration)
@@ -192,8 +200,15 @@ export function NetworkGraph({
       return
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H4',location:'NetworkGraph.tsx:initialRecenterEffect',message:'Initial recenter effect scheduled',data:{graphSize,worldRadius:worldBounds.maxRadius,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     const timeoutId = window.setTimeout(() => {
-      recenterGraph(0)
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:initialRecenterEffect',message:'Initial size effect timeout fired',data:{graphSize,nodesCount:nodes.length,worldRadius:worldBounds.maxRadius},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      recenterGraph(0, 'initial-size-effect-timeout')
     }, 80)
 
     return () => {
@@ -205,7 +220,10 @@ export function NetworkGraph({
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
-    recenterGraph(220)
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:recenterTriggerEffect',message:'Recenter trigger effect fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    recenterGraph(220, 'recenter-trigger-effect')
   }, [recenterTrigger])
 
   useEffect(() => {
@@ -457,6 +475,12 @@ export function NetworkGraph({
               : 20
 
           if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
+            if (zoomClampLogCountRef.current < 4) {
+              zoomClampLogCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H3',location:'NetworkGraph.tsx:onZoom',message:'Camera clamp applied',data:{cameraPosition,clampedX,clampedY,graphSize,worldBounds},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
