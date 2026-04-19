@@ -119,33 +119,6 @@ export function NetworkGraph({
     }
   }, [])
 
-  useEffect(() => {
-    const logFocusState = (source: 'visibilitychange' | 'focus' | 'blur') => {
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H1',location:'NetworkGraph.tsx:focusEvents',message:'Window focus/visibility state changed',data:{source,visibility:document.visibilityState,graphWidth:graphSize.width,graphHeight:graphSize.height,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-
-    const onVisibilityChange = () => {
-      logFocusState('visibilitychange')
-    }
-    const onFocus = () => {
-      logFocusState('focus')
-    }
-    const onBlur = () => {
-      logFocusState('blur')
-    }
-
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    window.addEventListener('focus', onFocus)
-    window.addEventListener('blur', onBlur)
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      window.removeEventListener('focus', onFocus)
-      window.removeEventListener('blur', onBlur)
-    }
-  }, [graphSize.height, graphSize.width, nodes.length])
-
   const worldBounds = useMemo(() => {
     const nonSelfCount = nodes.filter((node) => !node.isSelf).length
     const ringCount = Math.max(1, Math.ceil(nonSelfCount / 8))
@@ -313,14 +286,6 @@ export function NetworkGraph({
       links: edges as GraphEdge[],
     }
   }, [edges, nodes, worldBounds.maxRadius])
-
-  useEffect(() => {
-    const selfNode = graphData.nodes.find((node) => node.isSelf)
-    const firstOtherNode = graphData.nodes.find((node) => !node.isSelf)
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H2',location:'NetworkGraph.tsx:graphDataSnapshot',message:'Graph node coordinates snapshot after build',data:{nodesCount:graphData.nodes.length,self:{id:selfNode?.id??null,x:selfNode?.x??null,y:selfNode?.y??null},firstOther:{id:firstOtherNode?.id??null,x:firstOtherNode?.x??null,y:firstOtherNode?.y??null}},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [graphData])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 22 : 18
@@ -529,6 +494,38 @@ export function NetworkGraph({
             if (clampedY !== node.y) {
               node.y = clampedY
               node.vy = (node.vy ?? 0) * -0.45
+            }
+          }
+
+          if (
+            selfNode &&
+            typeof selfNode.x === 'number' &&
+            typeof selfNode.y === 'number'
+          ) {
+            const minimumDistanceFromSelf = 74
+            for (const node of otherNodes) {
+              if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+                continue
+              }
+              const dx = node.x - selfNode.x
+              const dy = node.y - selfNode.y
+              const distance = Math.hypot(dx, dy)
+              if (distance >= minimumDistanceFromSelf) {
+                continue
+              }
+              const ux = distance > 0 ? dx / distance : 1
+              const uy = distance > 0 ? dy / distance : 0
+              node.x = selfNode.x + ux * minimumDistanceFromSelf
+              node.y = selfNode.y + uy * minimumDistanceFromSelf
+              node.vx = (node.vx ?? 0) * 0.2
+              node.vy = (node.vy ?? 0) * 0.2
+
+              if (overlapLogCountRef.current < 8) {
+                overlapLogCountRef.current += 1
+                // #region agent log
+                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix-overlap',hypothesisId:'H3',location:'NetworkGraph.tsx:onEngineTick',message:'Applied hard separation from self node',data:{nodeId:node.id,distanceBefore:distance,minimumDistanceFromSelf,newX:node.x,newY:node.y},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+              }
             }
           }
 
