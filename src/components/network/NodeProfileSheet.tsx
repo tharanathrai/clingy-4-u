@@ -1,13 +1,13 @@
-import { format } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
-import type { NetworkGraphNode } from '../../hooks/useNetworkGraph.ts'
-import type { Bridge } from '../../types/index.ts'
+import { supabase } from '../../lib/supabase.ts'
+import type { User } from '../../types/index.ts'
+import { useBridgesByPair } from '../../hooks/useBridgesByPair.ts'
 
 interface NodeProfileSheetProps {
-  node: NetworkGraphNode | null
-  bridges: Bridge[]
+  userId: string | null
   onClose: () => void
   onViewProfile: (username: string) => void
 }
@@ -19,74 +19,48 @@ const toCategorySlug = (value: string): CategorySlug => {
   return 'explore'
 }
 
-const dotClassByCategory: Record<CategorySlug, string> = {
-  intimate: 'bg-intimate',
-  active: 'bg-active',
-  playful: 'bg-playful',
-  explore: 'bg-explore',
-  recharge: 'bg-recharge',
-  savor: 'bg-savor',
-  support: 'bg-support',
-}
-
 export function NodeProfileSheet({
-  node,
-  bridges,
+  userId,
   onClose,
   onViewProfile,
 }: NodeProfileSheetProps) {
-  const [isMounted, setIsMounted] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
-  const [displayedNode, setDisplayedNode] = useState<NetworkGraphNode | null>(null)
-  const [contentFading, setContentFading] = useState(false)
+  const [otherUser, setOtherUser] = useState<User | null>(null)
+  const [loadingUser, setLoadingUser] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [touchStartY, setTouchStartY] = useState<number | null>(null)
-  const [touchCurrentY, setTouchCurrentY] = useState<number | null>(null)
+  const { bridges, loading: loadingBridges } = useBridgesByPair({
+    otherUserId: userId ?? '',
+  })
 
   useEffect(() => {
-    if (node) {
-      setIsMounted(true)
-      window.requestAnimationFrame(() => {
-        setIsVisible(true)
-      })
+    if (!userId) {
+      setOtherUser(null)
+      setLoadingUser(false)
       return
     }
 
-    setIsVisible(false)
-    const timeout = window.setTimeout(() => {
-      setIsMounted(false)
-      setDisplayedNode(null)
-    }, 200)
+    let cancelled = false
+
+    const loadUser = async () => {
+      setLoadingUser(true)
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!cancelled) {
+        setOtherUser((data ?? null) as User | null)
+        setLoadingUser(false)
+      }
+    }
+
+    void loadUser()
 
     return () => {
-      window.clearTimeout(timeout)
+      cancelled = true
     }
-  }, [node])
-
-  useEffect(() => {
-    if (!node) {
-      return
-    }
-
-    if (!displayedNode) {
-      setDisplayedNode(node)
-      return
-    }
-
-    if (displayedNode.id === node.id) {
-      setDisplayedNode(node)
-      return
-    }
-
-    setContentFading(true)
-    const timeout = window.setTimeout(() => {
-      setDisplayedNode(node)
-      setContentFading(false)
-    }, 150)
-
-    return () => {
-      window.clearTimeout(timeout)
-    }
-  }, [displayedNode, node])
+  }, [userId])
 
   const topCategories = useMemo(() => {
     const counts: Record<CategorySlug, number> = {
@@ -111,72 +85,79 @@ export function NodeProfileSheet({
       .map(([category]) => category as CategorySlug)
   }, [bridges])
 
-  const recentBridges = useMemo(() => {
-    return [...bridges]
-      .sort((left, right) => {
-        return new Date(right.formed_at).getTime() - new Date(left.formed_at).getTime()
-      })
-      .slice(0, 3)
-  }, [bridges])
-
-  if (!isMounted || !displayedNode) {
+  if (!userId) {
     return null
   }
 
   return (
     <section
-      className={`absolute inset-x-0 bottom-0 z-30 h-[42vh] rounded-t-xl border-t border-white/10 bg-surface shadow-card transition-transform will-change-transform ${
-        isVisible
-          ? 'translate-y-0 duration-[280ms] [transition-timing-function:cubic-bezier(0.34,1.2,0.64,1)]'
-          : 'translate-y-full duration-200 ease-in'
+      className={`absolute inset-x-0 bottom-0 z-20 rounded-t-xl border-t border-white/10 bg-surface shadow-card transition-[height] duration-200 ${
+        expanded ? 'h-[72vh]' : 'h-[40vh]'
       }`}
-      onTouchStart={(event) => {
-        setTouchStartY(event.touches[0]?.clientY ?? null)
-        setTouchCurrentY(event.touches[0]?.clientY ?? null)
-      }}
-      onTouchMove={(event) => {
-        setTouchCurrentY(event.touches[0]?.clientY ?? null)
-      }}
-      onTouchEnd={() => {
-        if (touchStartY !== null && touchCurrentY !== null && touchCurrentY - touchStartY > 60) {
-          onClose()
-        }
-        setTouchStartY(null)
-        setTouchCurrentY(null)
-      }}
     >
       <button
         type="button"
-        aria-label="Dismiss profile"
+        aria-label="Expand profile preview"
         className="flex w-full justify-center py-3"
-        onClick={onClose}
+        onClick={() => {
+          setExpanded((previous) => !previous)
+        }}
+        onTouchStart={(event) => {
+          setTouchStartY(event.touches[0]?.clientY ?? null)
+        }}
+        onTouchEnd={(event) => {
+          const startY = touchStartY
+          const endY = event.changedTouches[0]?.clientY
+          if (startY === null || typeof endY !== 'number') {
+            return
+          }
+          const deltaY = endY - startY
+          if (deltaY < -30) {
+            setExpanded(true)
+          } else if (deltaY > 30) {
+            setExpanded(false)
+          }
+          setTouchStartY(null)
+        }}
       >
         <span className="h-1 w-9 rounded-full bg-white/20" />
       </button>
 
-      <div
-        className={`h-[calc(42vh-28px)] overflow-y-auto px-5 pb-8 transition-opacity duration-150 ${
-          contentFading ? 'opacity-0' : 'opacity-100'
-        }`}
+      <div className="h-full overflow-y-auto px-5 pb-8">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-3 rounded-full p-2 text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
+        aria-label="Close profile preview"
       >
+        <X size={18} strokeWidth={1.75} />
+      </button>
+
+      {loadingUser || loadingBridges ? (
+        <p className="py-8 text-center text-sm text-text-2">
+          Loading connection details...
+        </p>
+      ) : (
         <>
           <div className="flex items-center gap-3">
-            {displayedNode.user.avatar_url ? (
+            {otherUser?.avatar_url ? (
               <img
-                src={displayedNode.user.avatar_url}
-                alt={displayedNode.user.display_name}
-                className="h-14 w-14 rounded-full object-cover"
+                src={otherUser.avatar_url}
+                alt={otherUser.display_name}
+                className="h-16 w-16 rounded-full object-cover"
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-lg font-medium text-text">
-                {(displayedNode.user.display_name.trim().charAt(0) ?? '?').toUpperCase()}
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-2 text-xl font-medium text-text">
+                {(otherUser?.display_name?.trim().charAt(0) ?? '?').toUpperCase()}
               </div>
             )}
             <div>
-              <p className="font-display text-[20px] leading-tight text-text">
-                {displayedNode.user.display_name}
+              <p className="font-display text-2xl text-text">
+                {otherUser?.display_name ?? 'Unknown'}
               </p>
-              <p className="text-sm text-text-2">@{displayedNode.user.username}</p>
+              <p className="text-sm text-text-2">
+                @{otherUser?.username ?? 'unknown'}
+              </p>
             </div>
           </div>
 
@@ -190,41 +171,24 @@ export function NodeProfileSheet({
                 <CategoryChip key={category} category={category} size="sm" />
               ))
             ) : (
-              <span className="text-xs text-text-3">No shared categories yet</span>
-            )}
-          </div>
-
-          <div className="mt-5 space-y-2">
-            {recentBridges.length ? (
-              recentBridges.map((bridge) => (
-                <div
-                  key={bridge.id}
-                  className="flex items-center justify-between rounded-md border border-white/10 bg-surface-2 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${dotClassByCategory[toCategorySlug(bridge.category)]}`} />
-                    <p className="text-sm text-text">{bridge.activity_title}</p>
-                  </div>
-                  <p className="text-xs text-text-3">
-                    {format(new Date(bridge.formed_at), 'MMM d, yyyy')}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-text-3">No bridges to show yet.</p>
+              <span className="text-xs text-text-3">No bridges yet</span>
             )}
           </div>
 
           <button
             type="button"
             onClick={() => {
-              onViewProfile(displayedNode.user.username)
+              if (otherUser?.username) {
+                onViewProfile(otherUser.username)
+              }
             }}
-            className="mt-6 w-full rounded-full border border-white/20 bg-surface-2 px-5 py-3 text-sm font-medium text-text transition hover:border-white/30 active:scale-95"
+            className="mt-6 w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+            disabled={!otherUser?.username}
           >
-            View full profile →
+            View profile
           </button>
         </>
+      )}
       </div>
     </section>
   )
