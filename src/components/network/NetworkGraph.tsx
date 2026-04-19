@@ -70,7 +70,6 @@ export function NetworkGraph({
   const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
-  const overlapLogCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -292,14 +291,18 @@ export function NetworkGraph({
     const isSelected = selectedUserId === node.id
     const isHovered = hoveredNodeId === node.id
     const radius = baseRadius * (isSelected || isHovered ? 1.1 : 1)
-    const fill = node.isSelf ? '#CF8EE8' : '#272438'
-    const stroke = isSelected || isHovered ? '#F2EFF8' : 'rgba(255,255,255,0.2)'
+    const fill = node.isSelf ? '#1E1B2E' : '#272438'
+    const stroke = node.isSelf
+      ? '#CF8EE8'
+      : isSelected || isHovered
+        ? '#F2EFF8'
+        : 'rgba(255,255,255,0.2)'
 
     ctx.beginPath()
     ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI)
     ctx.fillStyle = fill
     ctx.fill()
-    ctx.lineWidth = node.isSelf ? 2 : 1.5
+    ctx.lineWidth = node.isSelf ? 3 : 1.5
     ctx.strokeStyle = stroke
     ctx.stroke()
 
@@ -386,6 +389,22 @@ export function NetworkGraph({
     ctx.stroke()
   }
 
+  const selfNodeId = useMemo(() => {
+    return nodes.find((node) => node.isSelf)?.id ?? null
+  }, [nodes])
+
+  const isSelectedPairLink = (link: GraphEdge): boolean => {
+    if (!selectedUserId || !selfNodeId) {
+      return false
+    }
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id
+    return (
+      (sourceId === selfNodeId && targetId === selectedUserId) ||
+      (sourceId === selectedUserId && targetId === selfNodeId)
+    )
+  }
+
   if (error) {
     return (
       <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
@@ -441,7 +460,7 @@ export function NetworkGraph({
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
-        linkVisibility={() => true}
+        linkVisibility={(link) => isSelectedPairLink(link as GraphEdge)}
         nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
         nodePointerAreaPaint={(node, color, ctx) =>
           nodePointerAreaPaint(node as GraphNode, color, ctx)
@@ -450,6 +469,11 @@ export function NetworkGraph({
         linkHoverPrecision={8}
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
+          if (selectedNode.isSelf) {
+            onNodeSelect(null)
+            onBridgeSelect?.(null)
+            return
+          }
           onNodeSelect(selectedNode.id)
           onBridgeSelect?.(null)
         }}
@@ -519,40 +543,6 @@ export function NetworkGraph({
               node.y = selfNode.y + uy * minimumDistanceFromSelf
               node.vx = (node.vx ?? 0) * 0.2
               node.vy = (node.vy ?? 0) * 0.2
-
-              if (overlapLogCountRef.current < 8) {
-                overlapLogCountRef.current += 1
-                // #region agent log
-                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix-overlap',hypothesisId:'H3',location:'NetworkGraph.tsx:onEngineTick',message:'Applied hard separation from self node',data:{nodeId:node.id,distanceBefore:distance,minimumDistanceFromSelf,newX:node.x,newY:node.y},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
-              }
-            }
-          }
-
-          if (
-            selfNode &&
-            typeof selfNode.x === 'number' &&
-            typeof selfNode.y === 'number' &&
-            overlapLogCountRef.current < 8
-          ) {
-            let nearestDistance = Number.POSITIVE_INFINITY
-            let nearestNodeId: string | null = null
-            for (const node of otherNodes) {
-              if (typeof node.x !== 'number' || typeof node.y !== 'number') {
-                continue
-              }
-              const distance = Math.hypot(node.x - selfNode.x, node.y - selfNode.y)
-              if (distance < nearestDistance) {
-                nearestDistance = distance
-                nearestNodeId = node.id
-              }
-            }
-
-            if (nearestDistance < 40) {
-              overlapLogCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-overlap-debug',hypothesisId:'H3',location:'NetworkGraph.tsx:onEngineTick',message:'Detected near-overlap with self node',data:{nearestDistance,nearestNodeId,selfX:selfNode.x,selfY:selfNode.y,otherCount:otherNodes.length},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
             }
           }
         }}

@@ -59,6 +59,8 @@ export default function Network() {
             type="button"
             className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-3 py-2 text-xs text-text-2 transition hover:text-text active:scale-95"
             onClick={() => {
+              setSelectedUserId(null)
+              setSelectedBridge(null)
               setRecenterTrigger((value) => value + 1)
             }}
           >
