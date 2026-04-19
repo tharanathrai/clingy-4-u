@@ -72,7 +72,6 @@ export function NetworkGraph({
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
   const zoomClampLogCountRef = useRef(0)
   const interactionLogCountRef = useRef(0)
-  const zoomInteractionLogCountRef = useRef(0)
   const hasAppliedInitialRecenterRef = useRef(false)
 
   useEffect(() => {
@@ -451,12 +450,6 @@ export function NetworkGraph({
         minZoom={MIN_GRAPH_ZOOM}
         maxZoom={MAX_GRAPH_ZOOM}
         onZoom={(cameraPosition) => {
-          if (zoomInteractionLogCountRef.current < 12) {
-            zoomInteractionLogCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H9',location:'NetworkGraph.tsx:onZoom',message:'Zoom callback received',data:{cameraPosition,recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-          }
           const worldLeft = worldBounds.left
           const worldRight = worldBounds.right
           const worldTop = worldBounds.top
@@ -497,7 +490,7 @@ export function NetworkGraph({
         linkHoverPrecision={8}
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
-          if (interactionLogCountRef.current < 30) {
+          if (interactionLogCountRef.current < 8) {
             interactionLogCountRef.current += 1
             // #region agent log
             fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeClick',message:'Node click received',data:{nodeId:selectedNode.id,isSelf:selectedNode.isSelf,recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
@@ -521,7 +514,7 @@ export function NetworkGraph({
           onBridgeSelect?.((link as GraphEdge).bridge)
         }}
         onBackgroundClick={() => {
-          if (interactionLogCountRef.current < 30) {
+          if (interactionLogCountRef.current < 8) {
             interactionLogCountRef.current += 1
             // #region agent log
             fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onBackgroundClick',message:'Background click received',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
@@ -596,7 +589,7 @@ export function NetworkGraph({
             return
           }
 
-          if (interactionLogCountRef.current < 30) {
+          if (interactionLogCountRef.current < 8) {
             interactionLogCountRef.current += 1
             // #region agent log
             fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDrag',message:'Node drag received',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
@@ -623,7 +616,7 @@ export function NetworkGraph({
             return
           }
 
-          if (interactionLogCountRef.current < 30) {
+          if (interactionLogCountRef.current < 8) {
             interactionLogCountRef.current += 1
             // #region agent log
             fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDragEnd',message:'Node drag ended',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
