@@ -72,11 +72,6 @@ export function NetworkGraph({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
   const hasAppliedInitialRecenterRef = useRef(false)
-  const sizeLogCountRef = useRef(0)
-  const earlyReturnLoggedRef = useRef(false)
-  const firstTickLoggedRef = useRef(false)
-  const zoomLoopLogCountRef = useRef(0)
-  const centerAtInvokeCountRef = useRef(0)
 
   useEffect(() => {
     for (const node of nodes) {
@@ -98,12 +93,6 @@ export function NetworkGraph({
         return
       }
       const bounds = container.getBoundingClientRect()
-      if (sizeLogCountRef.current < 4) {
-        sizeLogCountRef.current += 1
-        // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H2',location:'NetworkGraph.tsx:updateSize',message:'Measured graph container bounds',data:{width:Math.round(bounds.width),height:Math.round(bounds.height),loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-      }
       setGraphSize({
         width: Math.max(0, Math.round(bounds.width)),
         height: Math.max(0, Math.round(bounds.height)),
@@ -128,32 +117,6 @@ export function NetworkGraph({
       resizeObserver?.disconnect()
       window.removeEventListener('resize', updateSize)
       window.removeEventListener('orientationchange', updateSize)
-    }
-  }, [error, loading, nodes.length])
-
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H1',location:'NetworkGraph.tsx:dataStateEffect',message:'NetworkGraph data state update',data:{loading,error,nodesCount:nodes.length,edgesCount:edges.length,graphSize},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [edges.length, error, graphSize, loading, nodes.length])
-
-  useEffect(() => {
-    const handleRuntimeError = (event: ErrorEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H5',location:'NetworkGraph.tsx:windowError',message:'Runtime error event',data:{message:event.message,filename:event.filename,line:event.lineno,column:event.colno},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H5',location:'NetworkGraph.tsx:unhandledRejection',message:'Unhandled promise rejection event',data:{reason:String(event.reason)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-
-    window.addEventListener('error', handleRuntimeError)
-    window.addEventListener('unhandledrejection', handleUnhandledRejection)
-    return () => {
-      window.removeEventListener('error', handleRuntimeError)
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
     }
   }, [])
 
@@ -452,12 +415,6 @@ export function NetworkGraph({
   }
 
   if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
-    if (!earlyReturnLoggedRef.current) {
-      earlyReturnLoggedRef.current = true
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H3',location:'NetworkGraph.tsx:earlyReturnLoading',message:'Graph returned loading/size guard',data:{loading,width:graphSize.width,height:graphSize.height,error,nodesCount:nodes.length,edgesCount:edges.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
     return (
       <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center text-sm text-text-2">
         Loading your network...
@@ -505,13 +462,6 @@ export function NetworkGraph({
             Math.abs(clampedY - cameraPosition.y) > CAMERA_CLAMP_EPSILON
 
           if (needsClamp) {
-            centerAtInvokeCountRef.current += 1
-            if (zoomLoopLogCountRef.current < 6) {
-              zoomLoopLogCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas-zoom',hypothesisId:'H6',location:'NetworkGraph.tsx:onZoom',message:'onZoom clamp requested centerAt',data:{cameraPosition,clampedX,clampedY,centerAtInvokeCount:centerAtInvokeCountRef.current,graphSize,worldBounds},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
-            }
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
@@ -548,12 +498,6 @@ export function NetworkGraph({
         onEngineTick={() => {
           const graphNodes = graphData.nodes
           const selfNode = graphNodes.find((node) => node.isSelf)
-          if (!firstTickLoggedRef.current && selfNode) {
-            firstTickLoggedRef.current = true
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H4',location:'NetworkGraph.tsx:onEngineTick',message:'First simulation tick with self node',data:{selfNode:{id:selfNode.id,x:selfNode.x,y:selfNode.y,fx:selfNode.fx,fy:selfNode.fy},graphNodesCount:graphNodes.length},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-          }
           const otherNodes = graphNodes.filter((node) => !node.isSelf)
           for (const node of graphNodes) {
             if (node.isSelf) {
