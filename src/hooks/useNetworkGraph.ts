@@ -57,6 +57,9 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     let cancelled = false
 
     const loadGraphData = async () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H1',location:'useNetworkGraph.ts:loadGraphData:start',message:'Started network graph data load',data:{userId:user.id,hadCache:Boolean(networkGraphCache.get(user.id))},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const cached = networkGraphCache.get(user.id)
       if (cached) {
         setConnections(cached.connections)
@@ -149,6 +152,9 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       setConnections(activeConnections)
       setUsersById(mappedUsers)
       setBridges((bridgeRows ?? []) as Bridge[])
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9a13c7'},body:JSON.stringify({sessionId:'9a13c7',runId:'blank-canvas',hypothesisId:'H1',location:'useNetworkGraph.ts:loadGraphData:success',message:'Completed network graph data load',data:{connectionsCount:activeConnections.length,usersCount:userIds.length,bridgesCount:(bridgeRows ?? []).length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       networkGraphCache.set(user.id, {
         connections: activeConnections,
         usersById: mappedUsers,
