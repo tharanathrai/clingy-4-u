@@ -97,8 +97,8 @@ export function NetworkGraph({
   const programmaticCameraUntilRef = useRef(0)
   const zoomEventCountRef = useRef(0)
   const [graphSize, setGraphSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 0,
+    height: 0,
   })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
@@ -121,10 +121,6 @@ export function NetworkGraph({
     const updateSize = () => {
       const container = graphContainerRef.current
       if (!container) {
-        setGraphSize({
-          width: window.innerWidth,
-          height: window.innerHeight,
-        })
         return
       }
 
@@ -135,15 +131,25 @@ export function NetworkGraph({
       fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:updateSize',message:'Measured graph container size',data:{width,height,windowWidth:window.innerWidth,windowHeight:window.innerHeight},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
       setGraphSize({
-        width: width > 0 ? width : window.innerWidth,
-        height: height > 0 ? height : window.innerHeight,
+        width: Math.max(0, width),
+        height: Math.max(0, height),
       })
     }
 
     window.requestAnimationFrame(updateSize)
+    const container = graphContainerRef.current
+    const resizeObserver = container
+      ? new ResizeObserver(() => {
+          updateSize()
+        })
+      : null
+    if (container && resizeObserver) {
+      resizeObserver.observe(container)
+    }
     window.addEventListener('resize', updateSize)
     window.addEventListener('orientationchange', updateSize)
     return () => {
+      resizeObserver?.disconnect()
       window.removeEventListener('resize', updateSize)
       window.removeEventListener('orientationchange', updateSize)
     }
@@ -173,9 +179,12 @@ export function NetworkGraph({
   }, [nodes])
 
   const recenterGraph = (duration = 250) => {
-    const padding = graphSize.width < 640 ? 26 : 72
-    const usableWidth = Math.max(1, graphSize.width - padding * 2)
-    const usableHeight = Math.max(1, graphSize.height - padding * 2)
+    const bounds = graphContainerRef.current?.getBoundingClientRect()
+    const containerWidth = Math.round(bounds?.width ?? graphSize.width)
+    const containerHeight = Math.round(bounds?.height ?? graphSize.height)
+    const padding = containerWidth < 640 ? 26 : 72
+    const usableWidth = Math.max(1, containerWidth - padding * 2)
+    const usableHeight = Math.max(1, containerHeight - padding * 2)
     const diameter = Math.max(120, maxOrbitRadius * 2 + 80)
     const zoom = Math.max(
       MIN_GRAPH_ZOOM,
@@ -183,7 +192,7 @@ export function NetworkGraph({
     )
     programmaticCameraUntilRef.current = Date.now() + duration + 120
     // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter computed camera',data:{duration,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius,selfUserId},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter computed camera from measured container',data:{duration,containerWidth,containerHeight,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius,selfUserId},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     graphRef.current?.centerAt(0, 0, duration)
     graphRef.current?.zoom(zoom, duration)
@@ -206,17 +215,14 @@ export function NetworkGraph({
       const cachedCamera = selfUserId
         ? graphCameraCacheByUserId.get(selfUserId)
         : null
-      const maxAllowedPan = Math.max(260, maxOrbitRadius * 2.4)
       const hasValidCamera =
         !!cachedCamera &&
         isFiniteCameraState(cachedCamera) &&
         cachedCamera.k >= MIN_GRAPH_ZOOM &&
-        cachedCamera.k <= MAX_GRAPH_ZOOM &&
-        Math.abs(cachedCamera.x) <= maxAllowedPan &&
-        Math.abs(cachedCamera.y) <= maxAllowedPan
+        cachedCamera.k <= MAX_GRAPH_ZOOM
 
       // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Evaluated cached camera for restore',data:{cacheKey,force,selfUserId,cachedCamera:cachedCamera??null,maxAllowedPan,hasValidCamera,hasAppliedInitialCamera:hasAppliedInitialCameraRef.current,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Evaluated cached camera for restore',data:{cacheKey,force,selfUserId,cachedCamera:cachedCamera??null,hasValidCamera,hasAppliedInitialCamera:hasAppliedInitialCameraRef.current,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
       // #endregion
 
       if (hasValidCamera && cachedCamera) {
@@ -224,11 +230,11 @@ export function NetworkGraph({
         graphRef.current?.centerAt(cachedCamera.x, cachedCamera.y, 0)
         graphRef.current?.zoom(cachedCamera.k, 0)
         // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Applied cached camera',data:{cameraX:cachedCamera.x,cameraY:cachedCamera.y,cameraK:cachedCamera.k},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Applied cached camera',data:{cameraX:cachedCamera.x,cameraY:cachedCamera.y,cameraK:cachedCamera.k},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
       } else {
         // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H4',location:'NetworkGraph.tsx:fitCamera',message:'Falling back to recenter',data:{reason:'invalid-or-missing-cache',selfUserId,cachedCamera:cachedCamera??null},timestamp:Date.now()})}).catch(()=>{});
+        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H4',location:'NetworkGraph.tsx:fitCamera',message:'Falling back to recenter',data:{reason:'invalid-or-missing-cache',selfUserId,cachedCamera:cachedCamera??null},timestamp:Date.now()})}).catch(()=>{});
         // #endregion
         recenterGraph(0)
       }
@@ -246,12 +252,19 @@ export function NetworkGraph({
   }, [error, graphSize.height, graphSize.width, loading, maxOrbitRadius, nodes.length, selfUserId])
 
   useEffect(() => {
-    if (!graphRef.current || loading || error || nodes.length === 0) {
+    if (
+      !graphRef.current ||
+      loading ||
+      error ||
+      nodes.length === 0 ||
+      graphSize.width <= 0 ||
+      graphSize.height <= 0
+    ) {
       return
     }
 
     recenterGraph(220)
-  }, [error, loading, nodes.length, recenterTrigger])
+  }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterTrigger])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -507,7 +520,7 @@ export function NetworkGraph({
     ctx.stroke()
   }
 
-  if (loading) {
+  if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
     return (
       <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
         Loading your network...
