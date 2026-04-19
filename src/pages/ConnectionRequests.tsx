@@ -13,6 +13,7 @@ interface PendingConnectionRequest {
 
 export default function ConnectionRequests() {
   const { user, loading } = useAuth()
+  const userId = user?.id ?? null
   const [requests, setRequests] = useState<PendingConnectionRequest[]>([])
   const [fetching, setFetching] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -20,7 +21,7 @@ export default function ConnectionRequests() {
   const [ignoredIds, setIgnoredIds] = useState<Set<string>>(new Set())
 
   const loadRequests = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       return
     }
 
@@ -31,7 +32,7 @@ export default function ConnectionRequests() {
       .from('connections')
       .select('id, requested_by, user_a_id, user_b_id')
       .eq('status', 'pending')
-      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
     if (connectionError || !connectionRows) {
       setErrorMessage('Something went wrong - try again.')
@@ -39,7 +40,7 @@ export default function ConnectionRequests() {
       return
     }
 
-    const incomingRows = connectionRows.filter((row) => row.requested_by !== user.id)
+    const incomingRows = connectionRows.filter((row) => row.requested_by !== userId)
     const requesterIds = incomingRows.map((row) => row.requested_by)
 
     if (requesterIds.length === 0) {
@@ -78,7 +79,7 @@ export default function ConnectionRequests() {
 
     setRequests(mappedRequests)
     setFetching(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     void loadRequests()

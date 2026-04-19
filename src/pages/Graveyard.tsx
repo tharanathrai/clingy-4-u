@@ -24,6 +24,7 @@ interface UserNameRow {
 
 export default function Graveyard() {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [entries, setEntries] = useState<GraveyardEntry[]>([])
   const [namesById, setNamesById] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -31,7 +32,7 @@ export default function Graveyard() {
 
   useEffect(() => {
     const loadEntries = async () => {
-      if (!user) {
+      if (!userId) {
         setEntries([])
         setLoading(false)
         return
@@ -43,7 +44,7 @@ export default function Graveyard() {
       const { data, error: queryError } = await supabase
         .from('graveyard')
         .select('*')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
         .order('expired_at', { ascending: false })
 
       if (queryError) {
@@ -86,7 +87,7 @@ export default function Graveyard() {
     }
 
     void loadEntries()
-  }, [authLoading, user])
+  }, [authLoading, userId])
 
   const empty = useMemo(() => !loading && entries.length === 0, [entries.length, loading])
 
@@ -111,7 +112,7 @@ export default function Graveyard() {
 
       <section className="mt-8 space-y-3 pb-10">
         {entries.map((entry) => {
-          const partnerId = user?.id === entry.user_a_id ? entry.user_b_id : entry.user_a_id
+          const partnerId = userId === entry.user_a_id ? entry.user_b_id : entry.user_a_id
           const partnerName = namesById[partnerId] ?? 'Someone'
           const createdAgo = formatDistanceToNow(new Date(entry.created_at), {
             addSuffix: true,

@@ -81,6 +81,74 @@ Deno.serve(async (request) => {
       return jsonResponse(403, { error: 'forbidden' })
     }
 
+    const { data: existingDraft, error: existingDraftError } = await serviceClient
+      .from('posts')
+      .select('*')
+      .eq('bridge_id', bridge.id)
+      .eq('author_id', userId)
+      .eq('is_public', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (existingDraftError) {
+      return jsonResponse(500, { error: existingDraftError.message })
+    }
+
+    if (existingDraft) {
+      const { data: updatedDraft, error: updateDraftError } = await serviceClient
+        .from('posts')
+        .update({
+          body: postBody,
+          is_public: isPublic,
+        })
+        .eq('id', existingDraft.id)
+        .select('*')
+        .single()
+
+      if (updateDraftError || !updatedDraft) {
+        return jsonResponse(500, {
+          error: updateDraftError?.message ?? 'Failed to update existing draft post.',
+        })
+      }
+
+      return jsonResponse(200, { post: updatedDraft })
+    }
+
+    const { data: existingPublished, error: existingPublishedError } = await serviceClient
+      .from('posts')
+      .select('*')
+      .eq('bridge_id', bridge.id)
+      .eq('author_id', userId)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (existingPublishedError) {
+      return jsonResponse(500, { error: existingPublishedError.message })
+    }
+
+    if (existingPublished) {
+      const { data: updatedPost, error: updatePostError } = await serviceClient
+        .from('posts')
+        .update({
+          body: postBody,
+          is_public: isPublic,
+        })
+        .eq('id', existingPublished.id)
+        .select('*')
+        .single()
+
+      if (updatePostError || !updatedPost) {
+        return jsonResponse(500, {
+          error: updatePostError?.message ?? 'Failed to update existing post.',
+        })
+      }
+
+      return jsonResponse(200, { post: updatedPost })
+    }
+
     const { data: post, error: createPostError } = await serviceClient
       .from('posts')
       .insert({

@@ -26,6 +26,7 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export default function PieceDetail() {
   const { id } = useParams()
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const navigate = useNavigate()
   const [piece, setPiece] = useState<PieceDetailRow | null>(null)
   const [creatorName, setCreatorName] = useState('Someone')
@@ -41,7 +42,7 @@ export default function PieceDetail() {
       return
     }
 
-    if (!user) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -66,7 +67,7 @@ export default function PieceDetail() {
       return
     }
 
-    if (data.creator_id !== user.id && data.recipient_id !== user.id) {
+    if (data.creator_id !== userId && data.recipient_id !== userId) {
       setPiece(null)
       setLoading(false)
       return
@@ -89,7 +90,7 @@ export default function PieceDetail() {
     }
 
     setLoading(false)
-  }, [authLoading, id, user])
+  }, [authLoading, id, userId])
 
   useEffect(() => {
     void loadPiece()
@@ -138,11 +139,11 @@ export default function PieceDetail() {
   const category = useMemo(() => toCategorySlug(piece?.category), [piece?.category])
 
   const statusLine = useMemo(() => {
-    if (!piece || !user) {
+    if (!piece || !userId) {
       return ''
     }
 
-    const otherName = user.id === piece.creator_id ? recipientName : creatorName
+    const otherName = userId === piece.creator_id ? recipientName : creatorName
     if (piece.status === 'placeholder') {
       return `Waiting for ${otherName} to accept`
     }
@@ -156,7 +157,7 @@ export default function PieceDetail() {
       return 'Expired'
     }
     return 'Confirmed'
-  }, [creatorName, piece, recipientName, user])
+  }, [creatorName, piece, recipientName, userId])
 
   const expiryProgress = useMemo(() => {
     if (!piece) {
@@ -228,11 +229,11 @@ export default function PieceDetail() {
     )
   }
 
-  if (!piece || !user) {
+  if (!piece || !userId) {
     return <Navigate to="/home" replace />
   }
 
-  const isRecipient = user.id === piece.recipient_id
+  const isRecipient = userId === piece.recipient_id
   const canAccept = piece.status === 'placeholder' && isRecipient
   const canCancelPlaceholder = piece.status === 'placeholder' && !isRecipient
   const canTurnDownActive = piece.status === 'active'

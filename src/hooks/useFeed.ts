@@ -26,13 +26,14 @@ interface ConnectionRow {
 
 export function useFeed(): UseFeedResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const channelIdRef = useRef(crypto.randomUUID())
 
   const loadFeed = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setPosts([])
       setError(null)
       setLoading(false)
@@ -47,7 +48,7 @@ export function useFeed(): UseFeedResult {
         .from('connections')
         .select('user_a_id, user_b_id')
         .eq('status', 'active')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
       if (connectionsError) {
         throw new Error(connectionsError.message)
@@ -57,7 +58,7 @@ export function useFeed(): UseFeedResult {
       const connectedUserIds = Array.from(
         new Set(
           connections.map((connection) =>
-            connection.user_a_id === user.id ? connection.user_b_id : connection.user_a_id,
+            connection.user_a_id === userId ? connection.user_b_id : connection.user_a_id,
           ),
         ),
       )
@@ -65,7 +66,7 @@ export function useFeed(): UseFeedResult {
       const { data: ownPostsData, error: ownPostsError } = await supabase
         .from('posts')
         .select('*')
-        .eq('author_id', user.id)
+        .eq('author_id', userId)
 
       if (ownPostsError) {
         throw new Error(ownPostsError.message)
@@ -157,7 +158,7 @@ export function useFeed(): UseFeedResult {
           reaction.post_id,
           (reactionCountByPostId.get(reaction.post_id) ?? 0) + 1,
         )
-        if (reaction.user_id === user.id) {
+        if (reaction.user_id === userId) {
           hasReactedByPostId.set(reaction.post_id, true)
         }
       }
@@ -202,7 +203,7 @@ export function useFeed(): UseFeedResult {
       setPosts([])
       setLoading(false)
     }
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     if (authLoading) {
@@ -212,15 +213,29 @@ export function useFeed(): UseFeedResult {
   }, [authLoading, loadFeed])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       return
     }
 
     const channel = supabase
-      .channel(`feed-${user.id}-${channelIdRef.current}`)
+      .channel(`feed-${userId}-${channelIdRef.current}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'posts' },
+        { event: '*', schema: 'public', table: 'posts' },
+        () => {
+          void loadFeed()
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'reactions' },
+        () => {
+          void loadFeed()
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments' },
         () => {
           void loadFeed()
         },
@@ -230,7 +245,7 @@ export function useFeed(): UseFeedResult {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [loadFeed, user])
+  }, [loadFeed, userId])
 
   return {
     posts,

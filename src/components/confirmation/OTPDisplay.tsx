@@ -38,11 +38,13 @@ export function OTPDisplay({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showStartOver, setShowStartOver] = useState(false)
+  const [localConfirmed, setLocalConfirmed] = useState(false)
 
   useEffect(() => {
     setSecondsLeft(getSecondsLeft(expiresAt))
     setError(null)
     setShowStartOver(false)
+    setLocalConfirmed(false)
   }, [expiresAt, sessionId])
 
   useEffect(() => {
@@ -60,9 +62,9 @@ export function OTPDisplay({
     }
   }, [expiresAt])
 
-  const hasConfirmed = isInitiator
-    ? confirmed.initiator
-    : confirmed.responder
+  const hasConfirmed =
+    localConfirmed ||
+    (isInitiator ? confirmed.initiator : confirmed.responder)
   const isWarning = secondsLeft <= 60
 
   const handleConfirm = async () => {
@@ -116,6 +118,8 @@ export function OTPDisplay({
 
     if (payload?.bridge_formed && payload.bridge) {
       onBridgeFormed(payload.bridge, payload.draft_post_id ?? null)
+    } else {
+      setLocalConfirmed(true)
     }
 
     setSubmitting(false)

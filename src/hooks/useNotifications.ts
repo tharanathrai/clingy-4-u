@@ -35,18 +35,19 @@ const notificationsCache = new Map<string, Notification[]>()
 
 export function useNotifications(): UseNotificationsResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const channelIdRef = useRef(crypto.randomUUID())
 
   const loadNotifications = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setNotifications([])
       setLoading(false)
       return
     }
 
-    const cached = notificationsCache.get(user.id)
+    const cached = notificationsCache.get(userId)
     if (cached) {
       setNotifications(cached)
       setLoading(false)
@@ -56,14 +57,14 @@ export function useNotifications(): UseNotificationsResult {
     const { data } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     const nextNotifications = (data ?? []) as Notification[]
-    notificationsCache.set(user.id, nextNotifications)
+    notificationsCache.set(userId, nextNotifications)
     setNotifications(nextNotifications)
     setLoading(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     if (authLoading) {
@@ -74,27 +75,25 @@ export function useNotifications(): UseNotificationsResult {
   }, [authLoading, loadNotifications])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       return
     }
 
     const channel = supabase
-      .channel(`notifications-${user.id}-${channelIdRef.current}`)
+      .channel(`notifications-${userId}-${channelIdRef.current}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           const inserted = payload.new as Notification
           setNotifications((current) => {
             const next = [inserted, ...current]
-            if (user) {
-              notificationsCache.set(user.id, next)
-            }
+            notificationsCache.set(userId, next)
             return next
           })
         },
@@ -105,7 +104,7 @@ export function useNotifications(): UseNotificationsResult {
           event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           const updated = payload.new as Notification
@@ -113,9 +112,7 @@ export function useNotifications(): UseNotificationsResult {
             const next = current.map((notification) =>
               notification.id === updated.id ? updated : notification,
             )
-            if (user) {
-              notificationsCache.set(user.id, next)
-            }
+            notificationsCache.set(userId, next)
             return next
           })
         },
@@ -125,11 +122,11 @@ export function useNotifications(): UseNotificationsResult {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [userId])
 
   const markAsRead = useCallback(
     async (id: string) => {
-      if (!user) {
+      if (!userId) {
         return
       }
 
@@ -137,7 +134,7 @@ export function useNotifications(): UseNotificationsResult {
         const next = current.map((notification) =>
           notification.id === id ? { ...notification, read: true } : notification,
         )
-        notificationsCache.set(user.id, next)
+        notificationsCache.set(userId, next)
         return next
       })
 
@@ -145,28 +142,28 @@ export function useNotifications(): UseNotificationsResult {
         .from('notifications')
         .update({ read: true })
         .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
     },
-    [user],
+    [userId],
   )
 
   const markAllAsRead = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       return
     }
 
     setNotifications((current) => {
       const next = current.map((notification) => ({ ...notification, read: true }))
-      notificationsCache.set(user.id, next)
+      notificationsCache.set(userId, next)
       return next
     })
 
     await supabase
       .from('notifications')
       .update({ read: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('read', false)
-  }, [user])
+  }, [userId])
 
   const unreadCount = useMemo(() => {
     return notifications.reduce((count, notification) => {

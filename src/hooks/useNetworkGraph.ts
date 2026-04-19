@@ -34,6 +34,7 @@ const networkGraphCache = new Map<string, NetworkGraphCacheEntry>()
 
 export function useNetworkGraph(): UseNetworkGraphResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [connections, setConnections] = useState<Connection[]>([])
   const [usersById, setUsersById] = useState<Record<string, User>>({})
   const [bridges, setBridges] = useState<Bridge[]>([])
@@ -45,7 +46,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       return
     }
 
-    if (!user) {
+    if (!userId) {
       setConnections([])
       setUsersById({})
       setBridges([])
@@ -57,7 +58,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     let cancelled = false
 
     const loadGraphData = async () => {
-      const cached = networkGraphCache.get(user.id)
+      const cached = networkGraphCache.get(userId)
       if (cached) {
         setConnections(cached.connections)
         setUsersById(cached.usersById)
@@ -72,7 +73,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
         .from('connections')
         .select('*')
         .eq('status', 'active')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
       if (connectionError) {
         if (!cancelled) {
@@ -83,10 +84,10 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       }
 
       const activeConnections = (connectionRows ?? []) as Connection[]
-      const networkUserIds = new Set<string>([user.id])
+      const networkUserIds = new Set<string>([userId])
       for (const connection of activeConnections) {
         const otherUserId =
-          connection.user_a_id === user.id
+          connection.user_a_id === userId
             ? connection.user_b_id
             : connection.user_a_id
         networkUserIds.add(otherUserId)
@@ -109,7 +110,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       const { data: bridgeRows, error: bridgesError } = await supabase
         .from('bridges')
         .select('*')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
       if (bridgesError) {
         if (!cancelled) {
@@ -138,8 +139,8 @@ export function useNetworkGraph(): UseNetworkGraphResult {
 
         mappedUsers[id] = {
           id,
-          display_name: id === user.id ? 'You' : 'Unknown',
-          username: id === user.id ? 'me' : 'unknown',
+          display_name: id === userId ? 'You' : 'Unknown',
+          username: id === userId ? 'me' : 'unknown',
           avatar_url: null,
           bio: null,
           created_at: new Date().toISOString(),
@@ -149,7 +150,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
       setConnections(activeConnections)
       setUsersById(mappedUsers)
       setBridges((bridgeRows ?? []) as Bridge[])
-      networkGraphCache.set(user.id, {
+      networkGraphCache.set(userId, {
         connections: activeConnections,
         usersById: mappedUsers,
         bridges: (bridgeRows ?? []) as Bridge[],
@@ -162,26 +163,26 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     return () => {
       cancelled = true
     }
-  }, [authLoading, user])
+  }, [authLoading, userId])
 
   const nodes = useMemo<NetworkGraphNode[]>(() => {
-    if (!user) {
+    if (!userId) {
       return []
     }
 
     const connectionUserIds = new Set<string>()
     for (const connection of connections) {
       connectionUserIds.add(
-        connection.user_a_id === user.id ? connection.user_b_id : connection.user_a_id,
+        connection.user_a_id === userId ? connection.user_b_id : connection.user_a_id,
       )
     }
 
-    const ids = [user.id, ...Array.from(connectionUserIds)]
+    const ids = [userId, ...Array.from(connectionUserIds)]
     const bridgeCountByUserId: Record<string, number> = {}
 
     for (const bridge of bridges) {
       const otherUserId =
-        bridge.user_a_id === user.id ? bridge.user_b_id : bridge.user_a_id
+        bridge.user_a_id === userId ? bridge.user_b_id : bridge.user_a_id
       bridgeCountByUserId[otherUserId] = (bridgeCountByUserId[otherUserId] ?? 0) + 1
     }
 
@@ -195,12 +196,12 @@ export function useNetworkGraph(): UseNetworkGraphResult {
         return {
           id,
           user: profile,
-          isSelf: id === user.id,
-          bridgeCount: id === user.id ? 0 : (bridgeCountByUserId[id] ?? 0),
+          isSelf: id === userId,
+          bridgeCount: id === userId ? 0 : (bridgeCountByUserId[id] ?? 0),
         }
       })
       .filter((node): node is NetworkGraphNode => node !== null)
-  }, [bridges, connections, user, usersById])
+  }, [bridges, connections, userId, usersById])
 
   const edges = useMemo<NetworkGraphEdge[]>(() => {
     return bridges.map((bridge) => ({

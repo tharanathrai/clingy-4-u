@@ -334,16 +334,14 @@ async function ensureDraftPost(params: {
   }
 
   const userRows = (users ?? []) as UserNameRow[]
-  const authorName =
-    userRows.find((user) => user.id === params.authorId)?.display_name ?? 'Someone'
-  const otherUserId =
-    params.authorId === params.creatorId ? params.recipientId : params.creatorId
-  const otherName =
-    userRows.find((user) => user.id === otherUserId)?.display_name ?? 'someone'
+  const creatorName =
+    userRows.find((user) => user.id === params.creatorId)?.display_name ?? 'Someone'
+  const recipientName =
+    userRows.find((user) => user.id === params.recipientId)?.display_name ?? 'someone'
 
   const body = buildDraftBody({
-    authorName,
-    otherName,
+    firstName: creatorName,
+    secondName: recipientName,
     title: params.title,
     category: params.category,
   })
@@ -367,13 +365,13 @@ async function ensureDraftPost(params: {
 }
 
 function buildDraftBody(params: {
-  authorName: string
-  otherName: string
+  firstName: string
+  secondName: string
   title: string
   category: string
 }): string {
   const cleanedTitle = params.title.trim().replace(/[.!?]+$/g, '')
-  const names = `${params.authorName} and ${params.otherName}`
+  const names = `${params.firstName} and ${params.secondName}`
   if (params.category === 'active') return `${names} went ${cleanedTitle}.`
   if (params.category === 'savor') return `${names} shared ${cleanedTitle}.`
   if (params.category === 'intimate') return `${names} had ${cleanedTitle}.`

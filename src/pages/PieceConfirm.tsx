@@ -27,6 +27,7 @@ type FlowState = 'loading' | 'waiting' | 'bridge_formed' | 'expired'
 export default function PieceConfirm() {
   const { id } = useParams()
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const navigate = useNavigate()
   const [flowState, setFlowState] = useState<FlowState>('loading')
   const [piece, setPiece] = useState<GumPiece | null>(null)
@@ -68,21 +69,21 @@ export default function PieceConfirm() {
   const activeSession = liveSession ?? fallbackSession
   const isInitiator = user ? activeSession?.initiator_id === user.id : false
   const partnerName = useMemo(() => {
-    if (!user || !piece) {
+    if (!userId || !piece) {
       return 'your partner'
     }
-    return user.id === piece.creator_id ? recipientName : creatorName
-  }, [creatorName, piece, recipientName, user])
+    return userId === piece.creator_id ? recipientName : creatorName
+  }, [creatorName, piece, recipientName, userId])
   const currentUserName = useMemo(() => {
-    if (!user || !piece) {
+    if (!userId || !piece) {
       return 'You'
     }
-    return user.id === piece.creator_id ? creatorName : recipientName
-  }, [creatorName, piece, recipientName, user])
+    return userId === piece.creator_id ? creatorName : recipientName
+  }, [creatorName, piece, recipientName, userId])
   const category = useMemo(() => toCategorySlug(piece?.category), [piece?.category])
 
   const loadData = useCallback(async () => {
-    if (!id || !user) {
+    if (!id || !userId) {
       return
     }
 
@@ -105,7 +106,7 @@ export default function PieceConfirm() {
       return
     }
 
-    if (pieceRow.creator_id !== user.id && pieceRow.recipient_id !== user.id) {
+    if (pieceRow.creator_id !== userId && pieceRow.recipient_id !== userId) {
       setError('You do not have access to this plan.')
       return
     }
@@ -133,14 +134,14 @@ export default function PieceConfirm() {
       setFlowState,
       setError,
     )
-  }, [id, user])
+  }, [id, userId])
 
   useEffect(() => {
-    if (authLoading || !user || !id) {
+    if (authLoading || !userId || !id) {
       return
     }
     void loadData()
-  }, [authLoading, id, loadData, user])
+  }, [authLoading, id, loadData, userId])
 
   useEffect(() => {
     if (sessionError) {

@@ -33,6 +33,7 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function PieceNew() {
   const { user } = useAuth()
+  const userId = user?.id ?? null
   const location = useLocation()
   const navigate = useNavigate()
   const [connections, setConnections] = useState<ActiveConnection[]>([])
@@ -46,7 +47,7 @@ export default function PieceNew() {
   const locationState = location.state as LocationState | null
 
   const loadConnections = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setConnections([])
       setConnectionsLoading(false)
       return
@@ -57,10 +58,10 @@ export default function PieceNew() {
       .from('connections')
       .select('id, user_a_id, user_b_id')
       .eq('status', 'active')
-      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
     const otherIds = (connectionRows ?? []).map((row) =>
-      row.user_a_id === user.id ? row.user_b_id : row.user_a_id,
+      row.user_a_id === userId ? row.user_b_id : row.user_a_id,
     )
 
     if (otherIds.length === 0) {
@@ -82,7 +83,7 @@ export default function PieceNew() {
 
     setConnections(nextConnections)
     setConnectionsLoading(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     void loadConnections()

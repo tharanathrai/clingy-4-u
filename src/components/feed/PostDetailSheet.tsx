@@ -1,5 +1,6 @@
 import { Heart, Send } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { usePost } from '../../hooks/usePost.ts'
 import { supabase } from '../../lib/supabase.ts'
@@ -9,21 +10,30 @@ import { FeedPostCard } from './FeedPostCard.tsx'
 interface PostDetailSheetProps {
   postId: string | null
   onClose: () => void
+  onActivityChange?: () => void
 }
 
-export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
+export function PostDetailSheet({
+  postId,
+  onClose,
+  onActivityChange,
+}: PostDetailSheetProps) {
   const { user } = useAuth()
+  const userId = user?.id ?? null
+  const navigate = useNavigate()
   const [commentBody, setCommentBody] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const [submittingReaction, setSubmittingReaction] = useState(false)
-  const { post, reactions, comments, loading, error } = usePost({ postId: postId ?? '' })
+  const { post, reactions, comments, loading, error, refetch } = usePost({
+    postId: postId ?? '',
+  })
 
   const hasReacted = useMemo(() => {
-    if (!user) {
+    if (!userId) {
       return false
     }
-    return reactions.some((reaction) => reaction.user_id === user.id)
-  }, [reactions, user])
+    return reactions.some((reaction) => reaction.user_id === userId)
+  }, [reactions, userId])
 
   const recentReactors = useMemo(() => {
     return reactions.slice(0, 5)
@@ -41,6 +51,8 @@ export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
     await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
     })
+    await refetch()
+    onActivityChange?.()
     setSubmittingReaction(false)
   }
 
@@ -58,6 +70,8 @@ export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
       user_id: user.id,
       body: trimmedComment,
     })
+    await refetch()
+    onActivityChange?.()
     setCommentBody('')
     setSubmittingComment(false)
   }
@@ -97,8 +111,10 @@ export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
               <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-2 px-4 py-3">
                 <div className="flex items-center">
                   {recentReactors.map((reaction, index) => (
-                    <span
+                    <button
+                      type="button"
                       key={reaction.id}
+                      onClick={() => navigate(`/profile/${reaction.user.username}`)}
                       className={`relative ${index === 0 ? '' : '-ml-2'}`}
                     >
                       {reaction.user.avatar_url ? (
@@ -112,7 +128,7 @@ export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
                           {reaction.user.display_name.slice(0, 1).toUpperCase()}
                         </span>
                       )}
-                    </span>
+                    </button>
                   ))}
                 </div>
 
@@ -134,7 +150,11 @@ export function PostDetailSheet({ postId, onClose }: PostDetailSheetProps) {
 
               <div className="mt-4 space-y-3">
                 {comments.map((comment) => (
-                  <CommentItem key={comment.id} comment={comment} />
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    onUserPress={() => navigate(`/profile/${comment.user.username}`)}
+                  />
                 ))}
                 {comments.length === 0 ? (
                   <p className="text-sm text-text-2">No comments yet.</p>

@@ -26,10 +26,12 @@ interface UsePostResult {
   comments: CommentWithUser[]
   loading: boolean
   error: string | null
+  refetch: () => Promise<void>
 }
 
 export function usePost({ postId }: UsePostProps): UsePostResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [post, setPost] = useState<PostWithDetails | null>(null)
   const [reactions, setReactions] = useState<ReactionWithUser[]>([])
   const [comments, setComments] = useState<CommentWithUser[]>([])
@@ -38,7 +40,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
   const channelIdRef = useRef(crypto.randomUUID())
 
   const loadPost = useCallback(async () => {
-    if (!user || !postId) {
+    if (!userId || !postId) {
       setPost(null)
       setReactions([])
       setComments([])
@@ -172,7 +174,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
       setComments([])
       setLoading(false)
     }
-  }, [postId, user])
+  }, [postId, userId])
 
   useEffect(() => {
     if (authLoading) {
@@ -182,7 +184,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
   }, [authLoading, loadPost])
 
   useEffect(() => {
-    if (!user || !postId) {
+    if (!userId || !postId) {
       return
     }
 
@@ -229,7 +231,7 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [loadPost, postId, user])
+  }, [loadPost, postId, userId])
 
   return {
     post,
@@ -237,5 +239,6 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
     comments,
     loading: loading || authLoading,
     error,
+    refetch: loadPost,
   }
 }

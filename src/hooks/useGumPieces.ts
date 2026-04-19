@@ -27,19 +27,20 @@ const gumPiecesCache = new Map<string, GumPiece[]>()
 
 export function useGumPieces(): UseGumPiecesResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [pieces, setPieces] = useState<GumPiece[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadPieces = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setPieces([])
       setLoading(false)
       setError(null)
       return
     }
 
-    const cached = gumPiecesCache.get(user.id)
+    const cached = gumPiecesCache.get(userId)
     if (cached) {
       setPieces(cached)
       setLoading(false)
@@ -52,7 +53,7 @@ export function useGumPieces(): UseGumPiecesResult {
       .from('gum_pieces')
       .select('*')
       .in('status', ['placeholder', 'active'])
-      .or(`creator_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      .or(`creator_id.eq.${userId},recipient_id.eq.${userId}`)
       .order('created_at', { ascending: false })
 
     if (queryError) {
@@ -65,10 +66,10 @@ export function useGumPieces(): UseGumPiecesResult {
     }
 
     const nextPieces = (data ?? []) as GumPiece[]
-    gumPiecesCache.set(user.id, nextPieces)
+    gumPiecesCache.set(userId, nextPieces)
     setPieces(nextPieces)
     setLoading(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     if (authLoading) {
@@ -79,12 +80,12 @@ export function useGumPieces(): UseGumPiecesResult {
   }, [authLoading, loadPieces])
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       return
     }
 
     const channel = supabase
-      .channel(`gum-pieces-${user.id}`)
+      .channel(`gum-pieces-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -101,7 +102,7 @@ export function useGumPieces(): UseGumPiecesResult {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [loadPieces, user])
+  }, [loadPieces, userId])
 
   return {
     pieces,

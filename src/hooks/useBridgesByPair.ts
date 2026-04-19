@@ -17,6 +17,7 @@ export function useBridgesByPair({
   otherUserId,
 }: UseBridgesByPairParams): UseBridgesByPairResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +27,7 @@ export function useBridgesByPair({
       return
     }
 
-    if (!user || !otherUserId) {
+    if (!userId || !otherUserId) {
       setBridges([])
       setError(null)
       setLoading(false)
@@ -43,7 +44,7 @@ export function useBridgesByPair({
         .from('bridges')
         .select('*')
         .or(
-          `and(user_a_id.eq.${user.id},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${user.id})`,
+          `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
         )
         .order('formed_at', { ascending: false })
 
@@ -67,7 +68,7 @@ export function useBridgesByPair({
     return () => {
       cancelled = true
     }
-  }, [authLoading, otherUserId, user])
+  }, [authLoading, otherUserId, userId])
 
   return {
     bridges,

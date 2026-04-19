@@ -28,12 +28,13 @@ export function useBridges({
   otherUserId,
 }: UseBridgesParams = {}): UseBridgesResult {
   const { user, loading: authLoading } = useAuth()
+  const userId = user?.id ?? null
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const loadBridges = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setBridges([])
       setError(null)
       setLoading(false)
@@ -46,12 +47,12 @@ export function useBridges({
     let query = supabase
       .from('bridges')
       .select('*')
-      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
       .order('formed_at', { ascending: false })
 
     if (otherUserId) {
       query = query.or(
-        `and(user_a_id.eq.${user.id},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${user.id})`,
+        `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
       )
     }
 
@@ -65,7 +66,7 @@ export function useBridges({
 
     setBridges((data ?? []) as Bridge[])
     setLoading(false)
-  }, [otherUserId, user])
+  }, [otherUserId, userId])
 
   useEffect(() => {
     if (authLoading) {

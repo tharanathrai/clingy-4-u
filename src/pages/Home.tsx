@@ -10,6 +10,7 @@ const connectionsCountCache = new Map<string, number>()
 
 export default function Home() {
   const { user } = useAuth()
+  const userId = user?.id ?? null
   const { pieces, loading, error, refetch } = useGumPieces()
   const navigate = useNavigate()
   const location = useLocation()
@@ -18,13 +19,13 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null)
 
   const loadConnectionsCount = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setConnectionsCount(0)
       setLoadingConnections(false)
       return
     }
 
-    const cachedCount = connectionsCountCache.get(user.id)
+    const cachedCount = connectionsCountCache.get(userId)
     if (typeof cachedCount === 'number') {
       setConnectionsCount(cachedCount)
       setLoadingConnections(false)
@@ -35,13 +36,13 @@ export default function Home() {
       .from('connections')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
-      .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
     const nextCount = count ?? 0
-    connectionsCountCache.set(user.id, nextCount)
+    connectionsCountCache.set(userId, nextCount)
     setConnectionsCount(nextCount)
     setLoadingConnections(false)
-  }, [user])
+  }, [userId])
 
   useEffect(() => {
     void loadConnectionsCount()

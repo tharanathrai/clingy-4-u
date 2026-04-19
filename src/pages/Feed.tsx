@@ -87,7 +87,13 @@ export default function Feed() {
         ) : null}
       </main>
 
-      <PostDetailSheet postId={selectedPostId} onClose={() => setSelectedPostId(null)} />
+      <PostDetailSheet
+        postId={selectedPostId}
+        onClose={() => setSelectedPostId(null)}
+        onActivityChange={() => {
+          void refetch()
+        }}
+      />
     </Layout>
   )
 }
