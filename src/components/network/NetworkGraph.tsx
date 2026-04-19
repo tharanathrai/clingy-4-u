@@ -95,6 +95,7 @@ export function NetworkGraph({
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
   const hasAppliedInitialCameraRef = useRef<null | string>(null)
   const programmaticCameraUntilRef = useRef(0)
+  const zoomEventCountRef = useRef(0)
   const [graphSize, setGraphSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -130,6 +131,9 @@ export function NetworkGraph({
       const bounds = container.getBoundingClientRect()
       const width = Math.round(bounds.width)
       const height = Math.round(bounds.height)
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:updateSize',message:'Measured graph container size',data:{width,height,windowWidth:window.innerWidth,windowHeight:window.innerHeight},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setGraphSize({
         width: width > 0 ? width : window.innerWidth,
         height: height > 0 ? height : window.innerHeight,
@@ -178,6 +182,9 @@ export function NetworkGraph({
       Math.min(1.25, Math.min(usableWidth / diameter, usableHeight / diameter)),
     )
     programmaticCameraUntilRef.current = Date.now() + duration + 120
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter computed camera',data:{duration,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius,selfUserId},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     graphRef.current?.centerAt(0, 0, duration)
     graphRef.current?.zoom(zoom, duration)
     if (selfUserId) {
@@ -208,11 +215,21 @@ export function NetworkGraph({
         Math.abs(cachedCamera.x) <= maxAllowedPan &&
         Math.abs(cachedCamera.y) <= maxAllowedPan
 
+      // #region agent log
+      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Evaluated cached camera for restore',data:{cacheKey,force,selfUserId,cachedCamera:cachedCamera??null,maxAllowedPan,hasValidCamera,hasAppliedInitialCamera:hasAppliedInitialCameraRef.current,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
       if (hasValidCamera && cachedCamera) {
         programmaticCameraUntilRef.current = Date.now() + 200
         graphRef.current?.centerAt(cachedCamera.x, cachedCamera.y, 0)
         graphRef.current?.zoom(cachedCamera.k, 0)
+        // #region agent log
+        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:fitCamera',message:'Applied cached camera',data:{cameraX:cachedCamera.x,cameraY:cachedCamera.y,cameraK:cachedCamera.k},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H4',location:'NetworkGraph.tsx:fitCamera',message:'Falling back to recenter',data:{reason:'invalid-or-missing-cache',selfUserId,cachedCamera:cachedCamera??null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         recenterGraph(0)
       }
 
@@ -361,10 +378,14 @@ export function NetworkGraph({
       }
     }) as GraphNode[]
 
-    return {
+    const result = {
       nodes: graphNodes,
       links: edges as GraphEdge[],
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H5',location:'NetworkGraph.tsx:graphData',message:'Built orbit graph data',data:{nodesCount:result.nodes.length,linksCount:result.links.length,maxOrbitRadius,selfUserId,firstNode:result.nodes[0]?.id??null},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    return result
   }, [edges, nodes])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
@@ -519,7 +540,19 @@ export function NetworkGraph({
           return
         }
         if (Date.now() < programmaticCameraUntilRef.current) {
+          if (zoomEventCountRef.current < 5) {
+            zoomEventCountRef.current += 1
+            // #region agent log
+            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Ignored programmatic zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,programmaticUntil:programmaticCameraUntilRef.current,now:Date.now()},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+          }
           return
+        }
+        if (zoomEventCountRef.current < 10) {
+          zoomEventCountRef.current += 1
+          // #region agent log
+          fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Persisting user zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
         }
         graphCameraCacheByUserId.set(selfUserId, {
           x: cameraPosition.x,
