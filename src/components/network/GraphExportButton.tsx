@@ -1,4 +1,5 @@
 import { Download } from 'lucide-react'
+import html2canvas from 'html2canvas'
 import { useState, type RefObject } from 'react'
 
 interface GraphExportButtonProps {
@@ -25,25 +26,11 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
     setSaving(true)
 
     try {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 100)
+      const snapshot = await html2canvas(graphRef.current, {
+        backgroundColor: '#12101A',
+        useCORS: true,
+        scale: Math.max(window.devicePixelRatio, 2),
       })
-
-      const sourceCanvas = graphRef.current
-      const side = Math.max(sourceCanvas.width, sourceCanvas.height)
-      const snapshot = document.createElement('canvas')
-      snapshot.width = side
-      snapshot.height = side
-      const context = snapshot.getContext('2d')
-      if (!context) {
-        return
-      }
-
-      context.fillStyle = '#12101A'
-      context.fillRect(0, 0, snapshot.width, snapshot.height)
-      const offsetX = (side - sourceCanvas.width) / 2
-      const offsetY = (side - sourceCanvas.height) / 2
-      context.drawImage(sourceCanvas, offsetX, offsetY)
 
       const downloadLink = document.createElement('a')
       downloadLink.href = snapshot.toDataURL('image/png')
@@ -53,7 +40,7 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
       setShowToast(true)
       window.setTimeout(() => {
         setShowToast(false)
-      }, 1800)
+      }, 2000)
     } finally {
       setSaving(false)
     }
@@ -66,7 +53,7 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
         onClick={() => {
           void handleExport()
         }}
-        className="rounded-full border border-white/10 bg-surface px-3 py-2 text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95 disabled:opacity-50"
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-surface text-text-2 transition hover:border-white/20 hover:bg-surface-2 hover:text-text active:scale-95 disabled:opacity-50"
         aria-label="Export graph as image"
         disabled={saving}
       >
@@ -74,7 +61,7 @@ export function GraphExportButton({ graphRef }: GraphExportButtonProps) {
       </button>
       {showToast ? (
         <div className="absolute right-0 top-12 rounded-full bg-surface-2 px-3 py-1 text-xs text-text">
-          Saved to your photos
+          Saved!
         </div>
       ) : null}
     </>

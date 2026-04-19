@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BottomTabBar } from '../components/layout/BottomTabBar.tsx'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
@@ -6,101 +6,83 @@ import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
-import { supabase } from '../lib/supabase.ts'
-import type { Bridge, User } from '../types/index.ts'
+import { useBridges } from '../hooks/useBridges.ts'
+import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
+import type { Bridge } from '../types/index.ts'
 
 export default function Network() {
   const navigate = useNavigate()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [recenterTrigger, setRecenterTrigger] = useState(0)
-  const [graphState, setGraphState] = useState({
-    hasConnections: false,
-    hasBridges: false,
-    loading: true,
-    error: null as string | null,
+  const { nodes, edges, loading, error } = useNetworkGraph()
+  const { bridges: selectedNodeBridges } = useBridges({
+    otherUserId: selectedNodeId ?? undefined,
   })
 
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H7',location:'Network.tsx:selectedStateEffect',message:'Selection state changed',data:{selectedUserId,hasSelectedBridge:Boolean(selectedBridge)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [selectedBridge, selectedUserId])
+  const selectedNode = useMemo(() => {
+    return nodes.find((node) => node.id === selectedNodeId) ?? null
+  }, [nodes, selectedNodeId])
+  const selfNode = useMemo(() => {
+    return nodes.find((node) => node.isSelf) ?? null
+  }, [nodes])
 
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H11',location:'Network.tsx:graphStateEffect',message:'Graph state changed',data:{loading:graphState.loading,error:graphState.error,hasConnections:graphState.hasConnections,hasBridges:graphState.hasBridges},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [graphState.error, graphState.hasBridges, graphState.hasConnections, graphState.loading])
-
-  useEffect(() => {
-    if (!selectedUserId) {
-      setSelectedUser(null)
-      return
+  const selectedNodeSharedBridges = useMemo(() => {
+    if (!selectedNodeId) {
+      return []
     }
+    return selectedNodeBridges.filter((bridge) => {
+      return bridge.user_a_id === selectedNodeId || bridge.user_b_id === selectedNodeId
+    })
+  }, [selectedNodeBridges, selectedNodeId])
 
-    let cancelled = false
-
-    const loadSelectedUser = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', selectedUserId)
-        .maybeSingle()
-
-      if (!cancelled) {
-        setSelectedUser((data ?? null) as User | null)
-      }
-    }
-
-    void loadSelectedUser()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedUserId])
+  const hasConnections = nodes.some((node) => !node.isSelf)
+  const hasBridges = edges.length > 0
 
   const handleRecenter = () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock',hypothesisId:'H5',location:'Network.tsx:handleRecenter',message:'Recenter requested',data:{selectedUserIdBefore:selectedUserId,hadBridgeBefore:Boolean(selectedBridge),recenterTriggerBefore:recenterTrigger},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    setSelectedUserId(null)
+    setSelectedNodeId(null)
     setSelectedBridge(null)
     setRecenterTrigger((value) => value + 1)
   }
 
   return (
-    <div className="relative mx-auto h-screen w-full max-w-md overflow-hidden bg-bg text-text">
-      <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 pt-6">
-        <h1 className="font-display text-2xl text-text">your network</h1>
-        <div className="relative flex items-center gap-2">
+    <div className="relative h-screen w-screen overflow-hidden bg-bg text-text">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between px-5 pt-6">
+        <h1 className="pointer-events-auto font-display text-[18px] text-text">your network</h1>
+        <div className="pointer-events-auto relative flex flex-col items-center gap-2">
           <RecenterGraphButton
             onRecenter={handleRecenter}
-            disabled={graphState.loading || !!graphState.error}
+            disabled={loading || !!error || !hasConnections}
           />
           <GraphExportButton graphRef={graphCanvasRef} />
         </div>
       </header>
 
-      <main className="h-full w-full">
-        <NetworkGraph
-          onNodeSelect={(userId) => {
-            setSelectedUserId(userId)
-            setSelectedBridge(null)
-          }}
-          selectedUserId={selectedUserId}
-          onBridgeSelect={(bridge) => {
-            setSelectedBridge(bridge)
-          }}
-          onGraphStateChange={setGraphState}
-          graphCanvasRef={graphCanvasRef}
-          recenterTrigger={recenterTrigger}
-        />
+      <main className="h-screen w-screen">
+        {hasConnections || loading || error ? (
+          <NetworkGraph
+            nodes={nodes}
+            edges={edges}
+            loading={loading}
+            error={error}
+            selectedNodeId={selectedNodeId}
+            onNodeSelect={(userId) => {
+              setSelectedNodeId(userId)
+              setSelectedBridge(null)
+            }}
+            onBridgeSelect={setSelectedBridge}
+            onBackgroundClick={() => {
+              setSelectedNodeId(null)
+              setSelectedBridge(null)
+            }}
+            graphCanvasRef={graphCanvasRef}
+            recenterTrigger={recenterTrigger}
+          />
+        ) : null}
 
-        {!graphState.loading && !graphState.hasConnections ? (
-          <section className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-8 text-center">
+        {!loading && !hasConnections ? (
+          <section className="absolute inset-0 z-10 flex items-center justify-center px-8 text-center">
             <div className="pointer-events-auto">
               <h2 className="font-display text-3xl text-text">No bridges yet.</h2>
               <p className="mt-3 text-sm text-text-2">
@@ -116,36 +98,39 @@ export default function Network() {
           </section>
         ) : null}
 
-        {!graphState.loading &&
-        graphState.hasConnections &&
-        !graphState.hasBridges ? (
-          <div className="pointer-events-none absolute inset-x-0 top-24 z-10 flex justify-center px-6 text-center">
-            <p className="rounded-full bg-surface/80 px-4 py-2 text-xs text-text-2 backdrop-blur">
+        {!loading && hasConnections && !hasBridges ? (
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-10 mt-11 flex justify-center px-6 text-center">
+            <p className="max-w-xs text-sm text-text-3">
               Make a plan. Show up. Bridges form here.
             </p>
           </div>
         ) : null}
       </main>
 
-      {selectedBridge ? (
-        <BridgeDetailSheet
-          bridge={selectedBridge}
-          otherUser={selectedUser}
-          onClose={() => {
-            setSelectedBridge(null)
-          }}
-        />
-      ) : selectedUserId ? (
-        <NodeProfileSheet
-          userId={selectedUserId}
-          onClose={() => {
-            setSelectedUserId(null)
-          }}
-          onViewProfile={(username) => {
-            navigate(`/profile/${username}`)
-          }}
-        />
-      ) : null}
+      <BridgeDetailSheet
+        bridge={selectedBridge}
+        currentUser={selfNode?.user ?? null}
+        otherUser={selectedNode?.user ?? null}
+        open={Boolean(selectedBridge)}
+        onClose={() => {
+          setSelectedBridge(null)
+        }}
+        onBackToNode={() => {
+          setSelectedBridge(null)
+        }}
+      />
+
+      <NodeProfileSheet
+        node={selectedBridge ? null : selectedNode}
+        bridges={selectedNodeSharedBridges}
+        onClose={() => {
+          setSelectedNodeId(null)
+          setSelectedBridge(null)
+        }}
+        onViewProfile={(username) => {
+          navigate(`/profile/${username}`)
+        }}
+      />
 
       <BottomTabBar />
     </div>
