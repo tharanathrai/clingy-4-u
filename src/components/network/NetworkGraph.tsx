@@ -520,95 +520,90 @@ export function NetworkGraph({
     ctx.stroke()
   }
 
-  if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
-        Loading your network...
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
-        Something went wrong loading your network.
-      </div>
-    )
-  }
-
   return (
     <div ref={graphContainerRef} className="h-full w-full">
-    <ForceGraph2D<GraphNode, GraphEdge>
-      ref={graphRef}
-      width={graphSize.width}
-      height={graphSize.height}
-      graphData={graphData}
-      backgroundColor="#12101A"
-      d3AlphaDecay={0.02}
-      d3VelocityDecay={0.3}
-      minZoom={MIN_GRAPH_ZOOM}
-      maxZoom={MAX_GRAPH_ZOOM}
-      onZoom={(cameraPosition) => {
-        if (!selfUserId) {
-          return
-        }
-        if (Date.now() < programmaticCameraUntilRef.current) {
-          if (zoomEventCountRef.current < 5) {
-            zoomEventCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Ignored programmatic zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,programmaticUntil:programmaticCameraUntilRef.current,now:Date.now()},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
+      {error ? (
+        <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
+          Something went wrong loading your network.
+        </div>
+      ) : null}
+      {loading || graphSize.width <= 0 || graphSize.height <= 0 ? (
+        <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
+          Loading your network...
+        </div>
+      ) : (
+        <ForceGraph2D<GraphNode, GraphEdge>
+          ref={graphRef}
+          width={graphSize.width}
+          height={graphSize.height}
+          graphData={graphData}
+          backgroundColor="#12101A"
+          d3AlphaDecay={0.02}
+          d3VelocityDecay={0.3}
+          minZoom={MIN_GRAPH_ZOOM}
+          maxZoom={MAX_GRAPH_ZOOM}
+          onZoom={(cameraPosition) => {
+            if (!selfUserId) {
+              return
+            }
+            if (Date.now() < programmaticCameraUntilRef.current) {
+              if (zoomEventCountRef.current < 5) {
+                zoomEventCountRef.current += 1
+                // #region agent log
+                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Ignored programmatic zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,programmaticUntil:programmaticCameraUntilRef.current,now:Date.now()},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+              }
+              return
+            }
+            if (zoomEventCountRef.current < 10) {
+              zoomEventCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Persisting user zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
+            graphCameraCacheByUserId.set(selfUserId, {
+              x: cameraPosition.x,
+              y: cameraPosition.y,
+              k: cameraPosition.k,
+            })
+          }}
+          linkVisibility={(link) => {
+            if (!selectedUserId) {
+              return false
+            }
+            const sourceId =
+              typeof link.source === 'string' ? link.source : link.source.id
+            const targetId =
+              typeof link.target === 'string' ? link.target : link.target.id
+            return sourceId === selectedUserId || targetId === selectedUserId
+          }}
+          nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
+          nodePointerAreaPaint={(node, color, ctx) =>
+            nodePointerAreaPaint(node as GraphNode, color, ctx)
           }
-          return
-        }
-        if (zoomEventCountRef.current < 10) {
-          zoomEventCountRef.current += 1
-          // #region agent log
-          fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H2',location:'NetworkGraph.tsx:onZoom',message:'Persisting user zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-        }
-        graphCameraCacheByUserId.set(selfUserId, {
-          x: cameraPosition.x,
-          y: cameraPosition.y,
-          k: cameraPosition.k,
-        })
-      }}
-      linkVisibility={(link) => {
-        if (!selectedUserId) {
-          return false
-        }
-        const sourceId =
-          typeof link.source === 'string' ? link.source : link.source.id
-        const targetId =
-          typeof link.target === 'string' ? link.target : link.target.id
-        return sourceId === selectedUserId || targetId === selectedUserId
-      }}
-      nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
-      nodePointerAreaPaint={(node, color, ctx) =>
-        nodePointerAreaPaint(node as GraphNode, color, ctx)
-      }
-      linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
-      linkHoverPrecision={8}
-      onNodeClick={(node) => {
-        const selectedNode = node as GraphNode
-        onNodeSelect(selectedNode.id)
-        onBridgeSelect?.(null)
-      }}
-      onNodeHover={(node) => {
-        setHoveredNodeId((node as GraphNode | null)?.id ?? null)
-      }}
-      onLinkHover={(link) => {
-        setHoveredEdgeId((link as GraphEdge | null)?.id ?? null)
-      }}
-      onLinkClick={(link) => {
-        const selectedEdge = link as GraphEdge
-        onBridgeSelect?.(selectedEdge.bridge)
-      }}
-      onBackgroundClick={() => {
-        onNodeSelect(null)
-        onBridgeSelect?.(null)
-      }}
-    />
+          linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
+          linkHoverPrecision={8}
+          onNodeClick={(node) => {
+            const selectedNode = node as GraphNode
+            onNodeSelect(selectedNode.id)
+            onBridgeSelect?.(null)
+          }}
+          onNodeHover={(node) => {
+            setHoveredNodeId((node as GraphNode | null)?.id ?? null)
+          }}
+          onLinkHover={(link) => {
+            setHoveredEdgeId((link as GraphEdge | null)?.id ?? null)
+          }}
+          onLinkClick={(link) => {
+            const selectedEdge = link as GraphEdge
+            onBridgeSelect?.(selectedEdge.bridge)
+          }}
+          onBackgroundClick={() => {
+            onNodeSelect(null)
+            onBridgeSelect?.(null)
+          }}
+        />
+      )}
     </div>
   )
 }
