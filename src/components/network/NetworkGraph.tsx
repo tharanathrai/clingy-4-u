@@ -83,6 +83,9 @@ export function NetworkGraph({
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
   const initialViewAppliedRef = useRef(false)
   const clampedTickLogCountRef = useRef(0)
+  const zoomTraceLogCountRef = useRef(0)
+  const overlapLogCountRef = useRef(0)
+  const lastOverlapLogAtRef = useRef(0)
   const [graphSize, setGraphSize] = useState({
     width: 0,
     height: 0,
@@ -267,6 +270,24 @@ export function NetworkGraph({
       error,
     })
   }, [edges.length, error, loading, nodes, onGraphStateChange])
+
+  useEffect(() => {
+    if (nodes.length === 0) {
+      return
+    }
+
+    const visibleLinksCount = selectedUserId
+      ? edges.filter(
+          (edge) =>
+            edge.bridge.user_a_id === selectedUserId ||
+            edge.bridge.user_b_id === selectedUserId,
+        ).length
+      : 0
+
+    // #region agent log
+    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H15',location:'NetworkGraph.tsx:visibleLinks',message:'Computed visible links for current selection',data:{selectedUserId,edgesTotal:edges.length,visibleLinksCount,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, [edges, nodes.length, selectedUserId])
 
   useEffect(() => {
     if (!graphCanvasRef || !graphContainerRef.current) {
@@ -531,7 +552,12 @@ export function NetworkGraph({
           maxZoom={MAX_GRAPH_ZOOM}
           cooldownTicks={Infinity}
           onZoom={(cameraPosition) => {
-            void cameraPosition
+            if (zoomTraceLogCountRef.current < 10) {
+              zoomTraceLogCountRef.current += 1
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H12',location:'NetworkGraph.tsx:onZoom',message:'Observed camera pan/zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,graphWidth:graphSize.width,graphHeight:graphSize.height,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
           }}
           linkVisibility={(link) => {
             if (!selectedUserId) {
@@ -574,6 +600,8 @@ export function NetworkGraph({
             const minNodeY = -(maxOrbitRadius + 80)
             const maxNodeY = maxOrbitRadius + 130
             let clampedCount = 0
+            let overlapPairs = 0
+            let minDistance = Number.POSITIVE_INFINITY
 
             for (const node of graphNodes) {
               if (node.isSelf) {
@@ -604,10 +632,40 @@ export function NetworkGraph({
               }
             }
 
+            for (let i = 0; i < graphNodes.length; i += 1) {
+              for (let j = i + 1; j < graphNodes.length; j += 1) {
+                const first = graphNodes[i]
+                const second = graphNodes[j]
+                if (
+                  typeof first.x !== 'number' ||
+                  typeof first.y !== 'number' ||
+                  typeof second.x !== 'number' ||
+                  typeof second.y !== 'number'
+                ) {
+                  continue
+                }
+                const distance = Math.hypot(first.x - second.x, first.y - second.y)
+                minDistance = Math.min(minDistance, distance)
+                if (distance < 36) {
+                  overlapPairs += 1
+                }
+              }
+            }
+
             if (clampedCount > 0 && clampedTickLogCountRef.current < 6) {
               clampedTickLogCountRef.current += 1
               // #region agent log
               fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H11',location:'NetworkGraph.tsx:onEngineTick',message:'Clamped nodes inside world bounds',data:{clampedCount,maxNodeX,minNodeY,maxNodeY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
+              // #endregion
+            }
+            if (
+              overlapLogCountRef.current < 6 &&
+              Date.now() - lastOverlapLogAtRef.current > 1200
+            ) {
+              overlapLogCountRef.current += 1
+              lastOverlapLogAtRef.current = Date.now()
+              // #region agent log
+              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H13',location:'NetworkGraph.tsx:onEngineTick',message:'Measured overlap density',data:{overlapPairs,minDistance:minDistance===Number.POSITIVE_INFINITY?null:minDistance,nodesCount:graphNodes.length,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
               // #endregion
             }
           }}
