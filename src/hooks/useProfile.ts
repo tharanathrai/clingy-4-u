@@ -63,17 +63,17 @@ export function useProfile({
     const loadProfile = async () => {
       setLoading(true)
       setError(null)
-      setProfile(null)
-      setBridgeCount(0)
-      setConnectionCount(0)
-      setCategoryBreakdown(createEmptyCategoryBreakdown())
-      setSharedBridges([])
-      setIsConnected(false)
 
       const fallbackProfileId = !normalizedUsername ? viewer?.id ?? '' : ''
       const profileIdOrUsername = normalizedUserId || normalizedUsername || fallbackProfileId
       if (!profileIdOrUsername) {
         if (!cancelled) {
+          setProfile(null)
+          setBridgeCount(0)
+          setConnectionCount(0)
+          setCategoryBreakdown(createEmptyCategoryBreakdown())
+          setSharedBridges([])
+          setIsConnected(false)
           setError('Profile not found.')
           setLoading(false)
         }

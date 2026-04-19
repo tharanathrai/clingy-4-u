@@ -190,25 +190,23 @@ export function NetworkGraph({
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      if (hasAppliedInitialCameraRef.current) {
+    const fitCamera = (force = false) => {
+      if (hasAppliedInitialCameraRef.current && !force) {
         return
       }
 
-      const padding = graphSize.width < 640 ? 28 : 80
-      const usableWidth = Math.max(1, graphSize.width - padding * 2)
-      const usableHeight = Math.max(1, graphSize.height - padding * 2)
-      const diameter = Math.max(120, maxSelfRadius * 2)
-      const zoom = Math.max(0.55, Math.min(1.3, Math.min(usableWidth / diameter, usableHeight / diameter)))
-
-      graphRef.current?.centerAt(0, 0, 0)
-      graphRef.current?.zoom(zoom, 0)
+      const padding = graphSize.width < 640 ? 30 : 80
+      graphRef.current?.zoomToFit(250, padding)
 
       hasAppliedInitialCameraRef.current = true
-    }, 60)
+    }
+
+    const timeoutId = window.setTimeout(() => fitCamera(false), 80)
+    const secondPassTimeoutId = window.setTimeout(() => fitCamera(true), 420)
 
     return () => {
       window.clearTimeout(timeoutId)
+      window.clearTimeout(secondPassTimeoutId)
     }
   }, [error, graphSize.height, graphSize.width, loading, maxSelfRadius, nodes.length])
 
@@ -455,6 +453,7 @@ export function NetworkGraph({
       (node) => typeof node.x === 'number' && typeof node.y === 'number',
     )
     const minimumDistance = 110
+    const maxDistanceFromCenter = Math.max(220, maxSelfRadius + 120)
 
     for (let i = 0; i < positionedNodes.length; i += 1) {
       for (let j = i + 1; j < positionedNodes.length; j += 1) {
@@ -480,6 +479,15 @@ export function NetworkGraph({
     }
 
     for (const node of positionedNodes) {
+      if (!node.isSelf && typeof node.x === 'number' && typeof node.y === 'number') {
+        const distanceFromCenter = Math.hypot(node.x, node.y)
+        if (distanceFromCenter > maxDistanceFromCenter) {
+          const ratio = maxDistanceFromCenter / distanceFromCenter
+          node.x *= ratio
+          node.y *= ratio
+        }
+      }
+
       if (typeof node.x === 'number' && typeof node.y === 'number') {
         nodePositionCacheRef.current[node.id] = {
           x: node.x,

@@ -23,6 +23,7 @@ export default function ProfileMe() {
   const [isEditing, setIsEditing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [generatingBio, setGeneratingBio] = useState(false)
+  const [attemptedBioGeneration, setAttemptedBioGeneration] = useState(false)
 
   useEffect(() => {
     if (!toast) {
@@ -37,12 +38,22 @@ export default function ProfileMe() {
   }, [toast])
 
   useEffect(() => {
+    if (profile?.bio) {
+      setAttemptedBioGeneration(false)
+    }
+  }, [profile?.bio])
+
+  useEffect(() => {
     if (!profile || profile.bio || generatingBio) {
+      return
+    }
+    if (attemptedBioGeneration) {
       return
     }
 
     let cancelled = false
     const generateBio = async () => {
+      setAttemptedBioGeneration(true)
       setGeneratingBio(true)
       const { data, error: invokeError } =
         await supabase.functions.invoke('generate-profile-bio')
@@ -62,7 +73,7 @@ export default function ProfileMe() {
     return () => {
       cancelled = true
     }
-  }, [generatingBio, profile, refetch])
+  }, [attemptedBioGeneration, generatingBio, profile, refetch])
 
   const categoriesWithBridges = useMemo(() => {
     return Object.keys(CATEGORIES)
