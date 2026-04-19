@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import { forceCollide } from 'd3-force'
 import ForceGraph2D, {
   type ForceGraphMethods,
 } from 'react-force-graph-2d'
@@ -192,6 +193,10 @@ export function NetworkGraph({
       | { strength?: (value: number) => void }
       | undefined
     chargeForce?.strength?.(-110)
+    graphRef.current.d3Force(
+      'collide',
+      forceCollide<GraphNode>((node) => (node.isSelf ? 34 : 30)).strength(0.95),
+    )
 
     const centerForce = graphRef.current.d3Force('center') as
       | {
@@ -552,6 +557,39 @@ export function NetworkGraph({
           maxZoom={MAX_GRAPH_ZOOM}
           cooldownTicks={Infinity}
           onZoom={(cameraPosition) => {
+            const worldLeft = -(maxOrbitRadius + 120)
+            const worldRight = maxOrbitRadius + 120
+            const worldTop = -(maxOrbitRadius + 80)
+            const worldBottom = maxOrbitRadius + 130
+            const halfViewportWidth = graphSize.width / (2 * Math.max(cameraPosition.k, 0.0001))
+            const halfViewportHeight = graphSize.height / (2 * Math.max(cameraPosition.k, 0.0001))
+            const minCameraX = worldLeft + halfViewportWidth
+            const maxCameraX = worldRight - halfViewportWidth
+            const minCameraY = worldTop + halfViewportHeight
+            const maxCameraY = worldBottom - halfViewportHeight
+            const clampedCameraX =
+              minCameraX <= maxCameraX
+                ? Math.max(minCameraX, Math.min(maxCameraX, cameraPosition.x))
+                : 0
+            const clampedCameraY =
+              minCameraY <= maxCameraY
+                ? Math.max(minCameraY, Math.min(maxCameraY, cameraPosition.y))
+                : 24
+
+            if (
+              clampedCameraX !== cameraPosition.x ||
+              clampedCameraY !== cameraPosition.y
+            ) {
+              graphRef.current?.centerAt(clampedCameraX, clampedCameraY, 0)
+              if (zoomTraceLogCountRef.current < 10) {
+                zoomTraceLogCountRef.current += 1
+                // #region agent log
+                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H12',location:'NetworkGraph.tsx:onZoom',message:'Clamped camera viewport movement',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,clampedCameraX,clampedCameraY,cameraK:cameraPosition.k,worldLeft,worldRight,worldTop,worldBottom,halfViewportWidth,halfViewportHeight},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+              }
+              return
+            }
+
             if (zoomTraceLogCountRef.current < 10) {
               zoomTraceLogCountRef.current += 1
               // #region agent log
@@ -560,14 +598,8 @@ export function NetworkGraph({
             }
           }}
           linkVisibility={(link) => {
-            if (!selectedUserId) {
-              return false
-            }
-            const sourceId =
-              typeof link.source === 'string' ? link.source : link.source.id
-            const targetId =
-              typeof link.target === 'string' ? link.target : link.target.id
-            return sourceId === selectedUserId || targetId === selectedUserId
+            void link
+            return true
           }}
           nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
           nodePointerAreaPaint={(node, color, ctx) =>
