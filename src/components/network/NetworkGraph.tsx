@@ -70,21 +70,7 @@ export function NetworkGraph({
   const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
-  const zoomClampLogCountRef = useRef(0)
-  const interactionLogCountRef = useRef(0)
   const hasAppliedInitialRecenterRef = useRef(false)
-  const containerPointerLogCountRef = useRef(0)
-
-  useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H10',location:'NetworkGraph.tsx:mountEffect',message:'NetworkGraph mounted',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H10',location:'NetworkGraph.tsx:mountEffect',message:'NetworkGraph unmounted',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-    }
-  }, [])
 
   useEffect(() => {
     for (const node of nodes) {
@@ -106,9 +92,6 @@ export function NetworkGraph({
         return
       }
       const bounds = container.getBoundingClientRect()
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H2',location:'NetworkGraph.tsx:updateSize',message:'Graph container measured',data:{width:Math.round(bounds.width),height:Math.round(bounds.height)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setGraphSize({
         width: Math.max(0, Math.round(bounds.width)),
         height: Math.max(0, Math.round(bounds.height)),
@@ -149,7 +132,7 @@ export function NetworkGraph({
     }
   }, [nodes])
 
-  const recenterGraph = (duration = 240, reason = 'unknown') => {
+  const recenterGraph = (duration = 240) => {
     const bounds = graphContainerRef.current?.getBoundingClientRect()
     const width = Math.round(bounds?.width ?? graphSize.width)
     const height = Math.round(bounds?.height ?? graphSize.height)
@@ -169,10 +152,6 @@ export function NetworkGraph({
         Math.min(usableWidth / Math.max(1, worldWidth), usableHeight / Math.max(1, worldHeight)),
       ),
     )
-
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:recenterGraph',message:'Recenter invoked',data:{reason,duration,width,height,zoom,worldBounds,loading,error,nodesCount:nodes.length,recenterTrigger},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     graphRef.current?.centerAt(0, 20, duration)
     graphRef.current?.zoom(zoom, duration)
@@ -219,23 +198,14 @@ export function NetworkGraph({
     }
 
     hasAppliedInitialRecenterRef.current = true
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'post-fix',hypothesisId:'H1',location:'NetworkGraph.tsx:initialRecenterEffect',message:'Initial recenter applied immediately',data:{graphSize,nodesCount:nodes.length,worldRadius:worldBounds.maxRadius},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    recenterGraph(0, 'initial-ready-effect')
+    recenterGraph(0)
   }, [error, graphSize.height, graphSize.width, loading, nodes.length, worldBounds.maxRadius])
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H12',location:'NetworkGraph.tsx:recenterTriggerEffect',message:'Recenter effect entered',data:{recenterTrigger,hasGraphRef:Boolean(graphRef.current),loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H1',location:'NetworkGraph.tsx:recenterTriggerEffect',message:'Recenter trigger effect fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    recenterGraph(220, 'recenter-trigger-effect')
+    recenterGraph(220)
   }, [recenterTrigger])
 
   useEffect(() => {
@@ -452,19 +422,7 @@ export function NetworkGraph({
   }
 
   return (
-    <div
-      ref={graphContainerRef}
-      className="h-full w-full"
-      onPointerDown={() => {
-        if (containerPointerLogCountRef.current >= 6) {
-          return
-        }
-        containerPointerLogCountRef.current += 1
-        // #region agent log
-        fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-3',hypothesisId:'H11',location:'NetworkGraph.tsx:containerPointerDown',message:'Graph container pointer down',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
-      }}
-    >
+    <div ref={graphContainerRef} className="h-full w-full">
       <ForceGraph2D<GraphNode, GraphEdge>
         ref={graphRef}
         width={graphSize.width}
@@ -499,12 +457,6 @@ export function NetworkGraph({
               : 20
 
           if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
-            if (zoomClampLogCountRef.current < 4) {
-              zoomClampLogCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'initial-load',hypothesisId:'H3',location:'NetworkGraph.tsx:onZoom',message:'Camera clamp applied',data:{cameraPosition,clampedX,clampedY,graphSize,worldBounds},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
-            }
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
@@ -517,12 +469,6 @@ export function NetworkGraph({
         linkHoverPrecision={8}
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
-          if (interactionLogCountRef.current < 8) {
-            interactionLogCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeClick',message:'Node click received',data:{nodeId:selectedNode.id,isSelf:selectedNode.isSelf,recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-          }
           if (selectedNode.isSelf) {
             onNodeSelect(null)
             onBridgeSelect?.(null)
@@ -541,12 +487,6 @@ export function NetworkGraph({
           onBridgeSelect?.((link as GraphEdge).bridge)
         }}
         onBackgroundClick={() => {
-          if (interactionLogCountRef.current < 8) {
-            interactionLogCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onBackgroundClick',message:'Background click received',data:{recenterTrigger,selectedUserId},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-          }
           onNodeSelect(null)
           onBridgeSelect?.(null)
         }}
@@ -616,13 +556,6 @@ export function NetworkGraph({
             return
           }
 
-          if (interactionLogCountRef.current < 8) {
-            interactionLogCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDrag',message:'Node drag received',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-          }
-
           if (selectedUserId !== dragged.id) {
             onNodeSelect(dragged.id)
             onBridgeSelect?.(null)
@@ -641,13 +574,6 @@ export function NetworkGraph({
             dragged.fx = 0
             dragged.fy = 0
             return
-          }
-
-          if (interactionLogCountRef.current < 8) {
-            interactionLogCountRef.current += 1
-            // #region agent log
-            fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ae4bc5'},body:JSON.stringify({sessionId:'ae4bc5',runId:'interaction-lock-2',hypothesisId:'H6',location:'NetworkGraph.tsx:onNodeDragEnd',message:'Node drag ended',data:{nodeId:dragged.id,recenterTrigger,selectedUserId,x:dragged.x,y:dragged.y,fx:dragged.fx,fy:dragged.fy},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
           }
 
           dragged.fx = undefined
