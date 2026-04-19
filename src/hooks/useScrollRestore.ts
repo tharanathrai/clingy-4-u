@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 export function useScrollRestore(storageKey: string, restoreTrigger?: unknown) {
+  const lastScrollYRef = useRef(0)
+
   useEffect(() => {
     const restore = () => {
       const saved = window.sessionStorage.getItem(storageKey)
@@ -14,6 +16,7 @@ export function useScrollRestore(storageKey: string, restoreTrigger?: unknown) {
         document.documentElement.scrollHeight - window.innerHeight,
       )
       const targetY = Math.min(nextY, maxScrollableY)
+      lastScrollYRef.current = targetY
       window.scrollTo(0, targetY)
     }
 
@@ -26,14 +29,15 @@ export function useScrollRestore(storageKey: string, restoreTrigger?: unknown) {
 
   useEffect(() => {
     const onScroll = () => {
-      window.sessionStorage.setItem(storageKey, String(window.scrollY))
+      lastScrollYRef.current = window.scrollY
+      window.sessionStorage.setItem(storageKey, String(lastScrollYRef.current))
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.sessionStorage.setItem(storageKey, String(window.scrollY))
+      window.sessionStorage.setItem(storageKey, String(lastScrollYRef.current))
     }
   }, [storageKey])
 }
