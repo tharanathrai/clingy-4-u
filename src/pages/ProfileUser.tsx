@@ -1,68 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { useMemo } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
-import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
+import { SharedBridgesSection } from '../components/profile/SharedBridgesSection.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
-import { supabase } from '../lib/supabase.ts'
-import type { User } from '../types/index.ts'
 
-export default function ProfileMe() {
-  const { user, loading } = useAuth()
+export default function ProfileUser() {
+  const { username } = useParams<{ username: string }>()
+  const { user, loading: authLoading } = useAuth()
   const {
     profile,
     connectionCount,
     categoryBreakdown,
     bridgeCount,
-    loading: profileLoading,
+    sharedBridges,
+    isConnected,
+    loading,
     error,
-    refetch,
-  } = useProfile({ userId: user?.id })
-  const [isEditing, setIsEditing] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-  const [generatingBio, setGeneratingBio] = useState(false)
-
-  useEffect(() => {
-    if (!toast) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setToast(null)
-    }, 2500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
-
-  useEffect(() => {
-    if (!profile || profile.bio || generatingBio) {
-      return
-    }
-
-    let cancelled = false
-    const generateBio = async () => {
-      setGeneratingBio(true)
-      const { data, error: invokeError } =
-        await supabase.functions.invoke('generate-profile-bio')
-
-      if (cancelled) {
-        return
-      }
-
-      if (!invokeError && data) {
-        refetch()
-      }
-      setGeneratingBio(false)
-    }
-
-    void generateBio()
-
-    return () => {
-      cancelled = true
-    }
-  }, [generatingBio, profile, refetch])
+  } = useProfile({ username })
 
   const categoriesWithBridges = useMemo(() => {
     return Object.keys(CATEGORIES)
@@ -71,7 +28,7 @@ export default function ProfileMe() {
       .sort((a, b) => categoryBreakdown[b] - categoryBreakdown[a])
   }, [categoryBreakdown])
 
-  if (loading || profileLoading) {
+  if (authLoading || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading profile...</p>
@@ -86,18 +43,20 @@ export default function ProfileMe() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
-        <h1 className="font-display text-4xl">My profile</h1>
-        <p className="mt-4 text-sm text-text-2">
-          {error ?? 'Profile not found. Complete onboarding first.'}
-        </p>
+        <h1 className="font-display text-4xl">Profile</h1>
+        <p className="mt-4 text-sm text-text-2">{error ?? 'Profile not found.'}</p>
         <Link
-          to="/welcome"
+          to="/home"
           className="mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
         >
-          Finish onboarding
+          Back home
         </Link>
       </main>
     )
+  }
+
+  if (profile.id === user.id) {
+    return <Navigate to="/profile/me" replace />
   }
 
   return (
@@ -117,17 +76,17 @@ export default function ProfileMe() {
         <h1 className="mt-3 font-display text-2xl">{profile.display_name}</h1>
         <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
         <p className="mt-3 text-sm italic text-text-2">
-          {profile.bio ?? (generatingBio ? 'Generating your bio...' : 'New here — no bridges yet.')}
+          {profile.bio ?? 'New here — no bridges yet.'}
         </p>
-        <button
-          type="button"
-          className="mt-4 rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-        >
-          Edit profile
-        </button>
+
+        {!isConnected ? (
+          <Link
+            to="/add"
+            className="mt-4 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white"
+          >
+            Add {profile.display_name}
+          </Link>
+        ) : null}
       </section>
 
       <section className="mt-8 flex flex-col items-center">
@@ -153,30 +112,9 @@ export default function ProfileMe() {
         </section>
       ) : null}
 
-      <div className="mt-10">
-        <Link to="/home/graveyard" className="text-sm text-text-3">
-          graveyard →
-        </Link>
-      </div>
-
-      {toast ? (
-        <p className="fixed inset-x-5 bottom-24 rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
-          {toast}
-        </p>
+      {isConnected ? (
+        <SharedBridgesSection bridges={sharedBridges} otherUser={profile} />
       ) : null}
-
-      <EditProfileSheet
-        profile={profile}
-        isOpen={isEditing}
-        onClose={() => {
-          setIsEditing(false)
-        }}
-        onSaved={(_updatedProfile: User) => {
-          setIsEditing(false)
-          setToast('Profile updated.')
-          refetch()
-        }}
-      />
     </main>
   )
 }

@@ -1,5 +1,3 @@
-import { PageStub } from './PageStub.tsx'
+import ProfileUser from './ProfileUser.tsx'
 
-export default function Profile() {
-  return <PageStub title="Profile" />
-}
+export default ProfileUser

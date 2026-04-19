@@ -4,6 +4,9 @@ verify_jwt = false
 [functions.create-gum-piece]
 verify_jwt = false
 
+[functions.generate-profile-bio]
+verify_jwt = false
+
 [functions.generate-qr-token]
 verify_jwt = false
 
