@@ -272,7 +272,11 @@ export function PostDetailSheet({
                   <CommentItem
                     key={comment.id}
                     comment={comment}
-                    onUserPress={() => navigate(`/profile/${comment.user.username}`)}
+                    onUserPress={
+                      comment.user.username && comment.user.username !== 'me'
+                        ? () => navigate(`/profile/${comment.user.username}`)
+                        : undefined
+                    }
                   />
                 ))}
                 {displayedComments.length === 0 ? (

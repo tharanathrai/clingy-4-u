@@ -113,6 +113,7 @@ export default function ProfileMe() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+      <h1 className="app-page-title">your profile</h1>
       <section className="flex flex-col items-center text-center">
         {profile.avatar_url ? (
           <img
@@ -125,7 +126,7 @@ export default function ProfileMe() {
             {profile.display_name.slice(0, 1).toUpperCase()}
           </div>
         )}
-        <h1 className="app-page-title mt-3">{profile.display_name}</h1>
+        <h2 className="mt-3 font-display text-2xl text-text">{profile.display_name}</h2>
         <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
         <p className="mt-3 text-sm italic text-text-2">
           {profile.bio ?? (generatingBio ? 'Generating your bio...' : 'New here — no bridges yet.')}

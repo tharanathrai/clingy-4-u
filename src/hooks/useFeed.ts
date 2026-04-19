@@ -24,6 +24,8 @@ interface ConnectionRow {
   user_b_id: string
 }
 
+const feedCache = new Map<string, FeedPost[]>()
+
 export function useFeed(): UseFeedResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
@@ -42,10 +44,16 @@ export function useFeed(): UseFeedResult {
       setPosts([])
       setError(null)
       setLoading(false)
+      hasLoadedRef.current = false
       return
     }
 
-    if (!hasLoadedRef.current) {
+    const cachedFeed = feedCache.get(userId)
+    if (cachedFeed) {
+      setPosts(cachedFeed)
+      setLoading(false)
+      hasLoadedRef.current = true
+    } else if (!hasLoadedRef.current) {
       setLoading(true)
     }
     setError(null)
@@ -107,6 +115,7 @@ export function useFeed(): UseFeedResult {
 
       if (dedupedPosts.length === 0) {
         setPosts([])
+        feedCache.set(userId, [])
         setLoading(false)
         hasLoadedRef.current = true
         return
@@ -205,6 +214,7 @@ export function useFeed(): UseFeedResult {
         .filter((post): post is FeedPost => post !== null)
 
       setPosts(nextPosts)
+      feedCache.set(userId, nextPosts)
       setLoading(false)
       hasLoadedRef.current = true
     } catch (nextError) {

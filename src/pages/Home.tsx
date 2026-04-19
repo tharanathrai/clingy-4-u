@@ -193,13 +193,15 @@ export default function Home() {
           </p>
         ) : null}
 
-        <button
-          type="button"
-          onClick={handleNewGum}
-          className="new-gum-blob fixed bottom-24 right-5 z-30 bg-accent px-6 py-3 font-display text-lg text-white shadow-glow"
-        >
-          new gum
-        </button>
+        <div className="app-fixed-frame bottom-24 z-30 px-5">
+          <button
+            type="button"
+            onClick={handleNewGum}
+            className="new-gum-blob app-fixed-frame-inner ml-auto bg-accent px-6 py-3 font-display text-lg text-white shadow-glow"
+          >
+            new gum
+          </button>
+        </div>
       </main>
     </Layout>
   )

@@ -98,7 +98,7 @@ export default function Graveyard() {
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 py-8 text-text">
-      <Link to="/home" className="inline-flex items-center gap-2 text-sm text-text-2">
+      <Link to="/profile/me" className="inline-flex items-center gap-2 text-sm text-text-2">
         <ArrowLeft size={18} strokeWidth={1.75} />
         back
       </Link>
