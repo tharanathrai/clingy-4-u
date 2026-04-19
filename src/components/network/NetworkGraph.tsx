@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { forceCollide } from 'd3-force'
-import ForceGraph2D, {
-  type ForceGraphMethods,
-} from 'react-force-graph-2d'
+import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import type { Bridge } from '../../types/index.ts'
 import {
   useNetworkGraph,
@@ -39,33 +37,20 @@ interface NetworkGraphProps {
 }
 
 const MIN_GRAPH_ZOOM = 0.45
-const MAX_GRAPH_ZOOM = 4
-
-const normalizePair = (left: string, right: string): string => {
-  return [left, right].sort().join(':')
-}
-
-const getCategoryColor = (bridges: Bridge[]): string => {
-  if (!bridges.length) {
-    return '#F2EFF8'
-  }
-
-  const counts: Record<string, number> = {}
-  for (const bridge of bridges) {
-    counts[bridge.color_hex] = (counts[bridge.color_hex] ?? 0) + 1
-  }
-
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
-}
+const MAX_GRAPH_ZOOM = 3.25
 
 const getLinkWidth = (count: number): number => {
   if (count >= 5) {
     return 4
   }
   if (count >= 3) {
-    return 2.5
+    return 2.7
   }
-  return 1.5
+  return 1.7
+}
+
+const normalizePair = (left: string, right: string): string => {
+  return [left, right].sort().join(':')
 }
 
 export function NetworkGraph({
@@ -82,15 +67,7 @@ export function NetworkGraph({
   )
   const graphContainerRef = useRef<HTMLDivElement | null>(null)
   const avatarCacheRef = useRef<Record<string, HTMLImageElement>>({})
-  const initialViewAppliedRef = useRef(false)
-  const clampedTickLogCountRef = useRef(0)
-  const zoomTraceLogCountRef = useRef(0)
-  const overlapLogCountRef = useRef(0)
-  const lastOverlapLogAtRef = useRef(0)
-  const [graphSize, setGraphSize] = useState({
-    width: 0,
-    height: 0,
-  })
+  const [graphSize, setGraphSize] = useState({ width: 0, height: 0 })
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
 
@@ -100,7 +77,6 @@ export function NetworkGraph({
       if (!url || avatarCacheRef.current[url]) {
         continue
       }
-
       const image = new Image()
       image.crossOrigin = 'anonymous'
       image.src = url
@@ -114,16 +90,10 @@ export function NetworkGraph({
       if (!container) {
         return
       }
-
       const bounds = container.getBoundingClientRect()
-      const width = Math.round(bounds.width)
-      const height = Math.round(bounds.height)
-      // #region agent log
-      fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H3',location:'NetworkGraph.tsx:updateSize',message:'Measured graph container size',data:{width,height,windowWidth:window.innerWidth,windowHeight:window.innerHeight},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       setGraphSize({
-        width: Math.max(0, width),
-        height: Math.max(0, height),
+        width: Math.max(0, Math.round(bounds.width)),
+        height: Math.max(0, Math.round(bounds.height)),
       })
     }
 
@@ -134,9 +104,11 @@ export function NetworkGraph({
           updateSize()
         })
       : null
+
     if (container && resizeObserver) {
       resizeObserver.observe(container)
     }
+
     window.addEventListener('resize', updateSize)
     window.addEventListener('orientationchange', updateSize)
     return () => {
@@ -146,31 +118,46 @@ export function NetworkGraph({
     }
   }, [])
 
-  const selfUserId = useMemo(() => {
-    return nodes.find((node) => node.isSelf)?.id ?? null
+  const worldBounds = useMemo(() => {
+    const nonSelfCount = nodes.filter((node) => !node.isSelf).length
+    const ringCount = Math.max(1, Math.ceil(nonSelfCount / 8))
+    const maxRadius = 140 + Math.max(0, ringCount - 1) * 110
+    return {
+      left: -(maxRadius + 130),
+      right: maxRadius + 130,
+      top: -(maxRadius + 130),
+      bottom: maxRadius + 180,
+      maxRadius,
+    }
   }, [nodes])
 
-  const maxOrbitRadius = useMemo(() => {
-    const orbitNodes = nodes.filter((node) => !node.isSelf).length
-    if (orbitNodes === 0) {
-      return 120
+  const recenterGraph = (duration = 240) => {
+    const bounds = graphContainerRef.current?.getBoundingClientRect()
+    const width = Math.round(bounds?.width ?? graphSize.width)
+    const height = Math.round(bounds?.height ?? graphSize.height)
+    if (width <= 0 || height <= 0) {
+      return
     }
 
-    let ringIndex = 0
-    let usedSlots = 0
-    let slotsInRing = 6
+    const padding = width < 640 ? 24 : 72
+    const usableWidth = Math.max(1, width - padding * 2)
+    const usableHeight = Math.max(1, height - padding * 2)
+    const worldWidth = worldBounds.right - worldBounds.left
+    const worldHeight = worldBounds.bottom - worldBounds.top
+    const zoom = Math.max(
+      MIN_GRAPH_ZOOM,
+      Math.min(
+        1.2,
+        Math.min(usableWidth / Math.max(1, worldWidth), usableHeight / Math.max(1, worldHeight)),
+      ),
+    )
 
-    while (usedSlots + slotsInRing < orbitNodes) {
-      usedSlots += slotsInRing
-      ringIndex += 1
-      slotsInRing = 6 + ringIndex * 4
-    }
-
-    return 140 + ringIndex * 115
-  }, [nodes])
+    graphRef.current?.centerAt(0, 20, duration)
+    graphRef.current?.zoom(zoom, duration)
+  }
 
   useEffect(() => {
-    if (!graphRef.current) {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
 
@@ -180,52 +167,25 @@ export function NetworkGraph({
           strength?: (value: (link: GraphEdge) => number) => void
         }
       | undefined
-    linkForce?.distance?.(() => {
-      const pairCount = 1
-      return Math.max(36, 104 - pairCount * 12)
+    linkForce?.distance?.((link) => {
+      const pairCount = pairMeta[link.id]?.pairCount ?? 1
+      return Math.max(56, 118 - pairCount * 11)
     })
-    linkForce?.strength?.(() => {
-      const pairCount = 1
-      return Math.min(0.85, 0.36 + pairCount * 0.08)
+    linkForce?.strength?.((link) => {
+      const pairCount = pairMeta[link.id]?.pairCount ?? 1
+      return Math.min(0.9, 0.32 + pairCount * 0.09)
     })
 
     const chargeForce = graphRef.current.d3Force('charge') as
       | { strength?: (value: number) => void }
       | undefined
-    chargeForce?.strength?.(-110)
+    chargeForce?.strength?.(-145)
+
     graphRef.current.d3Force(
       'collide',
-      forceCollide<GraphNode>((node) => (node.isSelf ? 34 : 30)).strength(0.95),
+      forceCollide<GraphNode>((node) => (node.isSelf ? 34 : 28)).strength(0.98),
     )
-
-    const centerForce = graphRef.current.d3Force('center') as
-      | {
-          x?: (value: number) => void
-          y?: (value: number) => void
-        }
-      | undefined
-    centerForce?.x?.(0)
-    centerForce?.y?.(0)
-  }, [])
-
-  const recenterGraph = (duration = 250) => {
-    const bounds = graphContainerRef.current?.getBoundingClientRect()
-    const containerWidth = Math.round(bounds?.width ?? graphSize.width)
-    const containerHeight = Math.round(bounds?.height ?? graphSize.height)
-    const padding = containerWidth < 640 ? 26 : 72
-    const usableWidth = Math.max(1, containerWidth - padding * 2)
-    const usableHeight = Math.max(1, containerHeight - padding * 2)
-    const diameter = Math.max(120, maxOrbitRadius * 2 + 80)
-    const zoom = Math.max(
-      MIN_GRAPH_ZOOM,
-      Math.min(1.25, Math.min(usableWidth / diameter, usableHeight / diameter)),
-    )
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H9',location:'NetworkGraph.tsx:recenterGraph',message:'Applying deterministic bird-eye camera',data:{duration,containerWidth,containerHeight,padding,usableWidth,usableHeight,diameter,zoom,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    graphRef.current?.centerAt(0, 24, duration)
-    graphRef.current?.zoom(zoom, duration)
-  }
+  }, [error, loading, nodes.length])
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
@@ -234,34 +194,19 @@ export function NetworkGraph({
 
     const timeoutId = window.setTimeout(() => {
       recenterGraph(0)
-      initialViewAppliedRef.current = true
     }, 80)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [error, graphSize.height, graphSize.width, loading, maxOrbitRadius, nodes.length])
+  }, [error, graphSize.height, graphSize.width, loading, nodes.length, worldBounds.maxRadius])
 
   useEffect(() => {
-    if (
-      !graphRef.current ||
-      loading ||
-      error ||
-      nodes.length === 0 ||
-      graphSize.width <= 0 ||
-      graphSize.height <= 0
-    ) {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
-
-    if (!initialViewAppliedRef.current) {
-      return
-    }
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H9',location:'NetworkGraph.tsx:recenterEffect',message:'Explicit recenter trigger fired',data:{recenterTrigger,loading,error,nodesCount:nodes.length,graphWidth:graphSize.width,graphHeight:graphSize.height},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     recenterGraph(220)
-  }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterTrigger])
+  }, [recenterTrigger])
 
   useEffect(() => {
     if (!onGraphStateChange) {
@@ -269,7 +214,7 @@ export function NetworkGraph({
     }
 
     onGraphStateChange({
-      hasConnections: nodes.filter((node) => !node.isSelf).length > 0,
+      hasConnections: nodes.some((node) => !node.isSelf),
       hasBridges: edges.length > 0,
       loading,
       error,
@@ -277,28 +222,9 @@ export function NetworkGraph({
   }, [edges.length, error, loading, nodes, onGraphStateChange])
 
   useEffect(() => {
-    if (nodes.length === 0) {
-      return
-    }
-
-    const visibleLinksCount = selectedUserId
-      ? edges.filter(
-          (edge) =>
-            edge.bridge.user_a_id === selectedUserId ||
-            edge.bridge.user_b_id === selectedUserId,
-        ).length
-      : 0
-
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H15',location:'NetworkGraph.tsx:visibleLinks',message:'Computed visible links for current selection',data:{selectedUserId,edgesTotal:edges.length,visibleLinksCount,nodesCount:nodes.length},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-  }, [edges, nodes.length, selectedUserId])
-
-  useEffect(() => {
     if (!graphCanvasRef || !graphContainerRef.current) {
       return
     }
-
     const canvas = graphContainerRef.current.querySelector('canvas')
     if (canvas) {
       graphCanvasRef.current = canvas
@@ -315,11 +241,7 @@ export function NetworkGraph({
       groupedByPair[pairKey].push(edge as GraphEdge)
     }
 
-    const edgeMetaById: Record<
-      string,
-      { index: number; total: number; pairCount: number }
-    > = {}
-
+    const edgeMetaById: Record<string, { index: number; total: number; pairCount: number }> = {}
     for (const pairEdges of Object.values(groupedByPair)) {
       pairEdges.forEach((edge, index) => {
         edgeMetaById[edge.id] = {
@@ -333,56 +255,9 @@ export function NetworkGraph({
     return edgeMetaById
   }, [edges])
 
-  const dominantBridgeColorByNode = useMemo(() => {
-    const dominantColorByNode: Record<string, string> = {}
-    const selfNode = nodes.find((node) => node.isSelf)
-    if (!selfNode) {
-      return dominantColorByNode
-    }
-
-    for (const node of nodes) {
-      if (node.isSelf) {
-        continue
-      }
-
-      const sharedBridges = edges
-        .map((edge) => edge.bridge)
-        .filter(
-          (bridge) =>
-            (bridge.user_a_id === selfNode.id && bridge.user_b_id === node.id) ||
-            (bridge.user_b_id === selfNode.id && bridge.user_a_id === node.id),
-        )
-      dominantColorByNode[node.id] = getCategoryColor(sharedBridges)
-    }
-
-    return dominantColorByNode
-  }, [edges, nodes])
-
   const graphData = useMemo(() => {
     const selfNode = nodes.find((node) => node.isSelf)
-    const others = nodes
-      .filter((node) => !node.isSelf)
-      .sort((a, b) => b.bridgeCount - a.bridgeCount || a.id.localeCompare(b.id))
-
-    const getOrbitPlacement = (index: number) => {
-      let ring = 0
-      let consumedSlots = 0
-      let slotsInRing = 6
-      while (index >= consumedSlots + slotsInRing) {
-        consumedSlots += slotsInRing
-        ring += 1
-        slotsInRing = 6 + ring * 4
-      }
-
-      const slot = index - consumedSlots
-      const angle = (slot / slotsInRing) * Math.PI * 2 - Math.PI / 2
-      const radius = 140 + ring * 115
-
-      return {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-      }
-    }
+    const others = nodes.filter((node) => !node.isSelf)
 
     const graphNodes = nodes.map((node) => {
       if (node.isSelf || !selfNode) {
@@ -390,50 +265,41 @@ export function NetworkGraph({
           ...node,
           x: 0,
           y: 0,
-          fx: node.isSelf ? 0 : undefined,
-          fy: node.isSelf ? 0 : undefined,
+          fx: 0,
+          fy: 0,
         }
       }
 
       const index = others.findIndex((other) => other.id === node.id)
-      const position = getOrbitPlacement(Math.max(0, index))
+      const angle = (index / Math.max(others.length, 1)) * Math.PI * 2 - Math.PI / 2
+      const radius = Math.min(worldBounds.maxRadius, 130 + index * 16)
       return {
         ...node,
-        x: position.x,
-        y: position.y,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
       }
     }) as GraphNode[]
 
-    const result = {
+    return {
       nodes: graphNodes,
       links: edges as GraphEdge[],
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-pre-fix',hypothesisId:'H5',location:'NetworkGraph.tsx:graphData',message:'Built orbit graph data',data:{nodesCount:result.nodes.length,linksCount:result.links.length,maxOrbitRadius,selfUserId,firstNode:result.nodes[0]?.id??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    return result
-  }, [edges, nodes])
+  }, [edges, nodes, worldBounds.maxRadius])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 22 : 18
     const isSelected = selectedUserId === node.id
     const isHovered = hoveredNodeId === node.id
-    const scale = isSelected || isHovered ? 1.1 : 1
-    const radius = baseRadius * scale
-    const borderColor = isSelected || isHovered
-      ? dominantBridgeColorByNode[node.id] ?? '#F2EFF8'
-      : node.isSelf
-        ? '#FFFFFF'
-        : 'rgba(255, 255, 255, 0.15)'
-    const fillColor = node.isSelf ? '#CF8EE8' : '#272438'
+    const radius = baseRadius * (isSelected || isHovered ? 1.1 : 1)
+    const fill = node.isSelf ? '#CF8EE8' : '#272438'
+    const stroke = isSelected || isHovered ? '#F2EFF8' : 'rgba(255,255,255,0.2)'
 
     ctx.beginPath()
-    ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI, false)
-    ctx.fillStyle = fillColor
+    ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI)
+    ctx.fillStyle = fill
     ctx.fill()
-
     ctx.lineWidth = node.isSelf ? 2 : 1.5
-    ctx.strokeStyle = borderColor
+    ctx.strokeStyle = stroke
     ctx.stroke()
 
     const avatarUrl = node.user.avatar_url
@@ -447,7 +313,7 @@ export function NetworkGraph({
       const sourceY = (sourceHeight - sourceSize) / 2
       ctx.save()
       ctx.beginPath()
-      ctx.arc(node.x ?? 0, node.y ?? 0, imageRadius, 0, 2 * Math.PI, false)
+      ctx.arc(node.x ?? 0, node.y ?? 0, imageRadius, 0, 2 * Math.PI)
       ctx.clip()
       ctx.drawImage(
         image,
@@ -469,12 +335,6 @@ export function NetworkGraph({
       ctx.textBaseline = 'middle'
       ctx.fillText(initial, node.x ?? 0, node.y ?? 0)
     }
-
-    ctx.font = '10px "DM Sans"'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'top'
-    ctx.fillStyle = node.isSelf ? '#F2EFF8' : '#5C5478'
-    ctx.fillText(node.isSelf ? 'you' : node.user.display_name, node.x ?? 0, (node.y ?? 0) + radius + 6)
   }
 
   const nodePointerAreaPaint = (
@@ -482,15 +342,10 @@ export function NetworkGraph({
     color: string,
     ctx: CanvasRenderingContext2D,
   ) => {
-    const baseRadius = node.isSelf ? 22 : 18
-    const isSelected = selectedUserId === node.id
-    const isHovered = hoveredNodeId === node.id
-    const scale = isSelected || isHovered ? 1.1 : 1
-    const radius = baseRadius * scale
-
+    const radius = node.isSelf ? 26 : 22
     ctx.fillStyle = color
     ctx.beginPath()
-    ctx.arc(node.x ?? 0, node.y ?? 0, radius + 10, 0, 2 * Math.PI, false)
+    ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI)
     ctx.fill()
   }
 
@@ -526,212 +381,148 @@ export function NetworkGraph({
     ctx.moveTo(fromX, fromY)
     ctx.lineTo(toX, toY)
     ctx.lineWidth = getLinkWidth(meta?.pairCount ?? 1)
-    ctx.strokeStyle =
-      hoveredEdgeId === link.id
-        ? link.bridge.color_hex
-        : `${link.bridge.color_hex}B3`
+    ctx.strokeStyle = hoveredEdgeId === link.id ? link.bridge.color_hex : `${link.bridge.color_hex}A6`
     ctx.stroke()
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
+        Something went wrong loading your network.
+      </div>
+    )
+  }
+
+  if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
+    return (
+      <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center text-sm text-text-2">
+        Loading your network...
+      </div>
+    )
   }
 
   return (
     <div ref={graphContainerRef} className="h-full w-full">
-      {error ? (
-        <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
-          Something went wrong loading your network.
-        </div>
-      ) : null}
-      {loading || graphSize.width <= 0 || graphSize.height <= 0 ? (
-        <div className="flex h-full w-full items-center justify-center text-sm text-text-2">
-          Loading your network...
-        </div>
-      ) : (
-        <ForceGraph2D<GraphNode, GraphEdge>
-          ref={graphRef}
-          width={graphSize.width}
-          height={graphSize.height}
-          graphData={graphData}
-          backgroundColor="#12101A"
-          d3AlphaDecay={0.02}
-          d3VelocityDecay={0.3}
-          minZoom={MIN_GRAPH_ZOOM}
-          maxZoom={MAX_GRAPH_ZOOM}
-          cooldownTicks={Infinity}
-          onZoom={(cameraPosition) => {
-            const worldLeft = -(maxOrbitRadius + 120)
-            const worldRight = maxOrbitRadius + 120
-            const worldTop = -(maxOrbitRadius + 80)
-            const worldBottom = maxOrbitRadius + 130
-            const halfViewportWidth = graphSize.width / (2 * Math.max(cameraPosition.k, 0.0001))
-            const halfViewportHeight = graphSize.height / (2 * Math.max(cameraPosition.k, 0.0001))
-            const minCameraX = worldLeft + halfViewportWidth
-            const maxCameraX = worldRight - halfViewportWidth
-            const minCameraY = worldTop + halfViewportHeight
-            const maxCameraY = worldBottom - halfViewportHeight
-            const clampedCameraX =
-              minCameraX <= maxCameraX
-                ? Math.max(minCameraX, Math.min(maxCameraX, cameraPosition.x))
-                : 0
-            const clampedCameraY =
-              minCameraY <= maxCameraY
-                ? Math.max(minCameraY, Math.min(maxCameraY, cameraPosition.y))
-                : 24
+      <ForceGraph2D<GraphNode, GraphEdge>
+        ref={graphRef}
+        width={graphSize.width}
+        height={graphSize.height}
+        graphData={graphData}
+        backgroundColor="#12101A"
+        d3AlphaDecay={0.015}
+        d3VelocityDecay={0.22}
+        cooldownTicks={Infinity}
+        minZoom={MIN_GRAPH_ZOOM}
+        maxZoom={MAX_GRAPH_ZOOM}
+        onZoom={(cameraPosition) => {
+          const worldLeft = worldBounds.left
+          const worldRight = worldBounds.right
+          const worldTop = worldBounds.top
+          const worldBottom = worldBounds.bottom
+          const halfViewportWidth = graphSize.width / (2 * Math.max(cameraPosition.k, 0.0001))
+          const halfViewportHeight = graphSize.height / (2 * Math.max(cameraPosition.k, 0.0001))
 
-            if (
-              clampedCameraX !== cameraPosition.x ||
-              clampedCameraY !== cameraPosition.y
-            ) {
-              graphRef.current?.centerAt(clampedCameraX, clampedCameraY, 0)
-              if (zoomTraceLogCountRef.current < 10) {
-                zoomTraceLogCountRef.current += 1
-                // #region agent log
-                fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H12',location:'NetworkGraph.tsx:onZoom',message:'Clamped camera viewport movement',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,clampedCameraX,clampedCameraY,cameraK:cameraPosition.k,worldLeft,worldRight,worldTop,worldBottom,halfViewportWidth,halfViewportHeight},timestamp:Date.now()})}).catch(()=>{});
-                // #endregion
-              }
-              return
-            }
+          const minCameraX = worldLeft + halfViewportWidth
+          const maxCameraX = worldRight - halfViewportWidth
+          const minCameraY = worldTop + halfViewportHeight
+          const maxCameraY = worldBottom - halfViewportHeight
 
-            if (zoomTraceLogCountRef.current < 10) {
-              zoomTraceLogCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H12',location:'NetworkGraph.tsx:onZoom',message:'Observed camera pan/zoom event',data:{cameraX:cameraPosition.x,cameraY:cameraPosition.y,cameraK:cameraPosition.k,graphWidth:graphSize.width,graphHeight:graphSize.height,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
-            }
-          }}
-          linkVisibility={(link) => {
-            void link
-            return true
-          }}
-          nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
-          nodePointerAreaPaint={(node, color, ctx) =>
-            nodePointerAreaPaint(node as GraphNode, color, ctx)
+          const clampedX =
+            minCameraX <= maxCameraX
+              ? Math.max(minCameraX, Math.min(maxCameraX, cameraPosition.x))
+              : 0
+          const clampedY =
+            minCameraY <= maxCameraY
+              ? Math.max(minCameraY, Math.min(maxCameraY, cameraPosition.y))
+              : 20
+
+          if (clampedX !== cameraPosition.x || clampedY !== cameraPosition.y) {
+            graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
-          linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
-          linkHoverPrecision={8}
-          onNodeClick={(node) => {
-            const selectedNode = node as GraphNode
-            onNodeSelect(selectedNode.id)
-            onBridgeSelect?.(null)
-          }}
-          onNodeHover={(node) => {
-            setHoveredNodeId((node as GraphNode | null)?.id ?? null)
-          }}
-          onLinkHover={(link) => {
-            setHoveredEdgeId((link as GraphEdge | null)?.id ?? null)
-          }}
-          onLinkClick={(link) => {
-            const selectedEdge = link as GraphEdge
-            onBridgeSelect?.(selectedEdge.bridge)
-          }}
-          onBackgroundClick={() => {
-            onNodeSelect(null)
-            onBridgeSelect?.(null)
-          }}
-          onEngineTick={() => {
-            const graphNodes = graphData.nodes
-            const maxNodeX = maxOrbitRadius + 120
-            const minNodeY = -(maxOrbitRadius + 80)
-            const maxNodeY = maxOrbitRadius + 130
-            let clampedCount = 0
-            let overlapPairs = 0
-            let minDistance = Number.POSITIVE_INFINITY
-
-            for (const node of graphNodes) {
-              if (node.isSelf) {
-                node.x = 0
-                node.y = 0
-                node.vx = 0
-                node.vy = 0
-                node.fx = 0
-                node.fy = 0
-                continue
-              }
-
-              if (typeof node.x !== 'number' || typeof node.y !== 'number') {
-                continue
-              }
-
-              const clampedX = Math.max(-maxNodeX, Math.min(maxNodeX, node.x))
-              const clampedY = Math.max(minNodeY, Math.min(maxNodeY, node.y))
-              if (clampedX !== node.x) {
-                node.x = clampedX
-                node.vx = (node.vx ?? 0) * -0.35
-                clampedCount += 1
-              }
-              if (clampedY !== node.y) {
-                node.y = clampedY
-                node.vy = (node.vy ?? 0) * -0.35
-                clampedCount += 1
-              }
+        }}
+        linkVisibility={() => true}
+        nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
+        nodePointerAreaPaint={(node, color, ctx) =>
+          nodePointerAreaPaint(node as GraphNode, color, ctx)
+        }
+        linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
+        linkHoverPrecision={8}
+        onNodeClick={(node) => {
+          const selectedNode = node as GraphNode
+          onNodeSelect(selectedNode.id)
+          onBridgeSelect?.(null)
+        }}
+        onNodeHover={(node) => {
+          setHoveredNodeId((node as GraphNode | null)?.id ?? null)
+        }}
+        onLinkHover={(link) => {
+          setHoveredEdgeId((link as GraphEdge | null)?.id ?? null)
+        }}
+        onLinkClick={(link) => {
+          onBridgeSelect?.((link as GraphEdge).bridge)
+        }}
+        onBackgroundClick={() => {
+          onNodeSelect(null)
+          onBridgeSelect?.(null)
+        }}
+        onEngineTick={() => {
+          const graphNodes = graphData.nodes
+          for (const node of graphNodes) {
+            if (node.isSelf) {
+              node.x = 0
+              node.y = 0
+              node.vx = 0
+              node.vy = 0
+              node.fx = 0
+              node.fy = 0
+              continue
             }
 
-            for (let i = 0; i < graphNodes.length; i += 1) {
-              for (let j = i + 1; j < graphNodes.length; j += 1) {
-                const first = graphNodes[i]
-                const second = graphNodes[j]
-                if (
-                  typeof first.x !== 'number' ||
-                  typeof first.y !== 'number' ||
-                  typeof second.x !== 'number' ||
-                  typeof second.y !== 'number'
-                ) {
-                  continue
-                }
-                const distance = Math.hypot(first.x - second.x, first.y - second.y)
-                minDistance = Math.min(minDistance, distance)
-                if (distance < 36) {
-                  overlapPairs += 1
-                }
-              }
+            if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+              continue
             }
 
-            if (clampedCount > 0 && clampedTickLogCountRef.current < 6) {
-              clampedTickLogCountRef.current += 1
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'post-fix',hypothesisId:'H11',location:'NetworkGraph.tsx:onEngineTick',message:'Clamped nodes inside world bounds',data:{clampedCount,maxNodeX,minNodeY,maxNodeY,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
+            const clampedX = Math.max(worldBounds.left, Math.min(worldBounds.right, node.x))
+            const clampedY = Math.max(worldBounds.top, Math.min(worldBounds.bottom, node.y))
+            if (clampedX !== node.x) {
+              node.x = clampedX
+              node.vx = (node.vx ?? 0) * -0.45
             }
-            if (
-              overlapLogCountRef.current < 6 &&
-              Date.now() - lastOverlapLogAtRef.current > 1200
-            ) {
-              overlapLogCountRef.current += 1
-              lastOverlapLogAtRef.current = Date.now()
-              // #region agent log
-              fetch('http://127.0.0.1:7320/ingest/b9f84f1c-8004-4e98-93fb-d658dbf6a649',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'410ef4'},body:JSON.stringify({sessionId:'410ef4',runId:'run-current-obsidian',hypothesisId:'H13',location:'NetworkGraph.tsx:onEngineTick',message:'Measured overlap density',data:{overlapPairs,minDistance:minDistance===Number.POSITIVE_INFINITY?null:minDistance,nodesCount:graphNodes.length,maxOrbitRadius},timestamp:Date.now()})}).catch(()=>{});
-              // #endregion
+            if (clampedY !== node.y) {
+              node.y = clampedY
+              node.vy = (node.vy ?? 0) * -0.45
             }
-          }}
-          onNodeDrag={(node) => {
-            const dragged = node as GraphNode
-            if (dragged.isSelf) {
-              dragged.x = 0
-              dragged.y = 0
-              dragged.fx = 0
-              dragged.fy = 0
-              return
-            }
-            const maxNodeX = maxOrbitRadius + 120
-            const minNodeY = -(maxOrbitRadius + 80)
-            const maxNodeY = maxOrbitRadius + 130
-            const nextX = Math.max(-maxNodeX, Math.min(maxNodeX, dragged.x ?? 0))
-            const nextY = Math.max(minNodeY, Math.min(maxNodeY, dragged.y ?? 0))
-            dragged.x = nextX
-            dragged.y = nextY
-            dragged.fx = nextX
-            dragged.fy = nextY
-          }}
-          onNodeDragEnd={(node) => {
-            const dragged = node as GraphNode
-            if (dragged.isSelf) {
-              dragged.fx = 0
-              dragged.fy = 0
-              return
-            }
-            dragged.fx = undefined
-            dragged.fy = undefined
-          }}
-        />
-      )}
+          }
+        }}
+        onNodeDrag={(node) => {
+          const dragged = node as GraphNode
+          if (dragged.isSelf) {
+            dragged.x = 0
+            dragged.y = 0
+            dragged.fx = 0
+            dragged.fy = 0
+            return
+          }
+
+          const nextX = Math.max(worldBounds.left, Math.min(worldBounds.right, dragged.x ?? 0))
+          const nextY = Math.max(worldBounds.top, Math.min(worldBounds.bottom, dragged.y ?? 0))
+          dragged.x = nextX
+          dragged.y = nextY
+          dragged.fx = nextX
+          dragged.fy = nextY
+        }}
+        onNodeDragEnd={(node) => {
+          const dragged = node as GraphNode
+          if (dragged.isSelf) {
+            dragged.fx = 0
+            dragged.fy = 0
+            return
+          }
+
+          dragged.fx = undefined
+          dragged.fy = undefined
+        }}
+      />
     </div>
   )
 }
