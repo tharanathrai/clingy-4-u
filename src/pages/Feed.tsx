@@ -5,9 +5,11 @@ import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
 import { useFeed } from '../hooks/useFeed.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
+import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
+  useScrollRestore('scroll:/feed')
   const { posts, loading, error } = useFeed()
   const navigate = useNavigate()
   const [localPosts, setLocalPosts] = useState(posts)

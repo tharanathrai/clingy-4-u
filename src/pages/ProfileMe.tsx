@@ -114,7 +114,7 @@ export default function ProfileMe() {
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
       <h1 className="app-page-title">your profile</h1>
-      <section className="flex flex-col items-center text-center">
+      <section className="mt-6 flex flex-col items-center text-center">
         {profile.avatar_url ? (
           <img
             src={profile.avatar_url}

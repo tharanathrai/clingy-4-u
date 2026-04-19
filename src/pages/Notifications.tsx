@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
+import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 
 export default function Notifications() {
+  useScrollRestore('scroll:/notifications')
   const navigate = useNavigate()
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } =
     useNotifications()

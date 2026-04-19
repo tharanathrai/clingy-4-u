@@ -186,7 +186,7 @@ export function PostDetailSheet({
   }
 
   return (
-    <section className="fixed inset-0 z-50">
+    <section className="app-fixed-viewport z-50">
       <button
         type="button"
         aria-label="Close post details"
