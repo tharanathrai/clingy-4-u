@@ -11,8 +11,14 @@ export function usePaginatedItems<T>(
   pageSize = 6,
   storageKey?: string,
 ): UsePaginatedItemsResult<T> {
+  const resetFromReload = isReloadNavigation()
+
   const [visibleCount, setVisibleCount] = useState(() => {
     if (!storageKey) {
+      return pageSize
+    }
+    if (resetFromReload) {
+      window.sessionStorage.removeItem(storageKey)
       return pageSize
     }
     const saved = window.sessionStorage.getItem(storageKey)
@@ -45,4 +51,17 @@ export function usePaginatedItems<T>(
     hasMore,
     loadMore,
   }
+}
+
+function isReloadNavigation(): boolean {
+  const navEntries = window.performance.getEntriesByType('navigation')
+  const navEntry = navEntries[0] as PerformanceNavigationTiming | undefined
+  if (navEntry?.type === 'reload') {
+    return true
+  }
+
+  const legacyNavigation = (
+    window.performance as Performance & { navigation?: { type?: number } }
+  ).navigation
+  return legacyNavigation?.type === 1
 }
