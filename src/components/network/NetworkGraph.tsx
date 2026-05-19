@@ -76,13 +76,19 @@ export function NetworkGraph({
   const hasAppliedInitialRecenterRef = useRef(false)
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
   const pointerMovedRef = useRef(false)
+  const lastSelectionTsRef = useRef(0)
 
   const clearSelection = () => {
+    const msSinceSelection = Date.now() - lastSelectionTsRef.current
+    if (msSinceSelection < 250) {
+      return
+    }
     onNodeSelect(null)
     onBridgeSelect?.(null)
   }
 
   const selectNode = (nodeId: string | null) => {
+    lastSelectionTsRef.current = Date.now()
     onNodeSelect(nodeId)
     onBridgeSelect?.(null)
   }

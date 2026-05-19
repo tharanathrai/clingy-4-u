@@ -1,5 +1,5 @@
 import { Heart, Send } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { type CommentWithUser, usePost } from '../../hooks/usePost.ts'
@@ -37,6 +37,7 @@ export function PostDetailSheet({
   const [optimisticHasReacted, setOptimisticHasReacted] = useState<boolean | null>(null)
   const [optimisticCommentCount, setOptimisticCommentCount] = useState<number | null>(null)
   const [optimisticComments, setOptimisticComments] = useState<CommentWithUser[]>([])
+  const commentInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setOptimisticReactionCount(null)
@@ -204,7 +205,7 @@ export function PostDetailSheet({
         className="absolute inset-0 bg-black/60"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-6 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
+      <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
         <button
           type="button"
           onClick={onClose}
@@ -301,10 +302,19 @@ export function PostDetailSheet({
         <div className="composer-safe-bottom border-t border-white/10 bg-surface px-5 pt-3">
           <div className="flex items-center gap-2">
             <input
+              ref={commentInputRef}
               value={commentBody}
               onChange={(event) => setCommentBody(event.target.value)}
+              onFocus={() => {
+                window.setTimeout(() => {
+                  commentInputRef.current?.scrollIntoView({
+                    block: 'nearest',
+                    inline: 'nearest',
+                  })
+                }, 0)
+              }}
               placeholder="say something..."
-              className="min-h-10 flex-1 rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-3 focus:outline-none"
+              className="min-h-11 flex-1 rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-base text-text placeholder:text-text-3 focus:outline-none"
               maxLength={500}
             />
             <button

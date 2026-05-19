@@ -110,7 +110,7 @@ body.modal-scroll-lock {
 }
 
 .safe-bottom-tab {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .safe-content-bottom {
