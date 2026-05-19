@@ -42,7 +42,7 @@ export function BottomTabBar() {
             <Link
               key={tab.to}
               to={tab.to}
-              className="relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1"
+              className="relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1"
             >
               <Icon
                 size={22}

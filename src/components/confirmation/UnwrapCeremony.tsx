@@ -174,7 +174,7 @@ export function UnwrapCeremony({
         Bridge formed.
       </p>
 
-      <div className="app-fixed-frame bottom-24 z-40 px-5">
+      <div className="app-fixed-frame safe-bottom-24 z-40 px-5">
         <div
           className={`app-fixed-frame-inner rounded-xl border border-white/10 bg-surface p-4 shadow-card transition-all duration-300 ${
             showPrompt ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'

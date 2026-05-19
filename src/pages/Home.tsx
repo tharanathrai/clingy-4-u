@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/layout/Layout.tsx'
 import { GumPieceCard } from '../components/gum/GumPieceCard.tsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
@@ -18,6 +19,8 @@ export default function Home() {
   const [connectionsCount, setConnectionsCount] = useState(0)
   const [loadingConnections, setLoadingConnections] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
+  const slotsUsed = pieces.length
+  const pocketFull = slotsUsed >= 25
 
   const loadConnectionsCount = useCallback(async () => {
     if (!userId) {
@@ -90,6 +93,11 @@ export default function Home() {
   } = usePaginatedItems(sortedPieces, 6)
 
   const handleNewGum = () => {
+    if (pocketFull) {
+      setToast('Pocket full — complete or clear a plan first.')
+      return
+    }
+
     if (connectionsCount < 1) {
       setToast('add someone first')
       return
@@ -103,7 +111,7 @@ export default function Home() {
       <main className="pb-28">
         <header>
           <h1 className="app-page-title">your pocket</h1>
-          <p className="mt-2 text-xs text-text-3">{pieces.length} / 25 slots used</p>
+          <p className="mt-2 text-xs text-text-3">{slotsUsed} / 25 slots used</p>
         </header>
 
         <div className="mt-4">
@@ -120,19 +128,32 @@ export default function Home() {
         </div>
 
         {loading || loadingConnections ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Loading your pocket...</p>
+          <section className="mt-8 space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="skeleton h-24 rounded-lg" />
+            ))}
           </section>
         ) : null}
 
         {!loading && !loadingConnections && error ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-playful">{error}</p>
+            <p className="text-sm text-text-2">Couldn&apos;t load your pocket. Pull to refresh.</p>
+            <button
+              type="button"
+              onClick={() => {
+                void refetch()
+                void loadConnectionsCount()
+              }}
+              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Retry
+            </button>
           </section>
         ) : null}
 
         {!loading && !loadingConnections && !error && connectionsCount === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
+            <EmptyStateIllustration />
             <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
             <p className="mt-2 text-sm text-text-2">
               Make a plan with someone you love.
@@ -148,6 +169,7 @@ export default function Home() {
 
         {!loading && !loadingConnections && !error && connectionsCount > 0 && sortedPieces.length === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
+            <EmptyStateIllustration />
             <h2 className="font-display text-2xl text-text">Nothing brewing yet.</h2>
             <p className="mt-2 text-sm text-text-2">
               Who do you want to do something with?
@@ -188,21 +210,29 @@ export default function Home() {
         ) : null}
 
         {toast ? (
-          <div className="app-fixed-frame bottom-28 z-40 px-5">
+          <div className="app-fixed-frame safe-bottom-28 z-40 px-5">
             <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
               {toast}
             </p>
           </div>
         ) : null}
 
-        <div className="app-fixed-frame bottom-24 z-30 px-5">
-          <button
-            type="button"
-            onClick={handleNewGum}
-            className="new-gum-blob app-fixed-frame-inner ml-auto bg-accent px-6 py-3 font-display text-lg text-white shadow-glow"
-          >
-            new gum
-          </button>
+        <div className="app-fixed-frame safe-bottom-24 z-30 px-5">
+          <div className="app-fixed-frame-inner ml-auto flex flex-col items-end gap-2">
+            {pocketFull ? (
+              <p className="rounded-full bg-surface-2 px-3 py-1 text-xs text-text-2">
+                Pocket full — complete or clear a plan first.
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleNewGum}
+              disabled={pocketFull}
+              className="new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              new gum
+            </button>
+          </div>
         </div>
       </main>
     </Layout>

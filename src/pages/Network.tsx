@@ -5,6 +5,7 @@ import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, User } from '../types/index.ts'
 
@@ -86,6 +87,7 @@ export default function Network() {
         {!graphState.loading && !graphState.hasConnections ? (
           <section className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-8 text-center">
             <div className="pointer-events-auto">
+              <EmptyStateIllustration variant="bridge" />
               <h2 className="font-display text-3xl text-text">No bridges yet.</h2>
               <p className="mt-3 text-sm text-text-2">
                 They form when you actually show up.

@@ -10,6 +10,12 @@ interface ValidateBody {
   token?: string
 }
 
+interface ScannedUser {
+  display_name: string
+  username: string
+  avatar_url: string | null
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -56,12 +62,31 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: 'Invalid token.' })
     }
 
+    const { data: scannedUser, error: scannedUserError } = await serviceClient
+      .from('users')
+      .select('display_name, username, avatar_url')
+      .eq('id', tokenRow.user_id)
+      .single()
+
+    if (scannedUserError || !scannedUser) {
+      return jsonResponse(500, {
+        error: scannedUserError?.message ?? 'User not found.',
+        error_code: 'scanned_user_not_found',
+      })
+    }
+
     if (tokenRow.user_id === authData.user.id) {
-      return jsonResponse(400, { error: 'That is your own QR code.' })
+      return jsonResponse(400, {
+        error: 'That is your own QR code.',
+        error_code: 'own_qr',
+      })
     }
 
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
-      return jsonResponse(400, { error: 'This code has expired. Ask them to refresh.' })
+      return jsonResponse(400, {
+        error: 'This code has expired. Ask them to refresh.',
+        error_code: 'expired',
+      })
     }
 
     const userA = [authData.user.id, tokenRow.user_id].sort()[0]
@@ -79,7 +104,11 @@ Deno.serve(async (request) => {
     }
 
     if (existingConnection) {
-      return jsonResponse(400, { error: "You're already connected with this person." })
+      return jsonResponse(400, {
+        error: "You're already connected with this person.",
+        error_code: 'already_connected',
+        user: scannedUser as ScannedUser,
+      })
     }
 
     const { error: consumeTokenError } = await serviceClient
@@ -104,16 +133,6 @@ Deno.serve(async (request) => {
 
     if (createConnectionError || !createdConnection) {
       return jsonResponse(500, { error: createConnectionError?.message ?? 'Failed to connect.' })
-    }
-
-    const { data: scannedUser, error: scannedUserError } = await serviceClient
-      .from('users')
-      .select('display_name, username, avatar_url')
-      .eq('id', tokenRow.user_id)
-      .single()
-
-    if (scannedUserError || !scannedUser) {
-      return jsonResponse(500, { error: scannedUserError?.message ?? 'User not found.' })
     }
 
     return jsonResponse(200, {

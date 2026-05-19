@@ -12,6 +12,18 @@ interface ValidateQrResponse {
   }
 }
 
+interface ValidateQrError {
+  error?: string
+  error_code?: string
+  user?: ValidateQrResponse['user']
+}
+
+interface ScanIssue {
+  message: string
+  type: 'expired' | 'own' | 'already_connected' | 'network' | 'generic'
+  connectedUser?: ValidateQrResponse['user']
+}
+
 const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -20,7 +32,7 @@ export default function AddScan() {
   const [scanError, setScanError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successUser, setSuccessUser] = useState<ValidateQrResponse['user'] | null>(null)
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
+  const [scanIssue, setScanIssue] = useState<ScanIssue | null>(null)
 
   useEffect(() => {
     if (scannedToken || successUser) {
@@ -71,54 +83,67 @@ export default function AddScan() {
     }
 
     setSubmitting(true)
-    setSubmitMessage(null)
+    setScanIssue(null)
 
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
     const accessToken = sessionData.session?.access_token
 
     if (sessionError || !accessToken) {
-      setSubmitMessage('No active session. Please sign in again.')
+      setScanIssue({
+        message: 'No active session. Please sign in again.',
+        type: 'generic',
+      })
       setSubmitting(false)
       return
     }
 
-    const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ token: scannedToken }),
-    })
+    try {
+      const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ token: scannedToken }),
+      })
 
-    const responseText = await response.text()
-    let data: ValidateQrResponse | { error?: string } | null = null
-    if (responseText) {
-      try {
-        data = JSON.parse(responseText) as ValidateQrResponse | { error?: string }
-      } catch {
-        data = null
+      const responseText = await response.text()
+      let data: ValidateQrResponse | ValidateQrError | null = null
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText) as ValidateQrResponse | ValidateQrError
+        } catch {
+          data = null
+        }
       }
-    }
 
-    if (!response.ok || !data || !('success' in data) || !data.success) {
-      const message = getScanErrorMessage(
-        typeof data === 'object' && data && 'error' in data ? data.error : responseText,
-      )
-      setSubmitMessage(message)
+      if (!response.ok || !data || !('success' in data) || !data.success) {
+        const issue = getScanIssue(
+          typeof data === 'object' && data && 'error' in data
+            ? (data as ValidateQrError)
+            : { error: responseText },
+        )
+        setScanIssue(issue)
+        setSubmitting(false)
+        return
+      }
+
+      setSuccessUser(data.user)
+    } catch {
+      setScanIssue({
+        message: 'Something went wrong — try again.',
+        type: 'network',
+      })
+    } finally {
       setSubmitting(false)
-      return
     }
-
-    setSuccessUser(data.user)
-    setSubmitting(false)
   }
 
   const resetScanner = () => {
     setScannedToken(null)
     setScanError(null)
-    setSubmitMessage(null)
+    setScanIssue(null)
     setSuccessUser(null)
   }
 
@@ -145,7 +170,39 @@ export default function AddScan() {
             </button>
           ) : null}
 
-          {submitMessage ? <p className="mt-3 text-sm text-playful">{submitMessage}</p> : null}
+          {scanIssue ? (
+            <div className="mt-4 rounded-lg border border-white/10 bg-surface-2 p-3 text-left">
+              <p className="text-sm text-playful">{scanIssue.message}</p>
+              <div className="mt-3 flex items-center gap-2">
+                {(scanIssue.type === 'expired' || scanIssue.type === 'own' || scanIssue.type === 'generic') ? (
+                  <button
+                    type="button"
+                    onClick={() => setScanIssue(null)}
+                    className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
+                  >
+                    Dismiss
+                  </button>
+                ) : null}
+                {scanIssue.type === 'network' ? (
+                  <button
+                    type="button"
+                    onClick={() => void sendRequest()}
+                    className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
+                  >
+                    Retry
+                  </button>
+                ) : null}
+                {scanIssue.type === 'already_connected' && scanIssue.connectedUser?.username ? (
+                  <Link
+                    to={`/profile/${scanIssue.connectedUser.username}`}
+                    className="rounded-full bg-accent px-4 py-2 text-xs text-white"
+                  >
+                    View profile
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </>
       ) : (
         <section className="mt-8 rounded-lg border border-white/10 bg-surface p-6 text-center">
@@ -198,18 +255,42 @@ function extractToken(decodedValue: string): string | null {
   }
 }
 
-function getScanErrorMessage(errorMessage?: string): string {
-  const normalizedMessage = (errorMessage ?? '').toLowerCase()
+function getScanIssue(errorPayload: ValidateQrError): ScanIssue {
+  const normalizedMessage = (errorPayload.error ?? '').toLowerCase()
+  const errorCode = errorPayload.error_code ?? ''
 
-  if (normalizedMessage.includes('expired')) {
-    return 'This code has expired. Ask them to refresh.'
-  }
-  if (normalizedMessage.includes('already connected')) {
-    return "You're already connected with this person."
-  }
-  if (normalizedMessage.includes('own qr') || normalizedMessage.includes('your own')) {
-    return "That's your own code."
+  if (errorCode === 'expired' || normalizedMessage.includes('expired')) {
+    return {
+      message: 'This code has expired. Ask them to refresh.',
+      type: 'expired',
+    }
   }
 
-  return 'Something went wrong - try again.'
+  if (
+    errorCode === 'already_connected' ||
+    normalizedMessage.includes('already connected')
+  ) {
+    const name = errorPayload.user?.display_name ?? 'this person'
+    return {
+      message: `You're already connected with ${name}.`,
+      type: 'already_connected',
+      connectedUser: errorPayload.user,
+    }
+  }
+
+  if (
+    errorCode === 'own_qr' ||
+    normalizedMessage.includes('own qr') ||
+    normalizedMessage.includes('your own')
+  ) {
+    return {
+      message: "That's your own code.",
+      type: 'own',
+    }
+  }
+
+  return {
+    message: 'Something went wrong — try again.',
+    type: 'generic',
+  }
 }

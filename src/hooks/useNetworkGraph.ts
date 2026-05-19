@@ -22,6 +22,7 @@ interface UseNetworkGraphResult {
   edges: NetworkGraphEdge[]
   loading: boolean
   error: string | null
+  refetch: () => void
 }
 
 interface NetworkGraphCacheEntry {
@@ -40,6 +41,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshIndex, setRefreshIndex] = useState(0)
 
   useEffect(() => {
     if (authLoading) {
@@ -163,7 +165,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     return () => {
       cancelled = true
     }
-  }, [authLoading, userId])
+  }, [authLoading, refreshIndex, userId])
 
   const nodes = useMemo<NetworkGraphNode[]>(() => {
     if (!userId) {
@@ -217,5 +219,8 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     edges,
     loading: loading || authLoading,
     error,
+    refetch: () => {
+      setRefreshIndex((current) => current + 1)
+    },
   }
 }

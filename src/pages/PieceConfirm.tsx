@@ -244,13 +244,13 @@ export default function PieceConfirm() {
 
       {flowState === 'expired' ? (
         <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-          <p className="text-sm text-text">The window closed. Try again.</p>
+          <p className="text-sm text-text">The window closed.</p>
           <button
             type="button"
             onClick={() => void handleStartOver()}
             className="mt-4 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
           >
-            Start over
+            Try again
           </button>
         </section>
       ) : null}

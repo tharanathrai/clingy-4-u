@@ -102,6 +102,18 @@ body {
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
 }
 
+.safe-content-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+}
+
+.safe-bottom-24 {
+  bottom: calc(env(safe-area-inset-bottom) + 96px);
+}
+
+.safe-bottom-28 {
+  bottom: calc(env(safe-area-inset-bottom) + 112px);
+}
+
 .otp-hero-glow {
   position: absolute;
   inset: 24px 20px auto;
@@ -416,6 +428,53 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1e1b2e 25%, #272438 50%, #1e1b2e 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes node-cluster-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+.network-node-pulse {
+  animation: node-cluster-pulse 1.4s ease-in-out infinite;
+}
+
+.network-node-delay-1 {
+  animation-delay: 120ms;
+}
+
+.network-node-delay-2 {
+  animation-delay: 240ms;
+}
+
+.network-node-delay-3 {
+  animation-delay: 360ms;
+}
+
+.network-node-delay-4 {
+  animation-delay: 480ms;
 }
 
 @media (prefers-reduced-motion: no-preference) {

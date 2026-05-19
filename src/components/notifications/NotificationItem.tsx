@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '../../hooks/useNotifications.ts'
+import { withAvatarSize } from '../../utils/avatar.ts'
 
 interface NotificationWithActor extends Notification {
   actor_name?: string
@@ -25,7 +26,10 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
     >
       {notification.actor_avatar_url ? (
         <img
-          src={notification.actor_avatar_url}
+          src={
+            withAvatarSize(notification.actor_avatar_url, 48) ??
+            notification.actor_avatar_url
+          }
           alt={actorName}
           className="h-10 w-10 rounded-full object-cover"
         />

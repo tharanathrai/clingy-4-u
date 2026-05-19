@@ -199,7 +199,7 @@ export function PostDetailSheet({
           type="button"
           onClick={onClose}
           aria-label="Close post details"
-          className="flex justify-center py-3"
+          className="flex min-h-11 justify-center py-3"
         >
           <span className="h-1 w-9 rounded-full bg-white/20" />
         </button>

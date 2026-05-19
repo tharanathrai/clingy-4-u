@@ -6,7 +6,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-24 pt-6 text-text">
+    <div className="safe-content-bottom mx-auto min-h-screen w-full max-w-md bg-bg px-5 pt-6 text-text">
       {children}
     </div>
   )

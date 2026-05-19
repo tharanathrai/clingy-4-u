@@ -5,6 +5,7 @@ import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
+import { withAvatarSize } from '../utils/avatar.ts'
 
 interface ActiveConnection {
   id: string
@@ -37,6 +38,7 @@ export default function PieceNew() {
   const location = useLocation()
   const navigate = useNavigate()
   const [connections, setConnections] = useState<ActiveConnection[]>([])
+  const [pairSlotUsage, setPairSlotUsage] = useState<Record<string, number>>({})
   const [connectionsLoading, setConnectionsLoading] = useState(true)
   const [recipientId, setRecipientId] = useState('')
   const [title, setTitle] = useState('')
@@ -82,6 +84,22 @@ export default function PieceNew() {
     }))
 
     setConnections(nextConnections)
+
+    const { data: pairRows } = await supabase
+      .from('gum_pieces')
+      .select('creator_id, recipient_id')
+      .in('status', ['placeholder', 'active'])
+      .or(`creator_id.eq.${userId},recipient_id.eq.${userId}`)
+
+    const nextPairUsage: Record<string, number> = {}
+    for (const row of pairRows ?? []) {
+      const otherId = row.creator_id === userId ? row.recipient_id : row.creator_id
+      if (!otherIds.includes(otherId)) {
+        continue
+      }
+      nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
+    }
+    setPairSlotUsage(nextPairUsage)
     setConnectionsLoading(false)
   }, [userId])
 
@@ -240,6 +258,8 @@ export default function PieceNew() {
             <ul className="mt-3 space-y-2">
               {connections.map((connection) => {
                 const isSelected = recipientId === connection.id
+                const pairSlotsUsed = pairSlotUsage[connection.id] ?? 0
+                const pairAtLimit = pairSlotsUsed >= 5
                 return (
                   <li key={connection.id}>
                     <button
@@ -249,7 +269,7 @@ export default function PieceNew() {
                     >
                       {connection.avatar_url ? (
                         <img
-                          src={connection.avatar_url}
+                          src={withAvatarSize(connection.avatar_url, 48) ?? connection.avatar_url}
                           alt={connection.display_name}
                           className="h-10 w-10 rounded-full object-cover"
                         />
@@ -259,6 +279,11 @@ export default function PieceNew() {
                         </div>
                       )}
                       <span className="text-sm text-text">{connection.display_name}</span>
+                      {pairAtLimit ? (
+                        <span className="ml-auto rounded-full bg-surface-2 px-2 py-1 text-xs text-warning">
+                          {pairSlotsUsed}/5
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 )
@@ -301,7 +326,7 @@ export default function PieceNew() {
       </button>
 
       {toast ? (
-        <div className="app-fixed-frame bottom-24 px-5">
+        <div className="app-fixed-frame safe-bottom-24 px-5">
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

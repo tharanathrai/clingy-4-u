@@ -172,7 +172,7 @@ export default function ProfileMe() {
       </div>
 
       {toast ? (
-        <div className="app-fixed-frame bottom-24 px-5">
+        <div className="app-fixed-frame safe-bottom-24 px-5">
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

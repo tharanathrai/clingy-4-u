@@ -28,6 +28,7 @@ interface UseNotificationsResult {
   unreadCount: number
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
+  dismissNotification: (id: string) => Promise<void>
   loading: boolean
 }
 
@@ -165,6 +166,27 @@ export function useNotifications(): UseNotificationsResult {
       .eq('read', false)
   }, [userId])
 
+  const dismissNotification = useCallback(
+    async (id: string) => {
+      if (!userId) {
+        return
+      }
+
+      setNotifications((current) => {
+        const next = current.filter((notification) => notification.id !== id)
+        notificationsCache.set(userId, next)
+        return next
+      })
+
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+    },
+    [userId],
+  )
+
   const unreadCount = useMemo(() => {
     return notifications.reduce((count, notification) => {
       return notification.read ? count : count + 1
@@ -176,6 +198,7 @@ export function useNotifications(): UseNotificationsResult {
     unreadCount,
     markAsRead,
     markAllAsRead,
+    dismissNotification,
     loading: loading || authLoading,
   }
 }

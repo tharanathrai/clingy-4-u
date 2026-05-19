@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useFeed } from '../hooks/useFeed.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
-  const { posts, loading, error } = useFeed()
+  const { posts, loading, error, refetch } = useFeed()
   const navigate = useNavigate()
   const [localPosts, setLocalPosts] = useState(posts)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
@@ -78,19 +79,29 @@ export default function Feed() {
         <h1 className="app-page-title">feed</h1>
 
         {loading ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Loading your feed...</p>
+          <section className="mt-8 space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="skeleton h-44 rounded-lg" />
+            ))}
           </section>
         ) : null}
 
         {!loading && error ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-playful">{error}</p>
+            <p className="text-sm text-text-2">Couldn&apos;t load your feed. Try again.</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Retry
+            </button>
           </section>
         ) : null}
 
         {!loading && !error && localPosts.length === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
+            <EmptyStateIllustration variant="bridge" />
             <h2 className="font-display text-2xl text-text">Nothing here yet.</h2>
             <p className="mt-2 text-sm text-text-2">
               Your feed fills up when your people do things together.

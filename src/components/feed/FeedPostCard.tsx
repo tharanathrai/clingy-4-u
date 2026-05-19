@@ -3,6 +3,7 @@ import { Heart, MessageCircle } from 'lucide-react'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import type { Bridge, Post, User } from '../../types/index.ts'
+import { withAvatarSize } from '../../utils/avatar.ts'
 
 interface FeedPostCardProps {
   post: Post & {
@@ -53,7 +54,7 @@ export function FeedPostCard({
         >
           {post.author.avatar_url ? (
             <img
-              src={post.author.avatar_url}
+              src={withAvatarSize(post.author.avatar_url, 48) ?? post.author.avatar_url}
               alt={post.author.display_name}
               className="h-9 w-9 rounded-full object-cover"
             />
@@ -93,7 +94,7 @@ export function FeedPostCard({
             <button
               type="button"
               onClick={onReact}
-              className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm text-text-2 transition-opacity active:opacity-80"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm text-text-2 transition-opacity active:opacity-80"
               aria-label="Toggle reaction"
             >
               <Heart
@@ -108,7 +109,7 @@ export function FeedPostCard({
             <button
               type="button"
               onClick={onComment}
-              className="inline-flex items-center gap-2 rounded-full px-2 py-1 text-sm text-text-2 transition-opacity active:opacity-80"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm text-text-2 transition-opacity active:opacity-80"
               aria-label="Open comments"
             >
               <MessageCircle size={20} strokeWidth={1.75} />

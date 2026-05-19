@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -36,6 +36,7 @@ export default function PieceDetail() {
   const [busyAction, setBusyAction] = useState<'accept' | 'turn_down' | null>(null)
   const [showTurnDownConfirm, setShowTurnDownConfirm] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const previousStatusRef = useRef<PieceDetailRow['status'] | null>(null)
 
   const loadPiece = useCallback(async () => {
     if (!id || authLoading) {
@@ -136,6 +137,38 @@ export default function PieceDetail() {
     }
   }, [toast])
 
+  useEffect(() => {
+    if (!piece) {
+      previousStatusRef.current = null
+      return
+    }
+
+    const previousStatus = previousStatusRef.current
+    previousStatusRef.current = piece.status
+
+    if (!previousStatus || previousStatus === piece.status) {
+      return
+    }
+
+    if (piece.status === 'confirmed') {
+      navigate('/home', {
+        replace: true,
+        state: { toast: 'Bridge formed while you were away.' },
+      })
+      return
+    }
+
+    if (piece.status === 'expired') {
+      setToast('This plan expired.')
+      const timeoutId = window.setTimeout(() => {
+        navigate('/home', { replace: true })
+      }, 2000)
+      return () => {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [navigate, piece])
+
   const category = useMemo(() => toCategorySlug(piece?.category), [piece?.category])
 
   const statusLine = useMemo(() => {
@@ -207,7 +240,19 @@ export default function PieceDetail() {
     }
 
     if (!response.ok) {
-      setToast('Something went wrong - try again.')
+      let errorCode: string | null = null
+      try {
+        const payload = (await response.json()) as { error?: string }
+        errorCode = payload.error ?? null
+      } catch {
+        errorCode = null
+      }
+
+      if (action === 'accept' && errorCode === 'invalid_status') {
+        setToast('This invite has expired.')
+      } else {
+        setToast('Something went wrong - try again.')
+      }
       setBusyAction(null)
       return
     }
@@ -225,6 +270,21 @@ export default function PieceDetail() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading piece...</p>
+      </main>
+    )
+  }
+
+  if (error && !piece) {
+    return (
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 text-center text-text">
+        <p className="text-sm text-text-2">Couldn&apos;t load this plan.</p>
+        <button
+          type="button"
+          onClick={() => void loadPiece()}
+          className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+        >
+          Retry
+        </button>
       </main>
     )
   }
@@ -349,7 +409,7 @@ export default function PieceDetail() {
       </section>
 
       {toast ? (
-        <div className="app-fixed-frame bottom-24 px-5">
+        <div className="app-fixed-frame safe-bottom-24 px-5">
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

@@ -19,6 +19,7 @@ export default function ProfileUser() {
     isConnected,
     loading,
     error,
+    refetch,
   } = useProfile({ username })
 
   const categoriesWithBridges = useMemo(() => {
@@ -30,8 +31,15 @@ export default function ProfileUser() {
 
   if (authLoading || loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
-        <p className="text-sm text-text-2">Loading profile...</p>
+      <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+        <section className="flex flex-col items-center">
+          <div className="skeleton h-20 w-20 rounded-full" />
+          <div className="skeleton mt-4 h-7 w-44 rounded-full" />
+          <div className="skeleton mt-2 h-4 w-28 rounded-full" />
+        </section>
+        <section className="mt-8 flex flex-col items-center">
+          <div className="skeleton h-40 w-40 rounded-full" />
+        </section>
       </main>
     )
   }
@@ -44,13 +52,28 @@ export default function ProfileUser() {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
         <h1 className="font-display text-4xl">Profile</h1>
-        <p className="mt-4 text-sm text-text-2">{error ?? 'Profile not found.'}</p>
-        <Link
-          to="/home"
-          className="mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
-        >
-          Back home
-        </Link>
+        {error ? (
+          <>
+            <p className="mt-4 text-sm text-text-2">Couldn&apos;t load this profile.</p>
+            <button
+              type="button"
+              onClick={refetch}
+              className="mt-8 rounded-full bg-surface-2 px-7 py-3.5 text-center text-sm font-medium text-text-2"
+            >
+              Retry
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="mt-4 text-sm text-text-2">Profile not found.</p>
+            <Link
+              to="/home"
+              className="mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
+            >
+              Back home
+            </Link>
+          </>
+        )}
       </main>
     )
   }

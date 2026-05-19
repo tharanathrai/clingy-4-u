@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import type { Bridge, User } from '../../types/index.ts'
+import { withAvatarSize } from '../../utils/avatar.ts'
 
 interface BridgeDetailSheetProps {
   bridge: Bridge | null
@@ -45,7 +46,7 @@ export function BridgeDetailSheet({
       <button
         type="button"
         aria-label="Expand bridge details"
-        className="flex w-full justify-center py-3"
+        className="flex min-h-11 w-full justify-center py-3"
         onClick={() => {
           setExpanded((previous) => !previous)
         }}
@@ -73,7 +74,7 @@ export function BridgeDetailSheet({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-3 rounded-full p-2 text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
+        className="absolute right-4 top-3 flex h-11 w-11 items-center justify-center rounded-full text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
         aria-label="Close bridge details"
       >
         <X size={18} strokeWidth={1.75} />
@@ -95,7 +96,7 @@ export function BridgeDetailSheet({
         <article className="rounded-lg border border-white/10 bg-surface-2 p-3">
           {otherUser?.avatar_url ? (
             <img
-              src={otherUser.avatar_url}
+              src={withAvatarSize(otherUser.avatar_url, 48) ?? otherUser.avatar_url}
               alt={otherUser.display_name}
               className="mb-2 h-12 w-12 rounded-full object-cover"
             />

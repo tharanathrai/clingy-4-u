@@ -7,6 +7,7 @@ import {
   type NetworkGraphEdge,
   type NetworkGraphNode,
 } from '../../hooks/useNetworkGraph.ts'
+import { withAvatarSize } from '../../utils/avatar.ts'
 
 type GraphNode = NetworkGraphNode & {
   x?: number
@@ -62,7 +63,7 @@ export function NetworkGraph({
   graphCanvasRef,
   recenterTrigger = 0,
 }: NetworkGraphProps) {
-  const { nodes, edges, loading, error } = useNetworkGraph()
+  const { nodes, edges, loading, error, refetch } = useNetworkGraph()
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphEdge> | undefined>(
     undefined,
   )
@@ -75,14 +76,14 @@ export function NetworkGraph({
 
   useEffect(() => {
     for (const node of nodes) {
-      const url = node.user.avatar_url
-      if (!url || avatarCacheRef.current[url]) {
+      const transformedUrl = withAvatarSize(node.user.avatar_url, node.isSelf ? 72 : 48)
+      if (!transformedUrl || avatarCacheRef.current[transformedUrl]) {
         continue
       }
       const image = new Image()
       image.crossOrigin = 'anonymous'
-      image.src = url
-      avatarCacheRef.current[url] = image
+      image.src = transformedUrl
+      avatarCacheRef.current[transformedUrl] = image
     }
   }, [nodes])
 
@@ -307,7 +308,7 @@ export function NetworkGraph({
     ctx.strokeStyle = stroke
     ctx.stroke()
 
-    const avatarUrl = node.user.avatar_url
+    const avatarUrl = withAvatarSize(node.user.avatar_url, node.isSelf ? 72 : 48)
     if (avatarUrl && avatarCacheRef.current[avatarUrl]?.complete) {
       const image = avatarCacheRef.current[avatarUrl]
       const imageRadius = radius - 3
@@ -408,16 +409,29 @@ export function NetworkGraph({
 
   if (error) {
     return (
-      <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-playful">
-        Something went wrong loading your network.
+      <div className="flex h-full w-full flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm text-text-2">Couldn&apos;t load your network. Try again.</p>
+        <button
+          type="button"
+          onClick={refetch}
+          className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+        >
+          Retry
+        </button>
       </div>
     )
   }
 
   if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
     return (
-      <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center text-sm text-text-2">
-        Loading your network...
+      <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center">
+        <div className="relative h-32 w-32">
+          <span className="network-node-pulse absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40" />
+          <span className="network-node-pulse network-node-delay-1 absolute left-4 top-7 h-8 w-8 rounded-full bg-explore/50" />
+          <span className="network-node-pulse network-node-delay-2 absolute right-4 top-9 h-7 w-7 rounded-full bg-active/50" />
+          <span className="network-node-pulse network-node-delay-3 absolute bottom-4 left-8 h-7 w-7 rounded-full bg-playful/50" />
+          <span className="network-node-pulse network-node-delay-4 absolute bottom-6 right-7 h-9 w-9 rounded-full bg-intimate/50" />
+        </div>
       </div>
     )
   }

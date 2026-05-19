@@ -1,14 +1,18 @@
+import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout.tsx'
 import { useNavigate } from 'react-router-dom'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
+import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
   const navigate = useNavigate()
-  const { notifications, unreadCount, markAsRead, markAllAsRead, loading } =
+  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, loading } =
     useNotifications()
+  const [toast, setToast] = useState<string | null>(null)
   const {
     visibleItems: visibleNotifications,
     hasMore,
@@ -19,8 +23,37 @@ export default function Notifications() {
     `${loading ? 'loading' : 'ready'}:${visibleNotifications.length}`,
   )
 
+  useEffect(() => {
+    if (!toast) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null)
+    }, 2400)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [toast])
+
   const handleNotificationPress = async (id: string, type: string, referenceId: string) => {
     await markAsRead(id)
+
+    if (type === 'invite_received') {
+      const { data: pieceRow } = await supabase
+        .from('gum_pieces')
+        .select('status')
+        .eq('id', referenceId)
+        .maybeSingle<{ status: string }>()
+
+      if (pieceRow?.status === 'expired') {
+        await dismissNotification(id)
+        setToast('This invite has expired.')
+        return
+      }
+    }
+
     if (type === 'connection_request') {
       void navigate('/connections/requests')
       return
@@ -61,6 +94,7 @@ export default function Notifications() {
 
         {!loading && notifications.length === 0 ? (
           <section className="mt-8 text-center">
+            <EmptyStateIllustration />
             <p className="font-display text-2xl text-text">All caught up.</p>
           </section>
         ) : null}
@@ -93,6 +127,14 @@ export default function Notifications() {
             >
               Load more
             </button>
+          </div>
+        ) : null}
+
+        {toast ? (
+          <div className="app-fixed-frame safe-bottom-24 px-5">
+            <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
+              {toast}
+            </p>
           </div>
         ) : null}
       </main>

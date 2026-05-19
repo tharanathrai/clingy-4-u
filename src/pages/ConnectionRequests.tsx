@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
+import { withAvatarSize } from '../utils/avatar.ts'
 
 interface PendingConnectionRequest {
   id: string
@@ -167,7 +168,7 @@ export default function ConnectionRequests() {
               <div className="flex items-center gap-3">
                 {request.avatar_url ? (
                   <img
-                    src={request.avatar_url}
+                    src={withAvatarSize(request.avatar_url, 48) ?? request.avatar_url}
                     alt={request.display_name}
                     className="h-11 w-11 rounded-full object-cover"
                   />

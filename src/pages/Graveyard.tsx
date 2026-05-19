@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -110,6 +111,7 @@ export default function Graveyard() {
 
       {empty ? (
         <section className="mt-10 rounded-lg bg-surface p-6 text-center">
+          <EmptyStateIllustration />
           <p className="font-display text-2xl text-text">Nothing here.</p>
           <p className="mt-2 text-sm text-text-2">Keep it that way.</p>
         </section>

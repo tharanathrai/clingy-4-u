@@ -5,6 +5,7 @@ import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import { supabase } from '../../lib/supabase.ts'
 import type { User } from '../../types/index.ts'
 import { useBridgesByPair } from '../../hooks/useBridgesByPair.ts'
+import { withAvatarSize } from '../../utils/avatar.ts'
 
 interface NodeProfileSheetProps {
   userId: string | null
@@ -98,7 +99,7 @@ export function NodeProfileSheet({
       <button
         type="button"
         aria-label="Expand profile preview"
-        className="flex w-full justify-center py-3"
+        className="flex min-h-11 w-full justify-center py-3"
         onClick={() => {
           setExpanded((previous) => !previous)
         }}
@@ -127,7 +128,7 @@ export function NodeProfileSheet({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-3 rounded-full p-2 text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
+        className="absolute right-4 top-3 flex h-11 w-11 items-center justify-center rounded-full text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
         aria-label="Close profile preview"
       >
         <X size={18} strokeWidth={1.75} />
@@ -142,7 +143,7 @@ export function NodeProfileSheet({
           <div className="flex items-center gap-3">
             {otherUser?.avatar_url ? (
               <img
-                src={otherUser.avatar_url}
+                src={withAvatarSize(otherUser.avatar_url, 64) ?? otherUser.avatar_url}
                 alt={otherUser.display_name}
                 className="h-16 w-16 rounded-full object-cover"
               />
