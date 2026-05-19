@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { forceCollide } from 'd3-force'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import type { Bridge } from '../../types/index.ts'
@@ -153,7 +153,7 @@ export function NetworkGraph({
     }
   }, [nodes])
 
-  const recenterGraph = (duration = 240) => {
+  const recenterGraph = useCallback((duration = 240) => {
     const bounds = graphContainerRef.current?.getBoundingClientRect()
     const width = Math.round(bounds?.width ?? graphSize.width)
     const height = Math.round(bounds?.height ?? graphSize.height)
@@ -176,7 +176,7 @@ export function NetworkGraph({
 
     graphRef.current?.centerAt(0, 20, duration)
     graphRef.current?.zoom(zoom, duration)
-  }
+  }, [graphSize.height, graphSize.width, worldBounds.bottom, worldBounds.left, worldBounds.right, worldBounds.top])
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
@@ -207,7 +207,7 @@ export function NetworkGraph({
       'collide',
       forceCollide<GraphNode>((node) => (node.isSelf ? 48 : 28)).strength(0.98),
     )
-  }, [error, loading, nodes.length])
+  }, [error, loading, nodes.length, pairMeta])
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
@@ -220,14 +220,14 @@ export function NetworkGraph({
 
     hasAppliedInitialRecenterRef.current = true
     recenterGraph(0)
-  }, [error, graphSize.height, graphSize.width, loading, nodes.length, worldBounds.maxRadius])
+  }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterGraph, worldBounds.maxRadius])
 
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
     }
     recenterGraph(220)
-  }, [recenterTrigger])
+  }, [error, loading, nodes.length, recenterGraph, recenterTrigger])
 
   useEffect(() => {
     if (!onGraphStateChange) {

@@ -62,7 +62,7 @@ export default function Add() {
     setToken(data.token)
     setExpiresAt(data.expires_at)
     setLoading(false)
-  }, [])
+  }, [signOut])
 
   useEffect(() => {
     void fetchToken()
@@ -127,7 +127,7 @@ export default function Add() {
       <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
         <button
           type="button"
-          className="rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
           onClick={() => void fetchToken()}
         >
           Refresh now

@@ -4,7 +4,6 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
-import type { User } from '../types/index.ts'
 
 export default function Settings() {
   const { user, loading: authLoading, signOut } = useAuth()
@@ -126,7 +125,7 @@ export default function Settings() {
           profile={profile}
           isOpen={isEditing}
           onClose={() => setIsEditing(false)}
-          onSaved={(_updatedProfile: User) => {
+          onSaved={() => {
             setIsEditing(false)
             refetch()
           }}

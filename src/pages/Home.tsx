@@ -19,8 +19,7 @@ export default function Home() {
   const [connectionsCount, setConnectionsCount] = useState(0)
   const [loadingConnections, setLoadingConnections] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
-  const slotsUsed = pieces.length
-  const pocketFull = slotsUsed >= 25
+  const pocketFull = pieces.length >= 25
 
   const loadConnectionsCount = useCallback(async () => {
     if (!userId) {
@@ -94,7 +93,6 @@ export default function Home() {
 
   const handleNewGum = () => {
     if (pocketFull) {
-      setToast('Pocket full — complete or clear a plan first.')
       return
     }
 
@@ -111,21 +109,7 @@ export default function Home() {
       <main className="pb-28">
         <header>
           <h1 className="app-page-title">your pocket</h1>
-          <p className="mt-2 text-xs text-text-3">{slotsUsed} / 25 slots used</p>
         </header>
-
-        <div className="mt-4">
-          <button
-            type="button"
-            className="rounded-full bg-surface-2 px-4 py-2 text-xs font-medium text-text-2"
-            onClick={() => {
-              void refetch()
-              void loadConnectionsCount()
-            }}
-          >
-            Refresh
-          </button>
-        </div>
 
         {loading || loadingConnections ? (
           <section className="mt-8 space-y-3">

@@ -153,7 +153,7 @@ export default function AddScan() {
 
       {!successUser ? (
         <>
-          <div className="mt-6 rounded-lg border border-white/10 bg-surface p-4">
+          <div className="qr-reader-container mt-6 rounded-lg border border-white/10 bg-surface p-4">
             <div id="qr-reader" />
           </div>
 
@@ -221,6 +221,7 @@ export default function AddScan() {
           <p className="mt-4 text-lg text-text">{successUser.display_name}</p>
           <p className="text-sm text-text-2">@{successUser.username}</p>
           <p className="mt-3 text-sm text-active">Request sent.</p>
+          <p className="mt-2 text-sm text-text-2">They&apos;ll get a notification to accept.</p>
         </section>
       )}
 

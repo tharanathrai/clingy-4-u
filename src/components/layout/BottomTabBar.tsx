@@ -36,7 +36,9 @@ export function BottomTabBar() {
     <nav className="app-fixed-frame bottom-0 z-40 border-t border-white/10 bg-surface">
       <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-center justify-between px-5 pb-0.5 pt-1.5">
         {tabs.map((tab) => {
-          const isActive = location.pathname === tab.to
+          const isActive =
+            location.pathname === tab.to ||
+            (tab.to !== '/' && location.pathname.startsWith(tab.to))
           const Icon = tab.icon
           return (
             <Link
@@ -44,11 +46,16 @@ export function BottomTabBar() {
               to={tab.to}
               className="relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 py-1"
             >
-              <Icon
-                size={22}
-                strokeWidth={1.75}
-                className={isActive ? 'text-accent' : 'text-text-3'}
-              />
+              <span className="relative">
+                <Icon
+                  size={22}
+                  strokeWidth={1.75}
+                  className={isActive ? 'text-accent' : 'text-text-3'}
+                />
+                {tab.hasBadge && unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-playful" />
+                ) : null}
+              </span>
               <span
                 className={`text-xs font-medium ${
                   isActive ? 'text-accent' : 'text-text-3'
@@ -56,9 +63,6 @@ export function BottomTabBar() {
               >
                 {tab.label}
               </span>
-              {tab.hasBadge && unreadCount > 0 ? (
-                <span className="absolute right-5 top-1 h-2 w-2 rounded-full bg-playful" />
-              ) : null}
             </Link>
           )
         })}

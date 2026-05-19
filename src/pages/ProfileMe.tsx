@@ -7,7 +7,6 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
-import type { User } from '../types/index.ts'
 
 export default function ProfileMe() {
   const { user, loading } = useAuth()
@@ -185,7 +184,7 @@ export default function ProfileMe() {
         onClose={() => {
           setIsEditing(false)
         }}
-        onSaved={(_updatedProfile: User) => {
+        onSaved={() => {
           setIsEditing(false)
           setToast('Profile updated.')
           refetch()

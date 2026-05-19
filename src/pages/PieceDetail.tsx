@@ -20,6 +20,13 @@ interface PieceDetailRow {
   expires_at: string
 }
 
+interface ParticipantMeta {
+  id: string
+  display_name: string
+  username: string
+  avatar_url: string | null
+}
+
 const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -29,8 +36,8 @@ export default function PieceDetail() {
   const userId = user?.id ?? null
   const navigate = useNavigate()
   const [piece, setPiece] = useState<PieceDetailRow | null>(null)
-  const [creatorName, setCreatorName] = useState('Unknown user')
-  const [recipientName, setRecipientName] = useState('Unknown user')
+  const [creator, setCreator] = useState<ParticipantMeta | null>(null)
+  const [recipient, setRecipient] = useState<ParticipantMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<'accept' | 'turn_down' | null>(null)
@@ -78,16 +85,16 @@ export default function PieceDetail() {
 
     const { data: participantRows } = await supabase
       .from('users')
-      .select('id, display_name')
+      .select('id, display_name, username, avatar_url')
       .in('id', [data.creator_id, data.recipient_id])
 
     const creator = participantRows?.find((row) => row.id === data.creator_id)
     const recipient = participantRows?.find((row) => row.id === data.recipient_id)
     if (creator) {
-      setCreatorName(creator.display_name)
+      setCreator(creator as ParticipantMeta)
     }
     if (recipient) {
-      setRecipientName(recipient.display_name)
+      setRecipient(recipient as ParticipantMeta)
     }
 
     setLoading(false)
@@ -176,7 +183,10 @@ export default function PieceDetail() {
       return ''
     }
 
-    const otherName = userId === piece.creator_id ? recipientName : creatorName
+    const otherName =
+      userId === piece.creator_id
+        ? recipient?.display_name ?? 'them'
+        : creator?.display_name ?? 'them'
     if (piece.status === 'placeholder') {
       return `Waiting for ${otherName} to accept`
     }
@@ -190,7 +200,7 @@ export default function PieceDetail() {
       return 'Expired'
     }
     return 'Confirmed'
-  }, [creatorName, piece, recipientName, userId])
+  }, [creator, piece, recipient, userId])
 
   const expiryProgress = useMemo(() => {
     if (!piece) {
@@ -298,14 +308,28 @@ export default function PieceDetail() {
   const canCancelPlaceholder = piece.status === 'placeholder' && !isRecipient
   const canTurnDownActive = piece.status === 'active'
   const readOnly = ['confirmed', 'expired', 'turned_down'].includes(piece.status)
+  const partner = userId === piece.creator_id ? recipient : creator
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+
+    navigate('/home')
+  }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
       <div className="mb-6">
-        <Link to="/home" className="inline-flex items-center gap-2 text-sm text-text-2">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-2 text-sm text-text-2"
+        >
           <ArrowLeft size={18} strokeWidth={1.75} />
           back
-        </Link>
+        </button>
       </div>
 
       {error ? <p className="mb-3 text-sm text-playful">{error}</p> : null}
@@ -315,6 +339,25 @@ export default function PieceDetail() {
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
       </div>
+      {partner ? (
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {partner.avatar_url ? (
+            <img
+              src={partner.avatar_url}
+              alt={partner.display_name}
+              className="h-6 w-6 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
+              {partner.display_name.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <span className="text-sm text-text-2">with</span>
+          <Link to={`/profile/${partner.username}`} className="text-sm text-text underline-offset-2 hover:underline">
+            {partner.display_name}
+          </Link>
+        </div>
+      ) : null}
       <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
 
       <div className="mt-5 flex gap-0.5 rounded-full bg-surface-2 p-0.5">
@@ -368,6 +411,9 @@ export default function PieceDetail() {
             >
               Mark as done
             </button>
+            <p className="text-center text-xs text-text-3">
+              you&apos;ll need to be with them to do this
+            </p>
             {!showTurnDownConfirm ? (
               <button
                 type="button"
@@ -403,7 +449,11 @@ export default function PieceDetail() {
 
         {readOnly ? (
           <p className="text-center text-sm text-text-2">
-            This plan is read-only now.
+            {piece.status === 'expired'
+              ? "This one didn't happen. That's okay."
+              : piece.status === 'turned_down'
+                ? 'Passed on. No hard feelings.'
+                : 'This one is complete.'}
           </p>
         ) : null}
       </section>

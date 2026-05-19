@@ -19,15 +19,28 @@ const accentClassByCategory: Record<CategorySlug, string> = {
   support: 'bg-support',
 }
 
+const glowClassByCategory: Record<CategorySlug, string> = {
+  intimate: 'bg-intimate/20',
+  active: 'bg-active/20',
+  playful: 'bg-playful/20',
+  explore: 'bg-explore/20',
+  recharge: 'bg-recharge/20',
+  savor: 'bg-savor/20',
+  support: 'bg-support/20',
+}
+
 const morphDurationClasses = ['gum-morph-3', 'gum-morph-37', 'gum-morph-42'] as const
 
 export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProps) {
   const category = toCategorySlug(piece.category)
   const accentClass = accentClassByCategory[category]
+  const glowClass = glowClassByCategory[category]
   const morphClass = morphDurationClasses[idModulo(piece.id, 3)]
   const isPlaceholder = piece.status === 'placeholder'
-  const isRecipient = currentUserId === piece.recipient_id
-  const partnerLabel = isRecipient ? 'from them' : 'to them'
+  const partnerName =
+    currentUserId === piece.recipient_id
+      ? piece.creator_display_name ?? 'someone'
+      : piece.recipient_display_name ?? 'someone'
 
   const expiryDate = new Date(piece.expires_at)
   const leftText = `${formatDistanceToNow(expiryDate, { addSuffix: false })} left`
@@ -41,17 +54,24 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
     >
       <span className={`block h-1 w-full ${accentClass}`} />
       <div className="flex items-center gap-4 p-6">
-        <div
-          className={`h-12 w-12 shrink-0 ${accentClass} gum-morph-base ${morphClass}`}
-          aria-hidden
-        />
+        <div className="relative h-12 w-12 shrink-0">
+          <span
+            className={`pointer-events-none absolute inset-0 scale-[1.7] rounded-full blur-md ${glowClass}`}
+            aria-hidden
+          />
+          <div
+            className={`relative h-12 w-12 ${accentClass} gum-morph-base ${morphClass}`}
+            aria-hidden
+          />
+        </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-base font-body font-normal text-text">{piece.title}</p>
           <div className="mt-2">
             <CategoryChip category={category} size="md" />
           </div>
+          <p className="mt-2 text-xs text-text-3">with {partnerName}</p>
           <p className={`mt-2 text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>
-            {leftText} {isPlaceholder ? `(${partnerLabel})` : ''}
+            {leftText} {isPlaceholder ? '(pending)' : ''}
           </p>
         </div>
       </div>

@@ -45,6 +45,41 @@ body {
   overflow-x: hidden;
 }
 
+.app-route-transition-fade {
+  animation: app-route-fade-in 250ms ease;
+}
+
+.app-route-transition-slide-up {
+  animation: app-route-slide-up 250ms cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes app-route-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-route-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-route-transition-fade,
+  .app-route-transition-slide-up {
+    animation: none;
+  }
+}
+
 .app-page-title {
   font-family: "Bagel Fat One", cursive;
   font-size: 2.25rem;
@@ -98,6 +133,30 @@ body.modal-scroll-lock {
   border: 3px solid rgba(207, 142, 232, 0.25);
   border-top-color: #cf8ee8;
   animation: qr-countdown-spin 60s linear infinite;
+}
+
+.qr-reader-container #qr-reader {
+  border: none !important;
+  background: transparent !important;
+  color: #9b93b8 !important;
+}
+
+.qr-reader-container #qr-reader__dashboard {
+  background: transparent !important;
+  color: #9b93b8 !important;
+}
+
+.qr-reader-container #qr-reader__dashboard_section_csr {
+  display: none !important;
+}
+
+.qr-reader-container #qr-reader__scan_region {
+  border: none !important;
+  background: transparent !important;
+}
+
+.qr-reader-container #qr-reader video {
+  border-radius: 14px;
 }
 
 @keyframes qr-countdown-spin {

@@ -14,6 +14,8 @@ export interface GumPiece {
   accepted_at: string | null
   expires_at: string
   confirmed_at: string | null
+  creator_display_name?: string
+  recipient_display_name?: string
 }
 
 interface UseGumPiecesResult {
@@ -65,7 +67,27 @@ export function useGumPieces(): UseGumPiecesResult {
       return
     }
 
-    const nextPieces = (data ?? []) as GumPiece[]
+    const rawPieces = (data ?? []) as GumPiece[]
+    const participantIds = Array.from(
+      new Set(rawPieces.flatMap((piece) => [piece.creator_id, piece.recipient_id])),
+    )
+    let nameById = new Map<string, string>()
+    if (participantIds.length > 0) {
+      const { data: userRows } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .in('id', participantIds)
+
+      nameById = new Map(
+        (userRows ?? []).map((row) => [row.id as string, row.display_name as string]),
+      )
+    }
+
+    const nextPieces = rawPieces.map((piece) => ({
+      ...piece,
+      creator_display_name: nameById.get(piece.creator_id),
+      recipient_display_name: nameById.get(piece.recipient_id),
+    }))
     gumPiecesCache.set(userId, nextPieces)
     setPieces(nextPieces)
     setLoading(false)

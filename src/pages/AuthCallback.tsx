@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase.ts'
 
+const postAuthReturnToKey = 'postAuthReturnTo'
+
 export default function AuthCallback() {
   const navigate = useNavigate()
 
@@ -32,6 +34,16 @@ export default function AuthCallback() {
       }
 
       if (!cancelled) {
+        const storedReturnTo = sessionStorage.getItem(postAuthReturnToKey)
+        if (storedReturnTo) {
+          sessionStorage.removeItem(postAuthReturnToKey)
+        }
+
+        if (profile && storedReturnTo?.startsWith('/')) {
+          navigate(storedReturnTo, { replace: true })
+          return
+        }
+
         navigate(profile ? '/home' : '/welcome', { replace: true })
       }
     }

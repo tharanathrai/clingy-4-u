@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/layout/AuthGuard.tsx'
 
 const LandingPage = lazy(() => import('./pages/Landing.tsx'))
@@ -24,143 +24,151 @@ const PieceConfirmPage = lazy(() => import('./pages/PieceConfirm.tsx'))
 const SettingsPage = lazy(() => import('./pages/Settings.tsx'))
 
 function App() {
+  const location = useLocation()
+  const tabRoots = ['/home', '/network', '/feed', '/notifications', '/profile']
+  const transitionClassName = tabRoots.some((path) => location.pathname.startsWith(path))
+    ? 'app-route-transition-fade'
+    : 'app-route-transition-slide-up'
+
   return (
     <div className="app-device-frame">
       <div className="app-device-screen">
-        <Suspense fallback={<div className="p-5 text-text">Loading...</div>}>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-            <Route
-              path="/welcome"
-              element={
-                <AuthGuard>
-                  <WelcomePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/home"
-              element={
-                <AuthGuard>
-                  <HomePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/home/graveyard"
-              element={
-                <AuthGuard>
-                  <GraveyardPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/network"
-              element={
-                <AuthGuard>
-                  <NetworkPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/feed"
-              element={
-                <AuthGuard>
-                  <FeedPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={
-                <AuthGuard>
-                  <NotificationsPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/profile/me"
-              element={
-                <AuthGuard>
-                  <ProfileMePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/profile/:username"
-              element={
-                <AuthGuard>
-                  <ProfilePage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/add"
-              element={
-                <AuthGuard>
-                  <AddPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/add/scan"
-              element={
-                <AuthGuard>
-                  <AddScanPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/connect"
-              element={
-                <AuthGuard>
-                  <ConnectPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/connections/requests"
-              element={
-                <AuthGuard>
-                  <ConnectionRequestsPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/piece/new"
-              element={
-                <AuthGuard>
-                  <PieceNewPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/piece/:id"
-              element={
-                <AuthGuard>
-                  <PieceDetailPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/piece/:id/confirm"
-              element={
-                <AuthGuard>
-                  <PieceConfirmPage />
-                </AuthGuard>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <AuthGuard>
-                  <SettingsPage />
-                </AuthGuard>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+        <div className="grain-overlay" aria-hidden="true" />
+        <Suspense
+          fallback={
+            <div className="flex min-h-screen items-center justify-center bg-bg">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
+            </div>
+          }
+        >
+          <div key={location.pathname} className={transitionClassName}>
+            <Routes location={location}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route
+                path="/welcome"
+                element={
+                  <AuthGuard>
+                    <WelcomePage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/home"
+                element={
+                  <AuthGuard>
+                    <HomePage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/home/graveyard"
+                element={
+                  <AuthGuard>
+                    <GraveyardPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/network"
+                element={
+                  <AuthGuard>
+                    <NetworkPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/feed"
+                element={
+                  <AuthGuard>
+                    <FeedPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <AuthGuard>
+                    <NotificationsPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/profile/me"
+                element={
+                  <AuthGuard>
+                    <ProfileMePage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/profile/:username"
+                element={
+                  <AuthGuard>
+                    <ProfilePage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/add"
+                element={
+                  <AuthGuard>
+                    <AddPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/add/scan"
+                element={
+                  <AuthGuard>
+                    <AddScanPage />
+                  </AuthGuard>
+                }
+              />
+              <Route path="/connect" element={<ConnectPage />} />
+              <Route
+                path="/connections/requests"
+                element={
+                  <AuthGuard>
+                    <ConnectionRequestsPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/piece/new"
+                element={
+                  <AuthGuard>
+                    <PieceNewPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/piece/:id"
+                element={
+                  <AuthGuard>
+                    <PieceDetailPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/piece/:id/confirm"
+                element={
+                  <AuthGuard>
+                    <PieceConfirmPage />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <AuthGuard>
+                    <SettingsPage />
+                  </AuthGuard>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
         </Suspense>
       </div>
     </div>

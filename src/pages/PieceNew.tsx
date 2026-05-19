@@ -43,6 +43,7 @@ export default function PieceNew() {
   const [recipientId, setRecipientId] = useState('')
   const [title, setTitle] = useState('')
   const [categoryPreview, setCategoryPreview] = useState<CategorySlug | null>(null)
+  const [categorizing, setCategorizing] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -130,14 +131,17 @@ export default function PieceNew() {
   useEffect(() => {
     if (!title.trim()) {
       setCategoryPreview(null)
+      setCategorizing(false)
       return
     }
 
     const timeoutId = window.setTimeout(() => {
       void (async () => {
+        setCategorizing(true)
         const { data: sessionData } = await supabase.auth.getSession()
         const accessToken = sessionData.session?.access_token
         if (!accessToken) {
+          setCategorizing(false)
           return
         }
 
@@ -152,6 +156,7 @@ export default function PieceNew() {
         })
 
         if (!response.ok) {
+          setCategorizing(false)
           return
         }
 
@@ -159,6 +164,7 @@ export default function PieceNew() {
         if (data.category in CATEGORIES) {
           setCategoryPreview(data.category as CategorySlug)
         }
+        setCategorizing(false)
       })()
     }, 300)
 
@@ -172,6 +178,17 @@ export default function PieceNew() {
   const selectedRecipientName = useMemo(() => {
     return connections.find((connection) => connection.id === recipientId)?.display_name
   }, [connections, recipientId])
+
+  const sortedConnections = useMemo(() => {
+    return [...connections].sort((a, b) => {
+      const aAtLimit = (pairSlotUsage[a.id] ?? 0) >= 5
+      const bAtLimit = (pairSlotUsage[b.id] ?? 0) >= 5
+      if (aAtLimit === bAtLimit) {
+        return a.display_name.localeCompare(b.display_name)
+      }
+      return aAtLimit ? 1 : -1
+    })
+  }, [connections, pairSlotUsage])
 
   const handleSubmit = async () => {
     if (!canSubmit) {
@@ -253,10 +270,18 @@ export default function PieceNew() {
         <section className="mt-6">
           <p className="text-xs uppercase text-text-3">Choose someone</p>
           {connections.length === 0 ? (
-            <p className="mt-2 text-sm text-text-2">Add someone first before making a plan.</p>
+            <>
+              <p className="mt-2 text-sm text-text-2">Add someone first before making a plan.</p>
+              <Link
+                to="/add"
+                className="mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+              >
+                Add someone
+              </Link>
+            </>
           ) : (
             <ul className="mt-3 space-y-2">
-              {connections.map((connection) => {
+              {sortedConnections.map((connection) => {
                 const isSelected = recipientId === connection.id
                 const pairSlotsUsed = pairSlotUsage[connection.id] ?? 0
                 const pairAtLimit = pairSlotsUsed >= 5
@@ -265,7 +290,10 @@ export default function PieceNew() {
                     <button
                       type="button"
                       onClick={() => setRecipientId(connection.id)}
-                      className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left ${isSelected ? 'border-accent bg-surface-2' : 'border-white/10 bg-surface'}`}
+                      disabled={pairAtLimit}
+                      className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left ${
+                        isSelected ? 'border-accent bg-surface-2' : 'border-white/10 bg-surface'
+                      } ${pairAtLimit ? 'cursor-not-allowed opacity-60' : ''}`}
                     >
                       {connection.avatar_url ? (
                         <img
@@ -278,7 +306,14 @@ export default function PieceNew() {
                           {connection.display_name.slice(0, 1).toUpperCase()}
                         </div>
                       )}
-                      <span className="text-sm text-text">{connection.display_name}</span>
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-sm text-text">{connection.display_name}</span>
+                        {pairAtLimit ? (
+                          <span className="text-xs text-text-3">
+                            5/5 plans - come back after one completes
+                          </span>
+                        ) : null}
+                      </div>
                       {pairAtLimit ? (
                         <span className="ml-auto rounded-full bg-surface-2 px-2 py-1 text-xs text-warning">
                           {pairSlotsUsed}/5
@@ -313,6 +348,9 @@ export default function PieceNew() {
             <p className="text-sm text-text-2">looks like</p>
             <CategoryChip category={categoryPreview} size="md" />
           </div>
+        ) : null}
+        {categorizing && !categoryPreview ? (
+          <p className="mt-3 text-xs text-text-3">figuring out what this is...</p>
         ) : null}
       </section>
 

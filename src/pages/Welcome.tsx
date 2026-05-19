@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Camera } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -153,6 +154,7 @@ export default function Welcome() {
           />
         ))}
       </div>
+      <p className="-mt-5 mb-6 text-center text-xs text-text-3">Step {step} of 3</p>
 
       {step === 1 ? (
         <section className="flex flex-1 flex-col">
@@ -254,15 +256,18 @@ export default function Welcome() {
             )}
           </div>
 
-          <label className="mt-6 text-center text-sm text-text-2" htmlFor="avatar-upload">
-            Upload image
+          <label className="mt-6 cursor-pointer text-center" htmlFor="avatar-upload">
+            <span className="inline-flex min-h-11 items-center gap-2 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2">
+              <Camera size={16} strokeWidth={1.75} />
+              Tap to upload
+            </span>
           </label>
           <input
             id="avatar-upload"
             type="file"
             accept="image/*"
             onChange={handleAvatarFileChange}
-            className="mt-2"
+            className="sr-only"
           />
 
           {errorMessage ? <p className="mt-3 text-sm text-playful">{errorMessage}</p> : null}

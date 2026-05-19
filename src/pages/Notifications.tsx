@@ -67,6 +67,7 @@ export default function Notifications() {
       type === 'plan_expiring_soon'
     ) {
       void navigate(`/piece/${referenceId}`)
+      return
     }
 
     if (type === 'bridge_formed') {
@@ -75,6 +76,11 @@ export default function Notifications() {
           ? { selectUserId: tappedNotification.target_user_id }
           : undefined,
       })
+      return
+    }
+
+    if (type === 'post_comment' || type === 'post_reaction') {
+      void navigate('/feed')
     }
   }
 
@@ -95,8 +101,10 @@ export default function Notifications() {
         </div>
 
         {loading ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Loading notifications...</p>
+          <section className="mt-6 space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="skeleton h-14 rounded-lg" />
+            ))}
           </section>
         ) : null}
 
