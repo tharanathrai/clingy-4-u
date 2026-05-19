@@ -178,6 +178,30 @@ export function NetworkGraph({
     graphRef.current?.zoom(zoom, duration)
   }, [graphSize.height, graphSize.width, worldBounds.bottom, worldBounds.left, worldBounds.right, worldBounds.top])
 
+  const pairMeta = useMemo(() => {
+    const groupedByPair: Record<string, GraphEdge[]> = {}
+    for (const edge of edges) {
+      const pairKey = normalizePair(edge.bridge.user_a_id, edge.bridge.user_b_id)
+      if (!groupedByPair[pairKey]) {
+        groupedByPair[pairKey] = []
+      }
+      groupedByPair[pairKey].push(edge as GraphEdge)
+    }
+
+    const edgeMetaById: Record<string, { index: number; total: number; pairCount: number }> = {}
+    for (const pairEdges of Object.values(groupedByPair)) {
+      pairEdges.forEach((edge, index) => {
+        edgeMetaById[edge.id] = {
+          index,
+          total: pairEdges.length,
+          pairCount: pairEdges.length,
+        }
+      })
+    }
+
+    return edgeMetaById
+  }, [edges])
+
   useEffect(() => {
     if (!graphRef.current || loading || error || nodes.length === 0) {
       return
@@ -251,30 +275,6 @@ export function NetworkGraph({
       graphCanvasRef.current = canvas
     }
   }, [edges.length, graphCanvasRef, nodes.length])
-
-  const pairMeta = useMemo(() => {
-    const groupedByPair: Record<string, GraphEdge[]> = {}
-    for (const edge of edges) {
-      const pairKey = normalizePair(edge.bridge.user_a_id, edge.bridge.user_b_id)
-      if (!groupedByPair[pairKey]) {
-        groupedByPair[pairKey] = []
-      }
-      groupedByPair[pairKey].push(edge as GraphEdge)
-    }
-
-    const edgeMetaById: Record<string, { index: number; total: number; pairCount: number }> = {}
-    for (const pairEdges of Object.values(groupedByPair)) {
-      pairEdges.forEach((edge, index) => {
-        edgeMetaById[edge.id] = {
-          index,
-          total: pairEdges.length,
-          pairCount: pairEdges.length,
-        }
-      })
-    }
-
-    return edgeMetaById
-  }, [edges])
 
   const graphData = useMemo(() => {
     const selfNode = nodes.find((node) => node.isSelf)
