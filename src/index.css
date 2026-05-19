@@ -9,7 +9,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --keyboard-inset: 0px;
 }
 
 * {
@@ -80,7 +79,7 @@ body.modal-scroll-lock {
 }
 
 .composer-safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-inset) + 12px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
 }
 
 .grain-overlay {
@@ -111,7 +110,7 @@ body.modal-scroll-lock {
 }
 
 .safe-bottom-tab {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
 }
 
 .safe-content-bottom {

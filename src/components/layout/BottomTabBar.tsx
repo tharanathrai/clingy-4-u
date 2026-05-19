@@ -34,7 +34,7 @@ export function BottomTabBar() {
 
   return (
     <nav className="app-fixed-frame bottom-0 z-40 border-t border-white/10 bg-surface">
-      <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-end justify-between px-5 pb-2 pt-2">
+      <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-end justify-between px-5 pb-1 pt-2">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.to
           const Icon = tab.icon

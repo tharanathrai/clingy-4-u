@@ -74,6 +74,18 @@ export function NetworkGraph({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null)
   const hasAppliedInitialRecenterRef = useRef(false)
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
+  const pointerMovedRef = useRef(false)
+
+  const clearSelection = () => {
+    onNodeSelect(null)
+    onBridgeSelect?.(null)
+  }
+
+  const selectNode = (nodeId: string | null) => {
+    onNodeSelect(nodeId)
+    onBridgeSelect?.(null)
+  }
 
   useEffect(() => {
     for (const node of nodes) {
@@ -441,7 +453,78 @@ export function NetworkGraph({
   }
 
   return (
-    <div ref={graphContainerRef} className="h-full w-full">
+    <div
+      ref={graphContainerRef}
+      className="h-full w-full"
+      onPointerDown={(event) => {
+        pointerDownRef.current = { x: event.clientX, y: event.clientY }
+        pointerMovedRef.current = false
+      }}
+      onPointerMove={(event) => {
+        const start = pointerDownRef.current
+        if (!start) {
+          return
+        }
+
+        const deltaX = event.clientX - start.x
+        const deltaY = event.clientY - start.y
+        if (Math.hypot(deltaX, deltaY) > 8) {
+          pointerMovedRef.current = true
+        }
+      }}
+      onPointerUp={(event) => {
+        const start = pointerDownRef.current
+        pointerDownRef.current = null
+        if (!start || pointerMovedRef.current) {
+          return
+        }
+
+        const graphMethods = graphRef.current as unknown as {
+          graph2ScreenCoords?: (x: number, y: number) => { x: number; y: number }
+        }
+        if (!graphMethods.graph2ScreenCoords) {
+          return
+        }
+
+        const rect = graphContainerRef.current?.getBoundingClientRect()
+        if (!rect) {
+          return
+        }
+
+        const clickX = event.clientX - rect.left
+        const clickY = event.clientY - rect.top
+        const tapThreshold = window.matchMedia('(pointer: coarse)').matches ? 42 : 30
+
+        let nearestNode: GraphNode | null = null
+        let nearestDistance = Number.POSITIVE_INFINITY
+
+        for (const node of graphData.nodes) {
+          if (typeof node.x !== 'number' || typeof node.y !== 'number') {
+            continue
+          }
+
+          const point = graphMethods.graph2ScreenCoords(node.x, node.y)
+          const distance = Math.hypot(point.x - clickX, point.y - clickY)
+          if (distance < nearestDistance) {
+            nearestDistance = distance
+            nearestNode = node
+          }
+        }
+
+        if (!nearestNode || nearestDistance > tapThreshold) {
+          return
+        }
+
+        if (nearestNode.isSelf) {
+          clearSelection()
+          return
+        }
+
+        if (selectedUserId !== nearestNode.id) {
+          selectNode(nearestNode.id)
+        }
+      }}
+    >
       <ForceGraph2D<GraphNode, GraphEdge>
         ref={graphRef}
         width={graphSize.width}
@@ -493,12 +576,10 @@ export function NetworkGraph({
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
           if (selectedNode.isSelf) {
-            onNodeSelect(null)
-            onBridgeSelect?.(null)
+            clearSelection()
             return
           }
-          onNodeSelect(selectedNode.id)
-          onBridgeSelect?.(null)
+          selectNode(selectedNode.id)
         }}
         onNodeHover={(node) => {
           setHoveredNodeId((node as GraphNode | null)?.id ?? null)
@@ -510,8 +591,7 @@ export function NetworkGraph({
           onBridgeSelect?.((link as GraphEdge).bridge)
         }}
         onBackgroundClick={() => {
-          onNodeSelect(null)
-          onBridgeSelect?.(null)
+          clearSelection()
         }}
         onEngineTick={() => {
           const graphNodes = graphData.nodes
@@ -580,8 +660,7 @@ export function NetworkGraph({
           }
 
           if (selectedUserId !== dragged.id) {
-            onNodeSelect(dragged.id)
-            onBridgeSelect?.(null)
+            selectNode(dragged.id)
           }
 
           const nextX = Math.max(worldBounds.left, Math.min(worldBounds.right, dragged.x ?? 0))

@@ -52,28 +52,8 @@ export function PostDetailSheet({
     }
 
     document.body.classList.add('modal-scroll-lock')
-    const viewport = window.visualViewport
-    const syncKeyboardInset = () => {
-      if (!viewport) {
-        return
-      }
-
-      const inset = Math.max(
-        0,
-        Math.round(window.innerHeight - viewport.height - viewport.offsetTop),
-      )
-      document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`)
-    }
-
-    syncKeyboardInset()
-    viewport?.addEventListener('resize', syncKeyboardInset)
-    viewport?.addEventListener('scroll', syncKeyboardInset)
-
     return () => {
       document.body.classList.remove('modal-scroll-lock')
-      document.documentElement.style.setProperty('--keyboard-inset', '0px')
-      viewport?.removeEventListener('resize', syncKeyboardInset)
-      viewport?.removeEventListener('scroll', syncKeyboardInset)
     }
   }, [postId])
 
@@ -224,7 +204,7 @@ export function PostDetailSheet({
         className="absolute inset-0 bg-black/60"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-6 flex flex-col rounded-t-xl border-t border-white/10 bg-surface">
+      <div className="absolute inset-x-0 bottom-0 top-6 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
         <button
           type="button"
           onClick={onClose}
