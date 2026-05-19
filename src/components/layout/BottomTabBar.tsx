@@ -37,8 +37,11 @@ export function BottomTabBar() {
       <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-center justify-between px-5 pb-0.5 pt-1.5">
         {tabs.map((tab) => {
           const isActive =
-            location.pathname === tab.to ||
-            (tab.to !== '/' && location.pathname.startsWith(tab.to))
+            tab.to === '/home'
+              ? location.pathname === '/home'
+              : tab.to === '/profile/me'
+                ? location.pathname.startsWith('/profile')
+                : location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`)
           const Icon = tab.icon
           return (
             <Link

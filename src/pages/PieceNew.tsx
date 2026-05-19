@@ -38,9 +38,14 @@ export default function PieceNew() {
   const location = useLocation()
   const navigate = useNavigate()
   const [connections, setConnections] = useState<ActiveConnection[]>([])
+  const [bridgeStrengthByConnectionId, setBridgeStrengthByConnectionId] = useState<
+    Record<string, number>
+  >({})
   const [pairSlotUsage, setPairSlotUsage] = useState<Record<string, number>>({})
   const [connectionsLoading, setConnectionsLoading] = useState(true)
   const [recipientId, setRecipientId] = useState('')
+  const [recipientQuery, setRecipientQuery] = useState('')
+  const [showRecipientOptions, setShowRecipientOptions] = useState(false)
   const [title, setTitle] = useState('')
   const [categoryPreview, setCategoryPreview] = useState<CategorySlug | null>(null)
   const [categorizing, setCategorizing] = useState(false)
@@ -69,6 +74,7 @@ export default function PieceNew() {
 
     if (otherIds.length === 0) {
       setConnections([])
+      setBridgeStrengthByConnectionId({})
       setConnectionsLoading(false)
       return
     }
@@ -100,6 +106,21 @@ export default function PieceNew() {
       }
       nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
     }
+
+    const { data: bridgeRows } = await supabase
+      .from('bridges')
+      .select('user_a_id, user_b_id')
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+    const nextStrength: Record<string, number> = {}
+    for (const row of bridgeRows ?? []) {
+      const otherId = row.user_a_id === userId ? row.user_b_id : row.user_a_id
+      if (!otherIds.includes(otherId)) {
+        continue
+      }
+      nextStrength[otherId] = (nextStrength[otherId] ?? 0) + 1
+    }
+    setBridgeStrengthByConnectionId(nextStrength)
+
     setPairSlotUsage(nextPairUsage)
     setConnectionsLoading(false)
   }, [userId])
@@ -113,6 +134,17 @@ export default function PieceNew() {
       setRecipientId(locationState.recipientId)
     }
   }, [locationState?.recipientId])
+
+  useEffect(() => {
+    if (!recipientId) {
+      return
+    }
+
+    const selectedConnection = connections.find((connection) => connection.id === recipientId)
+    if (selectedConnection) {
+      setRecipientQuery(selectedConnection.display_name)
+    }
+  }, [connections, recipientId])
 
   useEffect(() => {
     if (!toast) {
@@ -183,12 +215,31 @@ export default function PieceNew() {
     return [...connections].sort((a, b) => {
       const aAtLimit = (pairSlotUsage[a.id] ?? 0) >= 5
       const bAtLimit = (pairSlotUsage[b.id] ?? 0) >= 5
-      if (aAtLimit === bAtLimit) {
-        return a.display_name.localeCompare(b.display_name)
+      const strengthDelta =
+        (bridgeStrengthByConnectionId[b.id] ?? 0) - (bridgeStrengthByConnectionId[a.id] ?? 0)
+
+      if (aAtLimit !== bAtLimit) {
+        return aAtLimit ? 1 : -1
       }
-      return aAtLimit ? 1 : -1
+
+      if (strengthDelta !== 0) {
+        return strengthDelta
+      }
+
+      return a.display_name.localeCompare(b.display_name)
     })
-  }, [connections, pairSlotUsage])
+  }, [bridgeStrengthByConnectionId, connections, pairSlotUsage])
+
+  const filteredConnections = useMemo(() => {
+    const query = recipientQuery.trim().toLowerCase()
+    if (!query) {
+      return sortedConnections
+    }
+
+    return sortedConnections.filter((connection) =>
+      connection.display_name.toLowerCase().includes(query),
+    )
+  }, [recipientQuery, sortedConnections])
 
   const handleSubmit = async () => {
     if (!canSubmit) {
@@ -280,50 +331,84 @@ export default function PieceNew() {
               </Link>
             </>
           ) : (
-            <ul className="mt-3 space-y-2">
-              {sortedConnections.map((connection) => {
-                const isSelected = recipientId === connection.id
-                const pairSlotsUsed = pairSlotUsage[connection.id] ?? 0
-                const pairAtLimit = pairSlotsUsed >= 5
-                return (
-                  <li key={connection.id}>
-                    <button
-                      type="button"
-                      onClick={() => setRecipientId(connection.id)}
-                      disabled={pairAtLimit}
-                      className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left ${
-                        isSelected ? 'border-accent bg-surface-2' : 'border-white/10 bg-surface'
-                      } ${pairAtLimit ? 'cursor-not-allowed opacity-60' : ''}`}
-                    >
-                      {connection.avatar_url ? (
-                        <img
-                          src={withAvatarSize(connection.avatar_url, 48) ?? connection.avatar_url}
-                          alt={connection.display_name}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-sm text-text-2">
-                          {connection.display_name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-sm text-text">{connection.display_name}</span>
-                        {pairAtLimit ? (
-                          <span className="text-xs text-text-3">
-                            5/5 plans - come back after one completes
-                          </span>
-                        ) : null}
-                      </div>
-                      {pairAtLimit ? (
-                        <span className="ml-auto rounded-full bg-surface-2 px-2 py-1 text-xs text-warning">
-                          {pairSlotsUsed}/5
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            <div className="relative mt-3">
+              <input
+                value={recipientQuery}
+                onFocus={() => setShowRecipientOptions(true)}
+                onBlur={() => {
+                  window.setTimeout(() => {
+                    setShowRecipientOptions(false)
+                  }, 120)
+                }}
+                onChange={(event) => {
+                  const nextQuery = event.target.value
+                  setRecipientQuery(nextQuery)
+                  setShowRecipientOptions(true)
+                  const exactMatch = connections.find(
+                    (connection) =>
+                      connection.display_name.toLowerCase() === nextQuery.trim().toLowerCase(),
+                  )
+                  if (exactMatch) {
+                    const atLimit = (pairSlotUsage[exactMatch.id] ?? 0) >= 5
+                    setRecipientId(atLimit ? '' : exactMatch.id)
+                    return
+                  }
+
+                  setRecipientId('')
+                }}
+                placeholder="Type a name..."
+                className="w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-sm text-text outline-none placeholder:text-text-3 focus:border-white/20"
+              />
+              {showRecipientOptions ? (
+                <ul className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-white/10 bg-surface p-2 shadow-card">
+                  {filteredConnections.length === 0 ? (
+                    <li className="px-3 py-2 text-sm text-text-3">No matches</li>
+                  ) : (
+                    filteredConnections.map((connection) => {
+                      const pairSlotsUsed = pairSlotUsage[connection.id] ?? 0
+                      const pairAtLimit = pairSlotsUsed >= 5
+                      const bridgeStrength = bridgeStrengthByConnectionId[connection.id] ?? 0
+                      return (
+                        <li key={connection.id}>
+                          <button
+                            type="button"
+                            disabled={pairAtLimit}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                              setRecipientId(connection.id)
+                              setRecipientQuery(connection.display_name)
+                              setShowRecipientOptions(false)
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left ${
+                              pairAtLimit ? 'cursor-not-allowed opacity-60' : 'hover:bg-surface-2'
+                            }`}
+                          >
+                            {connection.avatar_url ? (
+                              <img
+                                src={withAvatarSize(connection.avatar_url, 48) ?? connection.avatar_url}
+                                alt={connection.display_name}
+                                className="h-8 w-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
+                                {connection.display_name.slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="flex min-w-0 flex-1 flex-col">
+                              <span className="truncate text-sm text-text">{connection.display_name}</span>
+                              <span className="text-xs text-text-3">
+                                {bridgeStrength} shared {bridgeStrength === 1 ? 'bridge' : 'bridges'}
+                                {pairAtLimit ? ' · 5/5 plans in progress' : ''}
+                              </span>
+                            </div>
+                          </button>
+                        </li>
+                      )
+                    })
+                  )}
+                </ul>
+              ) : null}
+            </div>
           )}
         </section>
       )}

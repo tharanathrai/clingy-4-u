@@ -16,6 +16,7 @@ export default function Feed() {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
   const knownPostIdsRef = useRef<Set<string>>(new Set())
+  const hasPostDetailHistoryEntryRef = useRef(false)
   const {
     visibleItems: visiblePosts,
     hasMore,
@@ -48,6 +49,37 @@ export default function Feed() {
       window.clearTimeout(timeoutId)
     }
   }, [localPosts])
+
+  useEffect(() => {
+    if (!selectedPostId || hasPostDetailHistoryEntryRef.current) {
+      return
+    }
+
+    const nextState =
+      typeof window.history.state === 'object' && window.history.state !== null
+        ? window.history.state
+        : {}
+    window.history.pushState({ ...nextState, feedPostDetailOpen: true }, '', window.location.href)
+    hasPostDetailHistoryEntryRef.current = true
+  }, [selectedPostId])
+
+  useEffect(() => {
+    if (!selectedPostId) {
+      return
+    }
+
+    const handlePopState = () => {
+      if (selectedPostId) {
+        setSelectedPostId(null)
+      }
+      hasPostDetailHistoryEntryRef.current = false
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [selectedPostId])
 
   const handleReact = async (postId: string) => {
     setLocalPosts((current) =>
@@ -142,7 +174,13 @@ export default function Feed() {
 
       <PostDetailSheet
         postId={selectedPostId}
-        onClose={() => setSelectedPostId(null)}
+        onClose={() => {
+          if (hasPostDetailHistoryEntryRef.current) {
+            window.history.back()
+            return
+          }
+          setSelectedPostId(null)
+        }}
         onPostMetricsChange={(next) => {
           setLocalPosts((current) =>
             current.map((post) =>
