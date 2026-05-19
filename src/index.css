@@ -9,6 +9,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --keyboard-inset: 0px;
 }
 
 * {
@@ -29,7 +30,8 @@ body {
 }
 
 .app-device-frame {
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   background: #000;
@@ -37,7 +39,8 @@ body {
 
 .app-device-screen {
   width: min(100vw, 430px);
-  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   background: #12101a;
   position: relative;
   overflow-x: hidden;
@@ -69,6 +72,15 @@ body {
   width: min(100vw, 430px);
   top: 0;
   bottom: 0;
+}
+
+body.modal-scroll-lock {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.composer-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--keyboard-inset) + 12px);
 }
 
 .grain-overlay {

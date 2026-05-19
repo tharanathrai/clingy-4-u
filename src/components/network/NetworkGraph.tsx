@@ -40,6 +40,7 @@ interface NetworkGraphProps {
 const MIN_GRAPH_ZOOM = 0.45
 const MAX_GRAPH_ZOOM = 3.25
 const CAMERA_CLAMP_EPSILON = 0.5
+const MOBILE_POINTER_BOOST = 1.35
 
 const getLinkWidth = (count: number): number => {
   if (count >= 5) {
@@ -348,7 +349,10 @@ export function NetworkGraph({
     color: string,
     ctx: CanvasRenderingContext2D,
   ) => {
-    const radius = node.isSelf ? 40 : 22
+    const pointerBoost = window.matchMedia('(max-width: 640px)').matches
+      ? MOBILE_POINTER_BOOST
+      : 1
+    const radius = (node.isSelf ? 40 : 24) * pointerBoost
     ctx.fillStyle = color
     ctx.beginPath()
     ctx.arc(node.x ?? 0, node.y ?? 0, radius, 0, 2 * Math.PI)
@@ -485,7 +489,7 @@ export function NetworkGraph({
           nodePointerAreaPaint(node as GraphNode, color, ctx)
         }
         linkCanvasObject={(link, ctx) => linkCanvasObject(link as GraphEdge, ctx)}
-        linkHoverPrecision={8}
+        linkHoverPrecision={12}
         onNodeClick={(node) => {
           const selectedNode = node as GraphNode
           if (selectedNode.isSelf) {

@@ -21,6 +21,9 @@ export interface Notification {
   reference_id: string
   read: boolean
   created_at: string
+  actor_name?: string
+  actor_avatar_url?: string | null
+  target_user_id?: string | null
 }
 
 interface UseNotificationsResult {
@@ -61,7 +64,10 @@ export function useNotifications(): UseNotificationsResult {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    const nextNotifications = (data ?? []) as Notification[]
+    const nextNotifications = await enrichNotifications(
+      userId,
+      (data ?? []) as Notification[],
+    )
     notificationsCache.set(userId, nextNotifications)
     setNotifications(nextNotifications)
     setLoading(false)
@@ -92,11 +98,14 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const inserted = payload.new as Notification
-          setNotifications((current) => {
-            const next = [inserted, ...current]
-            notificationsCache.set(userId, next)
-            return next
-          })
+          void (async () => {
+            const [enriched] = await enrichNotifications(userId, [inserted])
+            setNotifications((current) => {
+              const next = [enriched ?? inserted, ...current]
+              notificationsCache.set(userId, next)
+              return next
+            })
+          })()
         },
       )
       .on(
@@ -111,7 +120,14 @@ export function useNotifications(): UseNotificationsResult {
           const updated = payload.new as Notification
           setNotifications((current) => {
             const next = current.map((notification) =>
-              notification.id === updated.id ? updated : notification,
+              notification.id === updated.id
+                ? {
+                    ...updated,
+                    actor_name: notification.actor_name,
+                    actor_avatar_url: notification.actor_avatar_url,
+                    target_user_id: notification.target_user_id,
+                  }
+                : notification,
             )
             notificationsCache.set(userId, next)
             return next
@@ -201,4 +217,159 @@ export function useNotifications(): UseNotificationsResult {
     dismissNotification,
     loading: loading || authLoading,
   }
+}
+
+async function enrichNotifications(
+  userId: string,
+  notifications: Notification[],
+): Promise<Notification[]> {
+  if (notifications.length === 0) {
+    return notifications
+  }
+
+  const gumPieceIds = notifications
+    .filter((notification) =>
+      notification.type === 'invite_received' ||
+      notification.type === 'invite_accepted' ||
+      notification.type === 'invite_rejected' ||
+      notification.type === 'plan_turned_down' ||
+      notification.type === 'plan_expiring_soon',
+    )
+    .map((notification) => notification.reference_id)
+
+  const bridgeIds = notifications
+    .filter((notification) => notification.type === 'bridge_formed')
+    .map((notification) => notification.reference_id)
+
+  const connectionIds = notifications
+    .filter((notification) => notification.type === 'connection_request')
+    .map((notification) => notification.reference_id)
+
+  const gumPiecesById = new Map<
+    string,
+    { id: string; creator_id: string; recipient_id: string }
+  >()
+  const bridgesById = new Map<
+    string,
+    { id: string; user_a_id: string; user_b_id: string }
+  >()
+  const connectionsById = new Map<string, { id: string; requested_by: string }>()
+
+  if (gumPieceIds.length > 0) {
+    const { data: gumPieces } = await supabase
+      .from('gum_pieces')
+      .select('id, creator_id, recipient_id')
+      .in('id', gumPieceIds)
+    for (const piece of gumPieces ?? []) {
+      gumPiecesById.set(piece.id, {
+        id: piece.id,
+        creator_id: piece.creator_id,
+        recipient_id: piece.recipient_id,
+      })
+    }
+  }
+
+  if (bridgeIds.length > 0) {
+    const { data: bridges } = await supabase
+      .from('bridges')
+      .select('id, user_a_id, user_b_id')
+      .in('id', bridgeIds)
+    for (const bridge of bridges ?? []) {
+      bridgesById.set(bridge.id, {
+        id: bridge.id,
+        user_a_id: bridge.user_a_id,
+        user_b_id: bridge.user_b_id,
+      })
+    }
+  }
+
+  if (connectionIds.length > 0) {
+    const { data: connections } = await supabase
+      .from('connections')
+      .select('id, requested_by')
+      .in('id', connectionIds)
+    for (const connection of connections ?? []) {
+      connectionsById.set(connection.id, {
+        id: connection.id,
+        requested_by: connection.requested_by,
+      })
+    }
+  }
+
+  const actorIds = new Set<string>()
+  for (const notification of notifications) {
+    const actorInfo = getActorAndTargetUserId(
+      notification,
+      userId,
+      gumPiecesById,
+      bridgesById,
+      connectionsById,
+    )
+    if (actorInfo.actorId) {
+      actorIds.add(actorInfo.actorId)
+    }
+  }
+
+  const usersById = new Map<string, { display_name: string; avatar_url: string | null }>()
+  if (actorIds.size > 0) {
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, display_name, avatar_url')
+      .in('id', Array.from(actorIds))
+    for (const row of users ?? []) {
+      usersById.set(row.id, {
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+      })
+    }
+  }
+
+  return notifications.map((notification) => {
+    const actorInfo = getActorAndTargetUserId(
+      notification,
+      userId,
+      gumPiecesById,
+      bridgesById,
+      connectionsById,
+    )
+    const actor = actorInfo.actorId ? usersById.get(actorInfo.actorId) : null
+    return {
+      ...notification,
+      actor_name: actor?.display_name ?? notification.actor_name,
+      actor_avatar_url: actor?.avatar_url ?? notification.actor_avatar_url ?? null,
+      target_user_id: actorInfo.targetUserId ?? null,
+    }
+  })
+}
+
+function getActorAndTargetUserId(
+  notification: Notification,
+  userId: string,
+  gumPiecesById: Map<string, { id: string; creator_id: string; recipient_id: string }>,
+  bridgesById: Map<string, { id: string; user_a_id: string; user_b_id: string }>,
+  connectionsById: Map<string, { id: string; requested_by: string }>,
+): { actorId: string | null; targetUserId: string | null } {
+  if (notification.type === 'bridge_formed') {
+    const bridge = bridgesById.get(notification.reference_id)
+    if (!bridge) {
+      return { actorId: null, targetUserId: null }
+    }
+    const otherId = bridge.user_a_id === userId ? bridge.user_b_id : bridge.user_a_id
+    return { actorId: otherId, targetUserId: otherId }
+  }
+
+  if (notification.type === 'connection_request') {
+    const connection = connectionsById.get(notification.reference_id)
+    return {
+      actorId: connection?.requested_by ?? null,
+      targetUserId: connection?.requested_by ?? null,
+    }
+  }
+
+  const gumPiece = gumPiecesById.get(notification.reference_id)
+  if (!gumPiece) {
+    return { actorId: null, targetUserId: null }
+  }
+  const otherId = gumPiece.creator_id === userId ? gumPiece.recipient_id : gumPiece.creator_id
+  return { actorId: otherId, targetUserId: otherId }
 }

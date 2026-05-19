@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
@@ -11,6 +11,7 @@ import type { Bridge, User } from '../types/index.ts'
 
 export default function Network() {
   const navigate = useNavigate()
+  const location = useLocation()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null)
@@ -22,6 +23,17 @@ export default function Network() {
     loading: true,
     error: null as string | null,
   })
+
+  useEffect(() => {
+    const state = location.state as { selectUserId?: string } | null
+    if (!state?.selectUserId) {
+      return
+    }
+
+    setSelectedBridge(null)
+    setSelectedUserId(state.selectUserId)
+    window.history.replaceState({}, document.title)
+  }, [location.state])
 
   useEffect(() => {
     if (!selectedUserId) {

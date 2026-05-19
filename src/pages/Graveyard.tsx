@@ -120,7 +120,7 @@ export default function Graveyard() {
       <section className="mt-8 space-y-3 pb-10">
         {visibleEntries.map((entry) => {
           const partnerId = userId === entry.user_a_id ? entry.user_b_id : entry.user_a_id
-          const partnerName = namesById[partnerId] ?? 'Someone'
+          const partnerName = namesById[partnerId] ?? 'Unknown user'
           const createdAgo = formatDistanceToNow(new Date(entry.created_at), {
             addSuffix: true,
           })

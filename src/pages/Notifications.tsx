@@ -38,6 +38,7 @@ export default function Notifications() {
   }, [toast])
 
   const handleNotificationPress = async (id: string, type: string, referenceId: string) => {
+    const tappedNotification = notifications.find((notification) => notification.id === id)
     await markAsRead(id)
 
     if (type === 'invite_received') {
@@ -63,10 +64,17 @@ export default function Notifications() {
       type === 'invite_accepted' ||
       type === 'invite_rejected' ||
       type === 'plan_turned_down' ||
-      type === 'plan_expiring_soon' ||
-      type === 'bridge_formed'
+      type === 'plan_expiring_soon'
     ) {
       void navigate(`/piece/${referenceId}`)
+    }
+
+    if (type === 'bridge_formed') {
+      void navigate('/network', {
+        state: tappedNotification?.target_user_id
+          ? { selectUserId: tappedNotification.target_user_id }
+          : undefined,
+      })
     }
   }
 

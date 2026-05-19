@@ -335,7 +335,7 @@ async function ensureDraftPost(params: {
 
   const userRows = (users ?? []) as UserNameRow[]
   const creatorName =
-    userRows.find((user) => user.id === params.creatorId)?.display_name ?? 'Someone'
+    userRows.find((user) => user.id === params.creatorId)?.display_name ?? 'Unknown user'
   const recipientName =
     userRows.find((user) => user.id === params.recipientId)?.display_name ?? 'someone'
 

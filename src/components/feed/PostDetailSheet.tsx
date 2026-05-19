@@ -28,7 +28,6 @@ export function PostDetailSheet({
   const navigate = useNavigate()
   const [commentBody, setCommentBody] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
-  const [submittingReaction, setSubmittingReaction] = useState(false)
   const { post, reactions, comments, loading, error } = usePost({
     postId: postId ?? '',
   })
@@ -44,6 +43,38 @@ export function PostDetailSheet({
     setOptimisticHasReacted(null)
     setOptimisticCommentCount(null)
     setOptimisticComments([])
+    setCommentBody('')
+  }, [postId])
+
+  useEffect(() => {
+    if (!postId) {
+      return
+    }
+
+    document.body.classList.add('modal-scroll-lock')
+    const viewport = window.visualViewport
+    const syncKeyboardInset = () => {
+      if (!viewport) {
+        return
+      }
+
+      const inset = Math.max(
+        0,
+        Math.round(window.innerHeight - viewport.height - viewport.offsetTop),
+      )
+      document.documentElement.style.setProperty('--keyboard-inset', `${inset}px`)
+    }
+
+    syncKeyboardInset()
+    viewport?.addEventListener('resize', syncKeyboardInset)
+    viewport?.addEventListener('scroll', syncKeyboardInset)
+
+    return () => {
+      document.body.classList.remove('modal-scroll-lock')
+      document.documentElement.style.setProperty('--keyboard-inset', '0px')
+      viewport?.removeEventListener('resize', syncKeyboardInset)
+      viewport?.removeEventListener('scroll', syncKeyboardInset)
+    }
   }, [postId])
 
   const hasReacted = useMemo(() => {
@@ -75,10 +106,10 @@ export function PostDetailSheet({
   }
 
   const handleToggleReaction = async () => {
-    if (submittingReaction || !postId) {
+    if (!postId) {
       return
     }
-    setSubmittingReaction(true)
+
     const nextHasReacted = !hasReacted
     const nextReactionCount = Math.max(
       0,
@@ -96,7 +127,6 @@ export function PostDetailSheet({
     await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
     })
-    setSubmittingReaction(false)
   }
 
   const handleSubmitComment = async () => {
@@ -204,7 +234,7 @@ export function PostDetailSheet({
           <span className="h-1 w-9 rounded-full bg-white/20" />
         </button>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
+        <div className="flex min-h-0 flex-1 flex-col px-5 pb-3">
           {loading ? <p className="text-sm text-text-2">Loading post...</p> : null}
           {!loading && error ? <p className="text-sm text-playful">{error}</p> : null}
 
@@ -254,8 +284,7 @@ export function PostDetailSheet({
                 <button
                   type="button"
                   onClick={() => void handleToggleReaction()}
-                  disabled={submittingReaction}
-                  className="inline-flex items-center gap-2 text-sm text-text-2 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 text-sm text-text-2"
                 >
                   <Heart
                     size={18}
@@ -267,7 +296,8 @@ export function PostDetailSheet({
                 </button>
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
+                <div className="space-y-3">
                 {displayedComments.map((comment) => (
                   <CommentItem
                     key={comment.id}
@@ -282,12 +312,13 @@ export function PostDetailSheet({
                 {displayedComments.length === 0 ? (
                   <p className="text-sm text-text-2">No comments yet.</p>
                 ) : null}
+                </div>
               </div>
             </>
           ) : null}
         </div>
 
-        <div className="border-t border-white/10 bg-surface px-5 pb-4 pt-3">
+        <div className="composer-safe-bottom border-t border-white/10 bg-surface px-5 pt-3">
           <div className="flex items-center gap-2">
             <input
               value={commentBody}

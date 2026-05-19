@@ -182,8 +182,8 @@ async function sendExpiryEmails(params: {
 
   const creatorEmail = creatorAuth.data.user?.email
   const recipientEmail = recipientAuth.data.user?.email
-  const creatorName = creatorProfile.data?.display_name ?? 'Someone'
-  const recipientName = recipientProfile.data?.display_name ?? 'Someone'
+  const creatorName = creatorProfile.data?.display_name ?? 'Unknown user'
+  const recipientName = recipientProfile.data?.display_name ?? 'Unknown user'
 
   const requests: Promise<Response>[] = []
   if (creatorEmail) {

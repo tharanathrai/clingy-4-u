@@ -29,8 +29,8 @@ export default function PieceDetail() {
   const userId = user?.id ?? null
   const navigate = useNavigate()
   const [piece, setPiece] = useState<PieceDetailRow | null>(null)
-  const [creatorName, setCreatorName] = useState('Someone')
-  const [recipientName, setRecipientName] = useState('Someone')
+  const [creatorName, setCreatorName] = useState('Unknown user')
+  const [recipientName, setRecipientName] = useState('Unknown user')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<'accept' | 'turn_down' | null>(null)

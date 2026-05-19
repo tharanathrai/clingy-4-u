@@ -35,8 +35,8 @@ export default function PieceConfirm() {
   const [bridge, setBridge] = useState<Bridge | null>(null)
   const [draftPostId, setDraftPostId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [creatorName, setCreatorName] = useState('Someone')
-  const [recipientName, setRecipientName] = useState('Someone')
+  const [creatorName, setCreatorName] = useState('Unknown user')
+  const [recipientName, setRecipientName] = useState('Unknown user')
 
   const handleSessionDeleted = useCallback(async () => {
     if (!id || !userId) {

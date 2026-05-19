@@ -13,7 +13,7 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onPress }: NotificationItemProps) {
-  const actorName = notification.actor_name ?? 'Someone'
+  const actorName = notification.actor_name ?? 'Unknown user'
   const copy = getNotificationCopy(notification.type, actorName)
   const timestamp = getTimestamp(notification.created_at)
   const isUnread = !notification.read
@@ -75,7 +75,7 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
     return 'A plan expired'
   }
   if (type === 'bridge_formed') {
-    return 'You formed a bridge!'
+    return `You formed a bridge with ${name}`
   }
   if (type === 'connection_request') {
     return `${name} wants to connect`

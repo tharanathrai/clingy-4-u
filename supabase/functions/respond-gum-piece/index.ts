@@ -249,7 +249,7 @@ async function sendTurnDownEmail(params: {
     .eq('id', params.actorUserId)
     .maybeSingle<{ display_name: string }>()
 
-  const actorName = actorProfile?.display_name ?? 'Someone'
+  const actorName = actorProfile?.display_name ?? 'Unknown user'
   const { data: authData } = await params.serviceClient.auth.admin.getUserById(
     params.recipientUserId,
   )

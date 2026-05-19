@@ -390,7 +390,7 @@ async function sendInviteEmail(params: {
     .eq('id', params.creatorId)
     .maybeSingle<{ display_name: string }>()
 
-  const creatorName = creatorProfile?.display_name ?? 'Someone'
+  const creatorName = creatorProfile?.display_name ?? 'Unknown user'
   const { data: recipientAuthData } = await params.serviceClient.auth.admin.getUserById(
     params.recipientId,
   )
