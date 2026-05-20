@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { categorizeTitle } from '../_shared/categorize.ts'
+import { categories, categorizeTitle } from '../_shared/categorize.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +10,7 @@ const corsHeaders = {
 interface CreateGumPieceBody {
   recipient_id?: string
   title?: string
+  category?: string
 }
 
 const gumShapes = [
@@ -88,7 +89,7 @@ Deno.serve(async (request) => {
       return jsonResponse(400, { error: 'connection_required' })
     }
 
-    const categorized = categorizeTitle(title)
+    const categorized = resolveCategory(title, body.category?.trim())
 
     const { count: globalCount, error: globalCountError } = await serviceClient
       .from('gum_pieces')
@@ -177,6 +178,17 @@ Deno.serve(async (request) => {
     })
   }
 })
+
+function resolveCategory(title: string, requestedSlug?: string) {
+  if (requestedSlug) {
+    const match = categories.find((category) => category.slug === requestedSlug)
+    if (match) {
+      return match
+    }
+  }
+
+  return categorizeTitle(title)
+}
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

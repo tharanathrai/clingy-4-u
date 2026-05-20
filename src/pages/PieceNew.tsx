@@ -2,10 +2,11 @@ import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
+import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
-import { supabase } from '../lib/supabase.ts'
 import type { CategorySlug } from '../lib/constants.ts'
+import { supabase } from '../lib/supabase.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
 
 interface ActiveConnection {
@@ -45,8 +46,10 @@ export default function PieceNew() {
   const [recipientQuery, setRecipientQuery] = useState('')
   const [showRecipientOptions, setShowRecipientOptions] = useState(false)
   const [title, setTitle] = useState('')
-  const [categoryPreview, setCategoryPreview] = useState<CategorySlug | null>(null)
-  const [categorizing, setCategorizing] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
+  const [categoryOverridden, setCategoryOverridden] = useState(false)
+  const [titleAtLastSuggest, setTitleAtLastSuggest] = useState('')
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -168,23 +171,34 @@ export default function PieceNew() {
     }
   }, [toast])
 
-  useEffect(() => {
-    if (!title.trim()) {
-      setCategoryPreview(null)
-      setCategorizing(false)
+  const suggestCategoryFromTitle = (nextTitle: string) => {
+    const trimmed = nextTitle.trim()
+    if (!trimmed) {
+      setSelectedCategory(null)
+      setCategoryOverridden(false)
+      setTitleAtLastSuggest('')
+      setShowCategoryPicker(false)
       return
     }
 
-    setCategorizing(true)
-    const timeoutId = window.setTimeout(() => {
-      setCategoryPreview(categorizeTitle(title.trim()))
-      setCategorizing(false)
-    }, 200)
+    setSelectedCategory(categorizeTitle(trimmed))
+    setCategoryOverridden(false)
+    setTitleAtLastSuggest(trimmed)
+  }
 
-    return () => {
-      window.clearTimeout(timeoutId)
+  const handleTitleBlur = () => {
+    const trimmed = title.trim()
+    if (!trimmed) {
+      suggestCategoryFromTitle('')
+      return
     }
-  }, [title])
+
+    if (categoryOverridden && trimmed === titleAtLastSuggest) {
+      return
+    }
+
+    suggestCategoryFromTitle(trimmed)
+  }
 
   const backTarget = locationState?.returnTo ?? '/home'
 
@@ -224,6 +238,10 @@ export default function PieceNew() {
     )
   }, [recipientQuery, sortedConnections])
 
+  const resolvedCategory =
+    selectedCategory ??
+    (title.trim() ? categorizeTitle(title.trim()) : null)
+
   const handleSubmit = async () => {
     if (!canSubmit) {
       return
@@ -249,6 +267,7 @@ export default function PieceNew() {
         body: JSON.stringify({
           recipient_id: recipientId,
           title: title.trim(),
+          ...(resolvedCategory ? { category: resolvedCategory } : {}),
         }),
       })
 
@@ -412,21 +431,66 @@ export default function PieceNew() {
           <input
             id="piece-title"
             value={title}
-            onChange={(event) => setTitle(event.target.value.slice(0, 60))}
+            onChange={(event) => {
+              const nextTitle = event.target.value.slice(0, 60)
+              setTitle(nextTitle)
+              const trimmed = nextTitle.trim()
+              if (!trimmed) {
+                setSelectedCategory(null)
+                setCategoryOverridden(false)
+                setTitleAtLastSuggest('')
+                setShowCategoryPicker(false)
+                return
+              }
+              if (!categoryOverridden && trimmed !== titleAtLastSuggest) {
+                setSelectedCategory(null)
+                setShowCategoryPicker(false)
+              }
+            }}
+            onBlur={handleTitleBlur}
             maxLength={60}
             placeholder="what do you want to do together?"
             className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-3"
           />
           <p className="mt-2 text-right text-xs text-text-3">{title.length} / 60</p>
         </div>
-        {categoryPreview ? (
-          <div className="mt-3 flex items-center gap-2">
-            <p className="text-sm text-text-2">looks like</p>
-            <CategoryChip category={categoryPreview} size="md" />
+        {selectedCategory ? (
+          <div className="mt-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-text-2">
+                {categoryOverridden ? 'category' : 'looks like'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowCategoryPicker((open) => !open)}
+                className="rounded-full transition active:scale-95"
+                aria-expanded={showCategoryPicker}
+                aria-label="Change category"
+              >
+                <CategoryChip category={selectedCategory} size="md" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCategoryPicker((open) => !open)}
+                className="text-xs text-text-3 underline-offset-2 hover:text-text-2 hover:underline"
+              >
+                {showCategoryPicker ? 'done' : 'change'}
+              </button>
+            </div>
+            {showCategoryPicker ? (
+              <CategoryPicker
+                selectedCategory={selectedCategory}
+                onSelect={(category) => {
+                  setSelectedCategory(category)
+                  setCategoryOverridden(true)
+                  setTitleAtLastSuggest(title.trim())
+                  setShowCategoryPicker(false)
+                }}
+              />
+            ) : null}
           </div>
-        ) : null}
-        {categorizing && !categoryPreview ? (
-          <p className="mt-3 text-xs text-text-3">figuring out what this is...</p>
+        ) : title.trim() ? (
+          <p className="mt-3 text-xs text-text-3">tap away from the title to suggest a category</p>
         ) : null}
       </section>
 
