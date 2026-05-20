@@ -1,3 +1,4 @@
+import { Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
@@ -96,6 +97,15 @@ export default function ProfileMe() {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+        <div className="flex justify-end">
+          <Link
+            to="/settings"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-surface text-text-2 transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
+            aria-label="Settings"
+          >
+            <Settings size={18} strokeWidth={1.75} />
+          </Link>
+        </div>
         <h1 className="font-display text-4xl">My profile</h1>
         <p className="mt-4 text-sm text-text-2">
           {error ?? 'Profile not found. Complete onboarding first.'}
@@ -106,12 +116,25 @@ export default function ProfileMe() {
         >
           Finish onboarding
         </Link>
+        <Link to="/settings" className="mt-6 text-sm text-text-2">
+          settings →
+        </Link>
       </main>
     )
   }
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+      <div className="flex justify-end">
+        <Link
+          to="/settings"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-surface text-text-2 transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
+          aria-label="Settings"
+        >
+          <Settings size={18} strokeWidth={1.75} />
+        </Link>
+      </div>
+
       <section className="mt-2 flex flex-col items-center text-center">
         {profile.avatar_url ? (
           <img
@@ -169,7 +192,10 @@ export default function ProfileMe() {
         </section>
       ) : null}
 
-      <div className="mt-10">
+      <div className="mt-10 flex flex-col gap-2">
+        <Link to="/settings" className="text-sm text-text-2">
+          settings →
+        </Link>
         <Link to="/home/graveyard" className="text-sm text-text-3">
           graveyard →
         </Link>
