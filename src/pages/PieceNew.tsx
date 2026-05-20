@@ -305,7 +305,7 @@ export default function PieceNew() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
+    <main className="mx-auto min-h-full w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
       <div className="mb-6">
         <Link to="/home" className="inline-flex items-center gap-2 text-sm text-text-2">
           <ArrowLeft size={18} strokeWidth={1.75} />

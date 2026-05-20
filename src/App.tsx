@@ -45,10 +45,13 @@ function App() {
       }
 
       const topInset = Math.max(0, viewport.offsetTop)
-      const bottomInset = Math.max(
+      const viewportBottomGap = Math.max(
         0,
         window.innerHeight - viewport.height - viewport.offsetTop,
       )
+      // Ignore software keyboard height. We only want browser chrome/safe-area insets.
+      const keyboardLikelyOpen = viewportBottomGap > 120
+      const bottomInset = keyboardLikelyOpen ? 0 : viewportBottomGap
 
       root.style.setProperty('--browser-top-inset', `${topInset}px`)
       root.style.setProperty('--browser-bottom-inset', `${bottomInset}px`)
