@@ -9,6 +9,7 @@ import { withAvatarSize } from '../../utils/avatar.ts'
 
 interface NodeProfileSheetProps {
   userId: string | null
+  preloadedUser?: User | null
   onClose: () => void
   onViewProfile: (username: string) => void
   onCreatePlan: (recipientId: string) => void
@@ -23,19 +24,25 @@ const toCategorySlug = (value: string): CategorySlug => {
 
 export function NodeProfileSheet({
   userId,
+  preloadedUser = null,
   onClose,
   onViewProfile,
   onCreatePlan,
 }: NodeProfileSheetProps) {
   const [otherUser, setOtherUser] = useState<User | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
-  const { bridges, loading: loadingBridges } = useBridgesByPair({
+  const { bridges } = useBridgesByPair({
     otherUserId: userId ?? '',
   })
 
   useEffect(() => {
     if (!userId) {
       setOtherUser(null)
+      setLoadingUser(false)
+      return
+    }
+    if (preloadedUser?.id === userId) {
+      setOtherUser(preloadedUser)
       setLoadingUser(false)
       return
     }
@@ -61,7 +68,7 @@ export function NodeProfileSheet({
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [preloadedUser, userId])
 
   const topCategories = useMemo(() => {
     const counts: Record<CategorySlug, number> = {
@@ -102,7 +109,7 @@ export function NodeProfileSheet({
         <X size={18} strokeWidth={1.75} />
       </button>
 
-      {loadingUser || loadingBridges ? (
+      {loadingUser && !otherUser ? (
         <p className="py-8 text-center text-sm text-text-2">
           Loading connection details...
         </p>

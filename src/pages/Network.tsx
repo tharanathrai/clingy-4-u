@@ -41,6 +41,9 @@ export default function Network() {
       setSelectedUser(null)
       return
     }
+    if (selectedUser?.id === selectedUserId) {
+      return
+    }
 
     let cancelled = false
 
@@ -61,7 +64,7 @@ export default function Network() {
     return () => {
       cancelled = true
     }
-  }, [selectedUserId])
+  }, [selectedUser?.id, selectedUserId])
 
   const handleRecenter = () => {
     setSelectedUserId(null)
@@ -92,8 +95,9 @@ export default function Network() {
 
       <main className="h-full w-full">
         <NetworkGraph
-          onNodeSelect={(userId) => {
+          onNodeSelect={(userId, user) => {
             setSelectedUserId(userId)
+            setSelectedUser(user ?? null)
             setSelectedBridge(null)
           }}
           selectedUserId={selectedUserId}
@@ -146,6 +150,7 @@ export default function Network() {
       ) : selectedUserId ? (
         <NodeProfileSheet
           userId={selectedUserId}
+          preloadedUser={selectedUser}
           onClose={() => {
             setSelectedUserId(null)
           }}

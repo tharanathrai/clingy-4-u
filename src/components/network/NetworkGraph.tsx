@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { forceCollide } from 'd3-force'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
-import type { Bridge } from '../../types/index.ts'
+import type { Bridge, User } from '../../types/index.ts'
 import {
   useNetworkGraph,
   type NetworkGraphEdge,
@@ -24,7 +24,7 @@ type GraphEdge = Omit<NetworkGraphEdge, 'source' | 'target'> & {
 }
 
 interface NetworkGraphProps {
-  onNodeSelect: (userId: string | null) => void
+  onNodeSelect: (userId: string | null, user?: User | null) => void
   selectedUserId: string | null
   onBridgeSelect?: (bridge: Bridge | null) => void
   onGraphStateChange?: (state: {
@@ -83,13 +83,13 @@ export function NetworkGraph({
     if (msSinceSelection < 250) {
       return
     }
-    onNodeSelect(null)
+    onNodeSelect(null, null)
     onBridgeSelect?.(null)
   }
 
-  const selectNode = (nodeId: string | null) => {
+  const selectNode = (nodeId: string | null, user?: User | null) => {
     lastSelectionTsRef.current = Date.now()
-    onNodeSelect(nodeId)
+    onNodeSelect(nodeId, user)
     onBridgeSelect?.(null)
   }
 
@@ -527,7 +527,7 @@ export function NetworkGraph({
         }
 
         if (selectedUserId !== nearestNode.id) {
-          selectNode(nearestNode.id)
+          selectNode(nearestNode.id, nearestNode.user)
         }
       }}
     >
@@ -585,7 +585,7 @@ export function NetworkGraph({
             clearSelection()
             return
           }
-          selectNode(selectedNode.id)
+          selectNode(selectedNode.id, selectedNode.user)
         }}
         onNodeHover={(node) => {
           setHoveredNodeId((node as GraphNode | null)?.id ?? null)
@@ -666,7 +666,7 @@ export function NetworkGraph({
           }
 
           if (selectedUserId !== dragged.id) {
-            selectNode(dragged.id)
+            selectNode(dragged.id, dragged.user)
           }
 
           const nextX = Math.max(worldBounds.left, Math.min(worldBounds.right, dragged.x ?? 0))
