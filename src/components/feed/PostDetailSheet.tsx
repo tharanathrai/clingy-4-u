@@ -55,11 +55,7 @@ export function PostDetailSheet({
     }
 
     const timeoutId = window.setTimeout(() => {
-      commentInputRef.current?.focus()
-      commentInputRef.current?.scrollIntoView({
-        block: 'nearest',
-        inline: 'nearest',
-      })
+      commentInputRef.current?.focus({ preventScroll: true })
     }, 120)
 
     return () => {
@@ -326,14 +322,6 @@ export function PostDetailSheet({
               ref={commentInputRef}
               value={commentBody}
               onChange={(event) => setCommentBody(event.target.value)}
-              onFocus={() => {
-                window.setTimeout(() => {
-                  commentInputRef.current?.scrollIntoView({
-                    block: 'nearest',
-                    inline: 'nearest',
-                  })
-                }, 0)
-              }}
               placeholder="say something..."
               className="min-h-11 flex-1 rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-base text-text placeholder:text-text-3 focus:outline-none"
               maxLength={500}
