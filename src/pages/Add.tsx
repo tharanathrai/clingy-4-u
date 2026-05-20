@@ -171,6 +171,17 @@ export default function Add() {
     return `${window.location.origin}/connect?token=${token}`
   }, [token])
 
+  const ringAnimationStyle = useMemo(() => {
+    if (!expiresAt) {
+      return undefined
+    }
+
+    const remainingMs = Math.max(0, new Date(expiresAt).getTime() - Date.now())
+    const elapsedMs = Math.min(60_000, 60_000 - remainingMs)
+
+    return { animationDelay: `-${elapsedMs}ms` }
+  }, [expiresAt])
+
   return (
     <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
       <h1 className="app-page-title">Add someone</h1>
@@ -179,7 +190,7 @@ export default function Add() {
       </p>
 
       <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
-        <div className="qr-countdown-ring" />
+        <div className="qr-countdown-ring" style={ringAnimationStyle} />
         <div className="relative z-10 rounded-lg bg-white p-4">
           {loading ? (
             <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
