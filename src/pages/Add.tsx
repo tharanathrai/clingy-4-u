@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase.ts'
@@ -19,12 +19,16 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const QR_CACHE_KEY = 'qr_token_cache'
 const MIN_REMAINING_SECONDS = 2
 
+function getRemainingSeconds(expiresAt: string): number {
+  return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+}
+
 function readCachedToken(): CachedQrToken | null {
   try {
     const raw = sessionStorage.getItem(QR_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as CachedQrToken
-    const secondsLeft = Math.floor((new Date(parsed.expires_at).getTime() - Date.now()) / 1000)
+    const secondsLeft = getRemainingSeconds(parsed.expires_at)
     return secondsLeft > MIN_REMAINING_SECONDS ? parsed : null
   } catch {
     return null
@@ -51,53 +55,71 @@ export default function Add() {
   const { signOut } = useAuth()
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
-  const [remainingSeconds, setRemainingSeconds] = useState(60)
+  const [remainingSeconds, setRemainingSeconds] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const fetchInFlightRef = useRef(false)
 
-  const fetchToken = useCallback(async () => {
-    setLoading(true)
+  const fetchToken = useCallback(async (options?: { force?: boolean; showLoading?: boolean }) => {
+    if (fetchInFlightRef.current) {
+      return
+    }
+
+    const showLoading = options?.showLoading ?? false
+    fetchInFlightRef.current = true
+    if (showLoading) {
+      setLoading(true)
+    }
     setErrorMessage(null)
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-    const accessToken = sessionData.session?.access_token
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
 
-    if (sessionError || !accessToken) {
-      setErrorMessage('No active session. Please sign in again.')
+      if (sessionError || !accessToken) {
+        setErrorMessage('No active session. Please sign in again.')
+        setLoading(false)
+        return
+      }
+
+      const { data: validatedUser, error: userError } = await supabase.auth.getUser(accessToken)
+      if (userError || !validatedUser.user) {
+        await signOut()
+        setErrorMessage('Session expired. Please sign in again.')
+        setLoading(false)
+        return
+      }
+
+      const response = await fetch(`${functionsBaseUrl}/generate-qr-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ force: options?.force === true }),
+      })
+
+      if (!response.ok) {
+        await response.text()
+        setErrorMessage('Something went wrong - try again.')
+        setLoading(false)
+        return
+      }
+
+      const data = (await response.json()) as GenerateQrTokenResponse
+
+      writeCachedToken(data)
+      setToken(data.token)
+      setExpiresAt(data.expires_at)
+      setRemainingSeconds(getRemainingSeconds(data.expires_at))
       setLoading(false)
-      return
-    }
-
-    const { data: validatedUser, error: userError } = await supabase.auth.getUser(accessToken)
-    if (userError || !validatedUser.user) {
-      await signOut()
-      setErrorMessage('Session expired. Please sign in again.')
-      setLoading(false)
-      return
-    }
-
-    const response = await fetch(`${functionsBaseUrl}/generate-qr-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: publishableKey,
-        Authorization: `Bearer ${accessToken}`,
-      },
-    })
-
-    if (!response.ok) {
-      await response.text()
+    } catch {
       setErrorMessage('Something went wrong - try again.')
       setLoading(false)
-      return
+    } finally {
+      fetchInFlightRef.current = false
     }
-
-    const data = (await response.json()) as GenerateQrTokenResponse
-
-    writeCachedToken(data)
-    setToken(data.token)
-    setExpiresAt(data.expires_at)
-    setLoading(false)
   }, [signOut])
 
   const loadToken = useCallback(() => {
@@ -105,10 +127,11 @@ export default function Add() {
     if (cached) {
       setToken(cached.token)
       setExpiresAt(cached.expires_at)
+      setRemainingSeconds(getRemainingSeconds(cached.expires_at))
       setLoading(false)
       return
     }
-    void fetchToken()
+    void fetchToken({ showLoading: true })
   }, [fetchToken])
 
   useEffect(() => {
@@ -120,17 +143,20 @@ export default function Add() {
       return
     }
 
-    const intervalId = window.setInterval(() => {
-      const secondsLeft = Math.max(
-        0,
-        Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000),
-      )
+    const syncRemainingSeconds = () => {
+      const secondsLeft = getRemainingSeconds(expiresAt)
       setRemainingSeconds(secondsLeft)
 
       if (secondsLeft <= 0) {
         clearCachedToken()
-        void fetchToken()
+        void fetchToken({ showLoading: false })
       }
+    }
+
+    syncRemainingSeconds()
+
+    const intervalId = window.setInterval(() => {
+      syncRemainingSeconds()
     }, 1000)
 
     return () => {
@@ -176,7 +202,10 @@ export default function Add() {
         <button
           type="button"
           className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          onClick={() => { clearCachedToken(); void fetchToken() }}
+          onClick={() => {
+            clearCachedToken()
+            void fetchToken({ force: true, showLoading: false })
+          }}
         >
           Refresh now
         </button>

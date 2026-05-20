@@ -12,6 +12,17 @@ Deno.serve(async (request) => {
   }
 
   try {
+    const requestBody = await request.text()
+    let forceRefresh = false
+    if (requestBody) {
+      try {
+        const parsed = JSON.parse(requestBody) as { force?: boolean }
+        forceRefresh = parsed.force === true
+      } catch {
+        forceRefresh = false
+      }
+    }
+
     const authHeader = request.headers.get('Authorization')
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header.' }), {
@@ -52,21 +63,23 @@ Deno.serve(async (request) => {
 
     const now = new Date()
 
-    const { data: existing } = await serviceClient
-      .from('rotating_qr_tokens')
-      .select('token, expires_at')
-      .eq('user_id', authData.user.id)
-      .gt('expires_at', now.toISOString())
-      .maybeSingle()
+    if (!forceRefresh) {
+      const { data: existing } = await serviceClient
+        .from('rotating_qr_tokens')
+        .select('token, expires_at')
+        .eq('user_id', authData.user.id)
+        .gt('expires_at', now.toISOString())
+        .maybeSingle()
 
-    if (existing) {
-      return new Response(
-        JSON.stringify({ token: existing.token, expires_at: existing.expires_at }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+      if (existing) {
+        return new Response(
+          JSON.stringify({ token: existing.token, expires_at: existing.expires_at }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
     }
 
     await serviceClient
