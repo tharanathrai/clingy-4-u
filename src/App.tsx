@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/layout/AuthGuard.tsx'
 
@@ -29,6 +29,46 @@ function App() {
   const transitionClassName = tabRoots.some((path) => location.pathname.startsWith(path))
     ? 'app-route-transition-fade'
     : 'app-route-transition-slide-up'
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return
+    }
+
+    const root = document.documentElement
+    const setInsets = () => {
+      const viewport = window.visualViewport
+      if (!viewport) {
+        root.style.setProperty('--browser-top-inset', '0px')
+        root.style.setProperty('--browser-bottom-inset', '0px')
+        return
+      }
+
+      const topInset = Math.max(0, viewport.offsetTop)
+      const bottomInset = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      )
+
+      root.style.setProperty('--browser-top-inset', `${topInset}px`)
+      root.style.setProperty('--browser-bottom-inset', `${bottomInset}px`)
+    }
+
+    setInsets()
+
+    const viewport = window.visualViewport
+    viewport?.addEventListener('resize', setInsets)
+    viewport?.addEventListener('scroll', setInsets)
+    window.addEventListener('resize', setInsets)
+    window.addEventListener('orientationchange', setInsets)
+
+    return () => {
+      viewport?.removeEventListener('resize', setInsets)
+      viewport?.removeEventListener('scroll', setInsets)
+      window.removeEventListener('resize', setInsets)
+      window.removeEventListener('orientationchange', setInsets)
+    }
+  }, [])
 
   return (
     <div className="app-device-frame">

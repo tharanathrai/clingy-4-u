@@ -148,7 +148,7 @@ export default function AddScan() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+    <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
       <h1 className="text-center font-display text-4xl">Scan code</h1>
 
       {!successUser ? (

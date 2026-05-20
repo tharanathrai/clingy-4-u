@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 
@@ -30,19 +30,26 @@ const postAuthReturnToKey = 'postAuthReturnTo'
 
 export default function Connect() {
   const { user, loading, signInWithGoogle } = useAuth()
+  const navigate = useNavigate()
   const [params] = useSearchParams()
   const token = params.get('token')
   const [submitting, setSubmitting] = useState(false)
   const [successUser, setSuccessUser] = useState<ValidateQrResponse['user'] | null>(null)
   const [connectIssue, setConnectIssue] = useState<ConnectIssue | null>(null)
+  const hasSubmittedRef = useRef(false)
 
   useEffect(() => {
-    if (loading || !user || !token || successUser || connectIssue || submitting) {
+    hasSubmittedRef.current = false
+  }, [token, user?.id])
+
+  useEffect(() => {
+    if (loading || !user || !token || successUser || connectIssue || hasSubmittedRef.current) {
       return
     }
 
     let cancelled = false
     const submitToken = async () => {
+      hasSubmittedRef.current = true
       setSubmitting(true)
       const { data: sessionData } = await supabase.auth.getSession()
       const accessToken = sessionData.session?.access_token
@@ -54,6 +61,7 @@ export default function Connect() {
             message: 'No active session. Please sign in again.',
           })
           setSubmitting(false)
+          hasSubmittedRef.current = false
         }
         return
       }
@@ -84,6 +92,7 @@ export default function Connect() {
             data && 'error' in data ? (data as ValidateQrError) : ({ error: responseText } as ValidateQrError)
           setConnectIssue(getConnectIssue(issuePayload))
           setSubmitting(false)
+          hasSubmittedRef.current = false
         }
         return
       }
@@ -98,7 +107,21 @@ export default function Connect() {
     return () => {
       cancelled = true
     }
-  }, [connectIssue, loading, submitting, successUser, token, user])
+  }, [connectIssue, loading, successUser, token, user])
+
+  useEffect(() => {
+    if (!successUser) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      navigate('/home')
+    }, 1400)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [navigate, successUser])
 
   const initials = useMemo(() => {
     if (!successUser) {

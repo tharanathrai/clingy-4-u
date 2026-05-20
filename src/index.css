@@ -9,6 +9,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --browser-top-inset: 0px;
+  --browser-bottom-inset: 0px;
+  --app-safe-top: calc(env(safe-area-inset-top) + var(--browser-top-inset));
+  --app-safe-bottom: calc(env(safe-area-inset-bottom) + var(--browser-bottom-inset));
 }
 
 * {
@@ -41,14 +45,16 @@ body {
 
 .app-device-screen {
   width: min(100vw, 430px);
-  min-height: 100dvh;
-  height: 100dvh;
+  min-height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
+  height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
   background: #12101a;
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  margin-top: var(--browser-top-inset);
+  margin-bottom: var(--browser-bottom-inset);
 }
 
 .app-route-transition-fade {
@@ -110,8 +116,8 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: min(100vw, 430px);
-  top: 0;
-  bottom: 0;
+  top: var(--app-safe-top);
+  bottom: var(--app-safe-bottom);
 }
 
 body.modal-scroll-lock {
@@ -120,7 +126,7 @@ body.modal-scroll-lock {
 }
 
 .composer-safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  padding-bottom: calc(var(--app-safe-bottom) + 12px);
 }
 
 .grain-overlay {
@@ -175,19 +181,32 @@ body.modal-scroll-lock {
 }
 
 .safe-bottom-tab {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--app-safe-bottom);
 }
 
 .safe-content-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 96px);
+  padding-bottom: calc(var(--app-safe-bottom) + 96px);
 }
 
 .safe-bottom-24 {
-  bottom: calc(env(safe-area-inset-bottom) + 96px);
+  bottom: calc(var(--app-safe-bottom) + 96px);
 }
 
 .safe-bottom-28 {
-  bottom: calc(env(safe-area-inset-bottom) + 112px);
+  bottom: calc(var(--app-safe-bottom) + 112px);
+}
+
+.safe-fixed-bottom {
+  bottom: var(--app-safe-bottom);
+}
+
+.safe-content-top {
+  padding-top: calc(var(--app-safe-top) + 24px);
+}
+
+.safe-screen-height {
+  min-height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
+  height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
 }
 
 .otp-hero-glow {

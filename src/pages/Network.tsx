@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { UserPlus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
@@ -69,10 +70,18 @@ export default function Network() {
   }
 
   return (
-    <div className="relative mx-auto h-screen w-full max-w-md overflow-hidden bg-bg text-text">
-      <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 pt-6">
+    <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
+      <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5">
         <h1 className="app-page-title">your network</h1>
         <div className="relative flex items-center gap-2">
+          <Link
+            to="/add"
+            className="rounded-full border border-white/10 bg-surface px-3 py-2 text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
+            aria-label="Add someone"
+            title="Add someone"
+          >
+            <UserPlus size={18} strokeWidth={1.75} />
+          </Link>
           <RecenterGraphButton
             onRecenter={handleRecenter}
             disabled={graphState.loading || !!graphState.error}

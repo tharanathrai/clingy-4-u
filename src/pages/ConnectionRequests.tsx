@@ -149,7 +149,7 @@ export default function ConnectionRequests() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+    <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
       <h1 className="app-page-title">Connection requests</h1>
 
       {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}

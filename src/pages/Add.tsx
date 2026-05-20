@@ -98,7 +98,7 @@ export default function Add() {
   }, [token])
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
+    <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
       <h1 className="app-page-title">Add someone</h1>
       <p className="mt-3 max-w-xs text-sm text-text-2">
         Show this to someone you want to connect with. It refreshes every 60 seconds.

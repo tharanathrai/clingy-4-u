@@ -145,6 +145,12 @@ export default function ProfileMe() {
         <p className="mt-4 text-center text-sm text-text-2">
           chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
         </p>
+        <Link
+          to="/add"
+          className="mt-3 rounded-full bg-surface-2 px-4 py-2 text-xs font-medium text-text-2"
+        >
+          Add someone
+        </Link>
       </section>
 
       {bridgeCount > 0 ? (
