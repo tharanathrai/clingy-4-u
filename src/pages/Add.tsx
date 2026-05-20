@@ -9,8 +9,43 @@ interface GenerateQrTokenResponse {
   expires_at: string
 }
 
+interface CachedQrToken {
+  token: string
+  expires_at: string
+}
+
 const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const QR_CACHE_KEY = 'qr_token_cache'
+const MIN_REMAINING_SECONDS = 2
+
+function readCachedToken(): CachedQrToken | null {
+  try {
+    const raw = sessionStorage.getItem(QR_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CachedQrToken
+    const secondsLeft = Math.floor((new Date(parsed.expires_at).getTime() - Date.now()) / 1000)
+    return secondsLeft > MIN_REMAINING_SECONDS ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedToken(data: CachedQrToken) {
+  try {
+    sessionStorage.setItem(QR_CACHE_KEY, JSON.stringify(data))
+  } catch {
+    // sessionStorage unavailable — silently skip caching
+  }
+}
+
+function clearCachedToken() {
+  try {
+    sessionStorage.removeItem(QR_CACHE_KEY)
+  } catch {
+    // ignore
+  }
+}
 
 export default function Add() {
   const { signOut } = useAuth()
@@ -59,14 +94,26 @@ export default function Add() {
 
     const data = (await response.json()) as GenerateQrTokenResponse
 
+    writeCachedToken(data)
     setToken(data.token)
     setExpiresAt(data.expires_at)
     setLoading(false)
   }, [signOut])
 
-  useEffect(() => {
+  const loadToken = useCallback(() => {
+    const cached = readCachedToken()
+    if (cached) {
+      setToken(cached.token)
+      setExpiresAt(cached.expires_at)
+      setLoading(false)
+      return
+    }
     void fetchToken()
   }, [fetchToken])
+
+  useEffect(() => {
+    loadToken()
+  }, [loadToken])
 
   useEffect(() => {
     if (!expiresAt) {
@@ -81,6 +128,7 @@ export default function Add() {
       setRemainingSeconds(secondsLeft)
 
       if (secondsLeft <= 0) {
+        clearCachedToken()
         void fetchToken()
       }
     }, 1000)
@@ -128,7 +176,7 @@ export default function Add() {
         <button
           type="button"
           className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          onClick={() => void fetchToken()}
+          onClick={() => { clearCachedToken(); void fetchToken() }}
         >
           Refresh now
         </button>

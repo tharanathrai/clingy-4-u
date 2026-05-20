@@ -51,14 +51,31 @@ Deno.serve(async (request) => {
     }
 
     const now = new Date()
-    const expiresAt = new Date(now.getTime() + 60 * 1000).toISOString()
-    const token = createRandomToken(32)
+
+    const { data: existing } = await serviceClient
+      .from('rotating_qr_tokens')
+      .select('token, expires_at')
+      .eq('user_id', authData.user.id)
+      .gt('expires_at', now.toISOString())
+      .maybeSingle()
+
+    if (existing) {
+      return new Response(
+        JSON.stringify({ token: existing.token, expires_at: existing.expires_at }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
 
     await serviceClient
       .from('rotating_qr_tokens')
       .delete()
       .eq('user_id', authData.user.id)
-      .gt('expires_at', now.toISOString())
+
+    const expiresAt = new Date(now.getTime() + 60 * 1000).toISOString()
+    const token = createRandomToken(32)
 
     const { error: insertError } = await serviceClient.from('rotating_qr_tokens').insert({
       user_id: authData.user.id,
