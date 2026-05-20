@@ -152,7 +152,7 @@ body.modal-scroll-lock {
   border-radius: inherit;
   padding: 6px;
   background: conic-gradient(
-    from -90deg,
+    from -132deg,
     #cf8ee8 0deg 42deg,
     rgba(207, 142, 232, 0.14) 42deg 360deg
   );
@@ -160,7 +160,7 @@ body.modal-scroll-lock {
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: qr-countdown-spin 60s linear infinite;
+  animation: qr-countdown-spin 60s linear forwards;
 }
 
 .qr-reader-container #qr-reader {
