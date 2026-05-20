@@ -19,6 +19,7 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const QR_CACHE_KEY = 'qr_token_cache'
 const MIN_REMAINING_SECONDS = 2
 const QR_TTL_MS = 60_000
+const HEAD_LOCK_MS = 1_000
 
 function getRemainingSeconds(expiresAt: string): number {
   return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
@@ -148,6 +149,8 @@ export default function Add() {
       return
     }
 
+    let animationFrameId = 0
+
     const syncRemainingSeconds = () => {
       const msLeft = getRemainingMs(expiresAt)
       setRemainingMs(msLeft)
@@ -155,17 +158,16 @@ export default function Add() {
       if (msLeft <= 0) {
         clearCachedToken()
         void fetchToken({ showLoading: false })
+        return
       }
+
+      animationFrameId = window.requestAnimationFrame(syncRemainingSeconds)
     }
 
     syncRemainingSeconds()
 
-    const intervalId = window.setInterval(() => {
-      syncRemainingSeconds()
-    }, 250)
-
     return () => {
-      window.clearInterval(intervalId)
+      window.cancelAnimationFrame(animationFrameId)
     }
   }, [expiresAt, fetchToken])
 
@@ -181,8 +183,10 @@ export default function Add() {
       return undefined
     }
 
-    const elapsedMs = Math.min(QR_TTL_MS, QR_TTL_MS - remainingMs)
-    const rotation = (elapsedMs / QR_TTL_MS) * 360
+    const effectiveRemainingMs = Math.max(0, remainingMs - HEAD_LOCK_MS)
+    const effectiveDurationMs = QR_TTL_MS - HEAD_LOCK_MS
+    const progress = 1 - effectiveRemainingMs / effectiveDurationMs
+    const rotation = Math.min(1, Math.max(0, progress)) * 360
 
     return { transform: `rotate(${rotation}deg)` }
   }, [expiresAt, remainingMs])
