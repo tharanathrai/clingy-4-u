@@ -125,6 +125,11 @@ body.modal-scroll-lock {
   overscroll-behavior: none;
 }
 
+body.modal-scroll-lock .bottom-tab-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .composer-safe-bottom {
   padding-bottom: calc(var(--app-safe-bottom) + 12px);
 }
