@@ -20,6 +20,7 @@ interface FeedPostCardProps {
   onAuthorPress?: () => void
   onOtherParticipantPress?: () => void
   hideActions?: boolean
+  reactionPlacement?: 'actions' | 'post-corner'
 }
 
 const categoryStripClass: Record<CategorySlug, string> = {
@@ -40,7 +41,9 @@ export function FeedPostCard({
   onAuthorPress,
   onOtherParticipantPress,
   hideActions = false,
+  reactionPlacement = 'actions',
 }: FeedPostCardProps) {
+  const reactionOnPost = reactionPlacement === 'post-corner'
   const category = toCategorySlug(post.bridge.category)
   const timestamp = toRelativeTimestamp(post.created_at)
 
@@ -72,13 +75,36 @@ export function FeedPostCard({
           <p className="text-xs text-text-3">{timestamp}</p>
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="mt-4 w-full rounded-md bg-surface-2 px-4 py-3 text-left text-base leading-relaxed text-text"
-        >
-          {post.body}
-        </button>
+        <div className="relative mt-4">
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            className={`w-full rounded-md bg-surface-2 text-left text-base leading-relaxed text-text ${
+              reactionOnPost ? 'px-4 py-3 pb-10 pr-16' : 'px-4 py-3'
+            }`}
+          >
+            {post.body}
+          </button>
+          {reactionOnPost ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onReact()
+              }}
+              className="absolute bottom-3 right-3 inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-sm text-text-2 transition-opacity active:opacity-80"
+              aria-label="Toggle reaction"
+            >
+              <Heart
+                size={18}
+                strokeWidth={1.75}
+                className={post.hasReacted ? 'text-accent' : 'text-text-2'}
+                fill={post.hasReacted ? 'currentColor' : 'none'}
+              />
+              <span>{post.reactionCount}</span>
+            </button>
+          ) : null}
+        </div>
 
         <div className="mt-3 flex items-center gap-2 text-xs text-text-2">
           <CategoryChip category={category} size="sm" />
@@ -94,20 +120,22 @@ export function FeedPostCard({
 
         {hideActions ? null : (
           <div className="mt-4 flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onReact}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm text-text-2 transition-opacity active:opacity-80"
-              aria-label="Toggle reaction"
-            >
-              <Heart
-                size={20}
-                strokeWidth={1.75}
-                className={post.hasReacted ? 'text-accent' : 'text-text-2'}
-                fill={post.hasReacted ? 'currentColor' : 'none'}
-              />
-              <span>{post.reactionCount}</span>
-            </button>
+            {!reactionOnPost ? (
+              <button
+                type="button"
+                onClick={onReact}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm text-text-2 transition-opacity active:opacity-80"
+                aria-label="Toggle reaction"
+              >
+                <Heart
+                  size={20}
+                  strokeWidth={1.75}
+                  className={post.hasReacted ? 'text-accent' : 'text-text-2'}
+                  fill={post.hasReacted ? 'currentColor' : 'none'}
+                />
+                <span>{post.reactionCount}</span>
+              </button>
+            ) : null}
 
             <button
               type="button"

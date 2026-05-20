@@ -1,4 +1,4 @@
-import { Heart, Send, X } from 'lucide-react'
+import { Send, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
@@ -26,13 +26,13 @@ export function PostDetailSheet({
   onPostMetricsChange,
 }: PostDetailSheetProps) {
   const { user } = useAuth()
-  const userId = user?.id ?? null
   const navigate = useNavigate()
   const [commentBody, setCommentBody] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
-  const { post, reactions, comments, loading, error } = usePost({
-    postId: postId ?? '',
-  })
+  const { post, reactionCount: serverReactionCount, hasReacted: serverHasReacted, comments, loading, error } =
+    usePost({
+      postId: postId ?? '',
+    })
   const [optimisticReactionCount, setOptimisticReactionCount] = useState<number | null>(
     null,
   )
@@ -97,21 +97,8 @@ export function PostDetailSheet({
     }
   }, [postId])
 
-  const hasReacted = useMemo(() => {
-    if (optimisticHasReacted !== null) {
-      return optimisticHasReacted
-    }
-    if (!userId) {
-      return false
-    }
-    return reactions.some((reaction) => reaction.user_id === userId)
-  }, [optimisticHasReacted, reactions, userId])
-
-  const recentReactors = useMemo(() => {
-    return reactions.slice(0, 5)
-  }, [reactions])
-
-  const reactionCount = optimisticReactionCount ?? reactions.length
+  const hasReacted = optimisticHasReacted ?? serverHasReacted
+  const reactionCount = optimisticReactionCount ?? serverReactionCount
   const commentCount = optimisticCommentCount ?? comments.length
   const displayedComments = useMemo(() => {
     const serverCommentIds = new Set(comments.map((comment) => comment.id))
@@ -281,46 +268,8 @@ export function PostDetailSheet({
                     : undefined
                 }
                 hideActions
+                reactionPlacement="post-corner"
               />
-
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-2 px-4 py-3">
-                <div className="flex items-center">
-                  {recentReactors.map((reaction, index) => (
-                    <button
-                      type="button"
-                      key={reaction.id}
-                      onClick={() => navigate(`/profile/${reaction.user.username}`)}
-                      className={`relative ${index === 0 ? '' : '-ml-2'}`}
-                    >
-                      {reaction.user.avatar_url ? (
-                        <img
-                          src={reaction.user.avatar_url}
-                          alt={reaction.user.display_name}
-                          className="h-7 w-7 rounded-full border border-surface object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-surface bg-bg text-xs text-text-2">
-                          {reaction.user.display_name.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => void handleToggleReaction()}
-                  className="inline-flex items-center gap-2 text-sm text-text-2"
-                >
-                  <Heart
-                    size={18}
-                    strokeWidth={1.75}
-                    className={hasReacted ? 'text-accent' : 'text-text-2'}
-                    fill={hasReacted ? 'currentColor' : 'none'}
-                  />
-                  <span>{reactionCount}</span>
-                </button>
-              </div>
 
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
                 <div className="space-y-3">

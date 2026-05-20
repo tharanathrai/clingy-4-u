@@ -14,17 +14,14 @@ export interface PostWithDetails extends Post {
   otherParticipantName: string
 }
 
-export interface ReactionWithUser extends Reaction {
-  user: User
-}
-
 export interface CommentWithUser extends Comment {
   user: User
 }
 
 interface UsePostResult {
   post: PostWithDetails | null
-  reactions: ReactionWithUser[]
+  reactionCount: number
+  hasReacted: boolean
   comments: CommentWithUser[]
   loading: boolean
   error: string | null
@@ -35,7 +32,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const [post, setPost] = useState<PostWithDetails | null>(null)
-  const [reactions, setReactions] = useState<ReactionWithUser[]>([])
+  const [reactionCount, setReactionCount] = useState(0)
+  const [hasReacted, setHasReacted] = useState(false)
   const [comments, setComments] = useState<CommentWithUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +47,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
   const loadPost = useCallback(async () => {
     if (!userId || !postId) {
       setPost(null)
-      setReactions([])
+      setReactionCount(0)
+      setHasReacted(false)
       setComments([])
       setError(null)
       setLoading(false)
@@ -73,7 +72,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
       }
       if (!postRow) {
         setPost(null)
-        setReactions([])
+        setReactionCount(0)
+        setHasReacted(false)
         setComments([])
         setLoading(false)
         hasLoadedRef.current = true
@@ -95,7 +95,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
       }
       if (!authorData || !bridgeData) {
         setPost(null)
-        setReactions([])
+        setReactionCount(0)
+        setHasReacted(false)
         setComments([])
         setLoading(false)
         hasLoadedRef.current = true
@@ -126,9 +127,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
         await Promise.all([
           supabase
             .from('reactions')
-            .select('*')
-            .eq('post_id', postId)
-            .order('created_at', { ascending: false }),
+            .select('id, post_id, user_id')
+            .eq('post_id', postId),
           supabase
             .from('comments')
             .select('*')
@@ -143,21 +143,19 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
         throw new Error(commentsError.message)
       }
 
-      const reactionRows = (reactionsData ?? []) as Reaction[]
+      const reactionRows = (reactionsData ?? []) as Pick<Reaction, 'id' | 'post_id' | 'user_id'>[]
       const commentRows = (commentsData ?? []) as Comment[]
-      const relatedUserIds = Array.from(
-        new Set([
-          ...reactionRows.map((reaction) => reaction.user_id),
-          ...commentRows.map((comment) => comment.user_id),
-        ]),
-      )
 
+      setReactionCount(reactionRows.length)
+      setHasReacted(reactionRows.some((reaction) => reaction.user_id === userId))
+
+      const commentUserIds = Array.from(new Set(commentRows.map((comment) => comment.user_id)))
       let usersById = new Map<string, User>()
-      if (relatedUserIds.length > 0) {
+      if (commentUserIds.length > 0) {
         const { data: relatedUsers, error: relatedUsersError } = await supabase
           .from('users')
           .select('*')
-          .in('id', relatedUserIds)
+          .in('id', commentUserIds)
         if (relatedUsersError) {
           throw new Error(relatedUsersError.message)
         }
@@ -166,18 +164,6 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
           (relatedUsers ?? []).map((relatedUser) => [relatedUser.id, relatedUser as User]),
         )
       }
-
-      setReactions(
-        reactionRows
-          .map((reaction) => {
-            const relatedUser = usersById.get(reaction.user_id)
-            if (!relatedUser) {
-              return null
-            }
-            return { ...reaction, user: relatedUser } satisfies ReactionWithUser
-          })
-          .filter((reaction): reaction is ReactionWithUser => reaction !== null),
-      )
 
       setComments(
         commentRows
@@ -196,7 +182,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : 'Failed to load post.')
       setPost(null)
-      setReactions([])
+      setReactionCount(0)
+      setHasReacted(false)
       setComments([])
       setLoading(false)
       hasLoadedRef.current = true
@@ -262,7 +249,8 @@ export function usePost({ postId }: UsePostProps): UsePostResult {
 
   return {
     post,
-    reactions,
+    reactionCount,
+    hasReacted,
     comments,
     loading: loading || authLoading,
     error,

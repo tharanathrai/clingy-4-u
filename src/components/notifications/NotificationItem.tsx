@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns'
+import { Heart } from 'lucide-react'
 import type { Notification } from '../../hooks/useNotifications.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
 
@@ -17,6 +18,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
   const copy = getNotificationCopy(notification.type, actorName)
   const timestamp = getTimestamp(notification.created_at)
   const isUnread = !notification.read
+  const hideActor = notification.type === 'post_reaction'
 
   return (
     <button
@@ -24,7 +26,11 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
       onClick={onPress}
       className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-2 border-accent bg-surface-2' : 'bg-surface'}`}
     >
-      {notification.actor_avatar_url ? (
+      {hideActor ? (
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">
+          <Heart size={18} strokeWidth={1.75} fill="currentColor" />
+        </div>
+      ) : notification.actor_avatar_url ? (
         <img
           src={
             withAvatarSize(notification.actor_avatar_url, 48) ??
@@ -79,6 +85,12 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   }
   if (type === 'connection_request') {
     return `${name} wants to connect`
+  }
+  if (type === 'post_reaction') {
+    return 'Someone reacted to your post'
+  }
+  if (type === 'post_comment') {
+    return `${name} commented on your post`
   }
 
   return 'You have a new notification'

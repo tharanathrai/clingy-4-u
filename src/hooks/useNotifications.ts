@@ -298,6 +298,9 @@ async function enrichNotifications(
 
   const actorIds = new Set<string>()
   for (const notification of notifications) {
+    if (notification.type === 'post_reaction') {
+      continue
+    }
     const actorInfo = getActorAndTargetUserId(
       notification,
       userId,
@@ -325,6 +328,15 @@ async function enrichNotifications(
   }
 
   return notifications.map((notification) => {
+    if (notification.type === 'post_reaction') {
+      return {
+        ...notification,
+        actor_name: undefined,
+        actor_avatar_url: null,
+        target_user_id: null,
+      }
+    }
+
     const actorInfo = getActorAndTargetUserId(
       notification,
       userId,
