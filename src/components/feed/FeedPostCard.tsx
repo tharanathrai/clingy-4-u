@@ -20,6 +20,7 @@ interface FeedPostCardProps {
   onAuthorPress?: () => void
   onOtherParticipantPress?: () => void
   hideActions?: boolean
+  showReactionInMetaWhenHidden?: boolean
 }
 
 const categoryStripClass: Record<CategorySlug, string> = {
@@ -40,6 +41,7 @@ export function FeedPostCard({
   onAuthorPress,
   onOtherParticipantPress,
   hideActions = false,
+  showReactionInMetaWhenHidden = false,
 }: FeedPostCardProps) {
   const category = toCategorySlug(post.bridge.category)
   const timestamp = toRelativeTimestamp(post.created_at)
@@ -95,7 +97,7 @@ export function FeedPostCard({
             </button>
           </div>
 
-          {hideActions ? null : (
+          {!hideActions || showReactionInMetaWhenHidden ? (
             <button
               type="button"
               onClick={onReact}
@@ -110,7 +112,7 @@ export function FeedPostCard({
               />
               <span>{post.reactionCount}</span>
             </button>
-          )}
+          ) : null}
         </div>
 
         {hideActions ? null : (

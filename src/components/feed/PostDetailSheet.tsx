@@ -268,6 +268,7 @@ export function PostDetailSheet({
                     : undefined
                 }
                 hideActions
+                showReactionInMetaWhenHidden
               />
 
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
