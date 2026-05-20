@@ -3,19 +3,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
-import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import { supabase } from '../lib/supabase.ts'
+import type { CategorySlug } from '../lib/constants.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
 
 interface ActiveConnection {
   id: string
   display_name: string
   avatar_url: string | null
-}
-
-interface CategorizeResponse {
-  category: string
-  color_hex: string
 }
 
 interface CreatePieceResponse {
@@ -27,6 +23,8 @@ interface CreatePieceErrorResponse {
 
 interface LocationState {
   recipientId?: string
+  returnTo?: string
+  selectUserId?: string
 }
 
 const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
@@ -177,43 +175,18 @@ export default function PieceNew() {
       return
     }
 
+    setCategorizing(true)
     const timeoutId = window.setTimeout(() => {
-      void (async () => {
-        setCategorizing(true)
-        const { data: sessionData } = await supabase.auth.getSession()
-        const accessToken = sessionData.session?.access_token
-        if (!accessToken) {
-          setCategorizing(false)
-          return
-        }
-
-        const response = await fetch(`${functionsBaseUrl}/categorize-gum`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: publishableKey,
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ title: title.trim() }),
-        })
-
-        if (!response.ok) {
-          setCategorizing(false)
-          return
-        }
-
-        const data = (await response.json()) as CategorizeResponse
-        if (data.category in CATEGORIES) {
-          setCategoryPreview(data.category as CategorySlug)
-        }
-        setCategorizing(false)
-      })()
-    }, 300)
+      setCategoryPreview(categorizeTitle(title.trim()))
+      setCategorizing(false)
+    }, 200)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
   }, [title])
+
+  const backTarget = locationState?.returnTo ?? '/home'
 
   const canSubmit = recipientId.trim().length > 0 && title.trim().length > 0 && !submitting
 
@@ -317,7 +290,15 @@ export default function PieceNew() {
   return (
     <main className="mx-auto min-h-full w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
       <div className="mb-6">
-        <Link to="/home" className="inline-flex items-center gap-2 text-sm text-text-2">
+        <Link
+          to={backTarget}
+          state={
+            locationState?.selectUserId
+              ? { selectUserId: locationState.selectUserId }
+              : undefined
+          }
+          className="inline-flex items-center gap-2 text-sm text-text-2"
+        >
           <ArrowLeft size={18} strokeWidth={1.75} />
           back
         </Link>

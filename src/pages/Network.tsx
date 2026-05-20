@@ -7,12 +7,15 @@ import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
-import { supabase } from '../lib/supabase.ts'
+import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
 import type { Bridge, User } from '../types/index.ts'
+
+const networkUserCache = new Map<string, User>()
 
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { usersById } = useNetworkGraph()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null)
@@ -33,38 +36,31 @@ export default function Network() {
 
     setSelectedBridge(null)
     setSelectedUserId(state.selectUserId)
+    const restoredUser =
+      networkUserCache.get(state.selectUserId) ?? usersById[state.selectUserId] ?? null
+    if (restoredUser) {
+      setSelectedUser(restoredUser)
+    }
     window.history.replaceState({}, document.title)
-  }, [location.state])
+  }, [location.state, usersById])
 
   useEffect(() => {
     if (!selectedUserId) {
       setSelectedUser(null)
       return
     }
-    if (selectedUser?.id === selectedUserId) {
+
+    const cachedUser =
+      networkUserCache.get(selectedUserId) ?? usersById[selectedUserId] ?? null
+    if (cachedUser) {
+      setSelectedUser(cachedUser)
       return
     }
 
-    let cancelled = false
-
-    const loadSelectedUser = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', selectedUserId)
-        .maybeSingle()
-
-      if (!cancelled) {
-        setSelectedUser((data ?? null) as User | null)
-      }
+    if (selectedUser?.id === selectedUserId) {
+      return
     }
-
-    void loadSelectedUser()
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedUser?.id, selectedUserId])
+  }, [selectedUser?.id, selectedUserId, usersById])
 
   const handleRecenter = () => {
     setSelectedUserId(null)
@@ -96,8 +92,16 @@ export default function Network() {
       <main className="h-full w-full">
         <NetworkGraph
           onNodeSelect={(userId, user) => {
+            if (!userId) {
+              return
+            }
             setSelectedUserId(userId)
-            setSelectedUser(user ?? null)
+            if (user) {
+              networkUserCache.set(userId, user)
+              setSelectedUser(user)
+            } else {
+              setSelectedUser(usersById[userId] ?? networkUserCache.get(userId) ?? null)
+            }
             setSelectedBridge(null)
           }}
           selectedUserId={selectedUserId}
@@ -158,7 +162,13 @@ export default function Network() {
             navigate(`/profile/${username}`)
           }}
           onCreatePlan={(recipientId) => {
-            navigate('/piece/new', { state: { recipientId } })
+            navigate('/piece/new', {
+              state: {
+                recipientId,
+                returnTo: '/network',
+                selectUserId: recipientId,
+              },
+            })
           }}
         />
       ) : null}

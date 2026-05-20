@@ -20,6 +20,7 @@ export interface NetworkGraphEdge {
 interface UseNetworkGraphResult {
   nodes: NetworkGraphNode[]
   edges: NetworkGraphEdge[]
+  usersById: Record<string, User>
   loading: boolean
   error: string | null
   refetch: () => void
@@ -66,9 +67,11 @@ export function useNetworkGraph(): UseNetworkGraphResult {
         setUsersById(cached.usersById)
         setBridges(cached.bridges)
         setLoading(false)
-      } else {
-        setLoading(true)
+        setError(null)
+        return
       }
+
+      setLoading(true)
       setError(null)
 
       const { data: connectionRows, error: connectionError } = await supabase
@@ -217,9 +220,13 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   return {
     nodes,
     edges,
+    usersById,
     loading: loading || authLoading,
     error,
     refetch: () => {
+      if (userId) {
+        networkGraphCache.delete(userId)
+      }
       setRefreshIndex((current) => current + 1)
     },
   }

@@ -13,6 +13,12 @@ interface UseBridgesByPairResult {
   error: string | null
 }
 
+const bridgesByPairCache = new Map<string, Bridge[]>()
+
+function pairCacheKey(userId: string, otherUserId: string): string {
+  return `${userId}:${otherUserId}`
+}
+
 export function useBridgesByPair({
   otherUserId,
 }: UseBridgesByPairParams): UseBridgesByPairResult {
@@ -31,6 +37,15 @@ export function useBridgesByPair({
       setBridges([])
       setError(null)
       setLoading(false)
+      return
+    }
+
+    const cacheKey = pairCacheKey(userId, otherUserId)
+    const cached = bridgesByPairCache.get(cacheKey)
+    if (cached) {
+      setBridges(cached)
+      setLoading(false)
+      setError(null)
       return
     }
 
@@ -59,7 +74,9 @@ export function useBridgesByPair({
         return
       }
 
-      setBridges((data ?? []) as Bridge[])
+      const nextBridges = (data ?? []) as Bridge[]
+      bridgesByPairCache.set(cacheKey, nextBridges)
+      setBridges(nextBridges)
       setLoading(false)
     }
 
@@ -74,5 +91,18 @@ export function useBridgesByPair({
     bridges,
     loading: loading || authLoading,
     error,
+  }
+}
+
+export function invalidateBridgesByPairCache(userId: string, otherUserId?: string): void {
+  if (otherUserId) {
+    bridgesByPairCache.delete(pairCacheKey(userId, otherUserId))
+    return
+  }
+
+  for (const key of bridgesByPairCache.keys()) {
+    if (key.startsWith(`${userId}:`)) {
+      bridgesByPairCache.delete(key)
+    }
   }
 }
