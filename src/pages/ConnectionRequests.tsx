@@ -134,7 +134,7 @@ export default function ConnectionRequests() {
 
   if (loading || fetching) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading requests...</p>
       </main>
     )
@@ -142,14 +142,14 @@ export default function ConnectionRequests() {
 
   if (!user) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Sign in to view requests.</p>
       </main>
     )
   }
 
   return (
-    <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+    <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
       <h1 className="app-page-title">Connection requests</h1>
 
       {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}

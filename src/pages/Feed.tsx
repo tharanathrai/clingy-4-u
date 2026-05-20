@@ -14,6 +14,7 @@ export default function Feed() {
   const navigate = useNavigate()
   const [localPosts, setLocalPosts] = useState(posts)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+  const [focusComposerOnOpen, setFocusComposerOnOpen] = useState(false)
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
   const knownPostIdsRef = useRef<Set<string>>(new Set())
   const hasPostDetailHistoryEntryRef = useRef(false)
@@ -65,6 +66,7 @@ export default function Feed() {
 
   useEffect(() => {
     if (!selectedPostId) {
+      setFocusComposerOnOpen(false)
       return
     }
 
@@ -105,9 +107,14 @@ export default function Feed() {
     })
   }
 
+  const openPostDetail = (postId: string, options?: { focusComposer?: boolean }) => {
+    setFocusComposerOnOpen(options?.focusComposer === true)
+    setSelectedPostId(postId)
+  }
+
   return (
     <Layout>
-      <main className="pb-28">
+      <main>
         <h1 className="app-page-title">feed</h1>
 
         {loading ? (
@@ -151,7 +158,8 @@ export default function Feed() {
                 <FeedPostCard
                   post={post}
                   onReact={() => void handleReact(post.id)}
-                  onComment={() => setSelectedPostId(post.id)}
+                  onOpenDetail={() => openPostDetail(post.id)}
+                  onComment={() => openPostDetail(post.id, { focusComposer: true })}
                   onAuthorPress={() => navigate(`/profile/${post.author.username}`)}
                 />
               </li>
@@ -174,6 +182,7 @@ export default function Feed() {
 
       <PostDetailSheet
         postId={selectedPostId}
+        autoFocusComposer={focusComposerOnOpen}
         onClose={() => {
           if (hasPostDetailHistoryEntryRef.current) {
             window.history.back()

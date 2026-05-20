@@ -15,6 +15,7 @@ interface FeedPostCardProps {
     hasReacted: boolean
   }
   onReact: () => void
+  onOpenDetail: () => void
   onComment: () => void
   onAuthorPress?: () => void
   onOtherParticipantPress?: () => void
@@ -34,6 +35,7 @@ const categoryStripClass: Record<CategorySlug, string> = {
 export function FeedPostCard({
   post,
   onReact,
+  onOpenDetail,
   onComment,
   onAuthorPress,
   onOtherParticipantPress,
@@ -65,14 +67,15 @@ export function FeedPostCard({
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-text">{post.author.display_name}</p>
+            <p className="truncate text-xs text-text-3">@{post.author.username}</p>
           </div>
           <p className="text-xs text-text-3">{timestamp}</p>
         </button>
 
         <button
           type="button"
-          onClick={onComment}
-          className="mt-4 w-full text-left text-base leading-relaxed text-text"
+          onClick={onOpenDetail}
+          className="mt-4 w-full rounded-md bg-surface-2 px-4 py-3 text-left text-base leading-relaxed text-text"
         >
           {post.body}
         </button>

@@ -138,6 +138,7 @@ export default function Network() {
         <BridgeDetailSheet
           bridge={selectedBridge}
           otherUser={selectedUser}
+          otherUserId={selectedUserId}
           onClose={() => {
             setSelectedBridge(null)
           }}
@@ -150,6 +151,9 @@ export default function Network() {
           }}
           onViewProfile={(username) => {
             navigate(`/profile/${username}`)
+          }}
+          onCreatePlan={(recipientId) => {
+            navigate('/piece/new', { state: { recipientId } })
           }}
         />
       ) : null}

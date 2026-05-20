@@ -106,7 +106,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <main className="pb-28">
+      <main>
         <header>
           <h1 className="app-page-title">your pocket</h1>
         </header>
@@ -168,7 +168,7 @@ export default function Home() {
         ) : null}
 
         {!loading && !loadingConnections && !error && sortedPieces.length > 0 ? (
-          <ul className="mt-6 space-y-3">
+          <ul className="mt-6 space-y-3 pb-24">
             {visiblePieces.map((piece) => (
               <li key={piece.id}>
                 <GumPieceCard

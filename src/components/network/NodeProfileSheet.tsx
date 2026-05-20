@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
+import { ChevronUp, X } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import { supabase } from '../../lib/supabase.ts'
@@ -11,6 +12,7 @@ interface NodeProfileSheetProps {
   userId: string | null
   onClose: () => void
   onViewProfile: (username: string) => void
+  onCreatePlan: (recipientId: string) => void
 }
 
 const toCategorySlug = (value: string): CategorySlug => {
@@ -24,6 +26,7 @@ export function NodeProfileSheet({
   userId,
   onClose,
   onViewProfile,
+  onCreatePlan,
 }: NodeProfileSheetProps) {
   const [otherUser, setOtherUser] = useState<User | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
@@ -86,14 +89,20 @@ export function NodeProfileSheet({
       .map(([category]) => category as CategorySlug)
   }, [bridges])
 
+  const recentBridges = useMemo(() => {
+    return [...bridges]
+      .sort((a, b) => new Date(b.formed_at).getTime() - new Date(a.formed_at).getTime())
+      .slice(0, 3)
+  }, [bridges])
+
   if (!userId) {
     return null
   }
 
   return (
     <section
-      className={`absolute inset-x-0 bottom-0 z-20 rounded-t-xl border-t border-white/10 bg-surface shadow-card transition-[height] duration-200 ${
-        expanded ? 'h-[72vh]' : 'h-[40vh]'
+      className={`absolute inset-x-0 bottom-0 z-20 h-auto rounded-t-xl border-t border-white/10 bg-surface shadow-card transition-[max-height] duration-200 ${
+        expanded ? 'max-h-[68vh]' : 'max-h-[42vh]'
       }`}
     >
       <button
@@ -122,6 +131,14 @@ export function NodeProfileSheet({
         }}
       >
         <span className="h-1 w-9 rounded-full bg-white/20" />
+        <span className="ml-2 inline-flex items-center gap-1 text-xs text-text-3">
+          {expanded ? 'Less' : 'More'}
+          <ChevronUp
+            size={14}
+            strokeWidth={1.75}
+            className={expanded ? 'text-text-3' : 'rotate-180 text-text-3'}
+          />
+        </span>
       </button>
 
       <div className="h-full overflow-y-auto px-5 pb-8">
@@ -176,6 +193,39 @@ export function NodeProfileSheet({
             )}
           </div>
 
+          {expanded ? (
+            <section className="mt-5 rounded-lg border border-white/10 bg-surface-2 p-4">
+              <p className="text-xs uppercase tracking-wide text-text-3">Recent shared activity</p>
+              {recentBridges.length > 0 ? (
+                <ul className="mt-3 space-y-2">
+                  {recentBridges.map((bridge) => (
+                    <li key={bridge.id} className="rounded-md bg-bg/40 px-3 py-2">
+                      <p className="text-sm text-text">{bridge.activity_title}</p>
+                      <p className="mt-1 text-xs text-text-3">
+                        {formatDistanceToNow(new Date(bridge.formed_at), { addSuffix: true })}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-sm text-text-2">No shared activity yet.</p>
+              )}
+            </section>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (otherUser?.id) {
+                onCreatePlan(otherUser.id)
+              }
+            }}
+            className="mt-6 w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+            disabled={!otherUser?.id}
+          >
+            Make a plan
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -183,7 +233,7 @@ export function NodeProfileSheet({
                 onViewProfile(otherUser.username)
               }
             }}
-            className="mt-6 w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+            className="mt-3 w-full rounded-full bg-surface-2 px-5 py-3 text-sm font-medium text-text-2 transition hover:border-white/20 active:scale-95 disabled:opacity-50"
             disabled={!otherUser?.username}
           >
             View profile

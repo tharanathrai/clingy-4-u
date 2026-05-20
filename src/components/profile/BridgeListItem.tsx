@@ -59,6 +59,7 @@ export function BridgeListItem({ bridge, otherUser }: BridgeListItemProps) {
           <BridgeDetailSheet
             bridge={bridge}
             otherUser={otherUser}
+            otherUserId={otherUser.id}
             onClose={() => {
               setOpen(false)
             }}

@@ -9,6 +9,7 @@ import { FeedPostCard } from './FeedPostCard.tsx'
 
 interface PostDetailSheetProps {
   postId: string | null
+  autoFocusComposer?: boolean
   onClose: () => void
   onPostMetricsChange?: (next: {
     postId: string
@@ -20,6 +21,7 @@ interface PostDetailSheetProps {
 
 export function PostDetailSheet({
   postId,
+  autoFocusComposer = false,
   onClose,
   onPostMetricsChange,
 }: PostDetailSheetProps) {
@@ -46,6 +48,24 @@ export function PostDetailSheet({
     setOptimisticComments([])
     setCommentBody('')
   }, [postId])
+
+  useEffect(() => {
+    if (!postId || !autoFocusComposer) {
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      commentInputRef.current?.focus()
+      commentInputRef.current?.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+      })
+    }, 120)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [autoFocusComposer, postId])
 
   useEffect(() => {
     if (!postId) {
@@ -205,7 +225,7 @@ export function PostDetailSheet({
         className="absolute inset-0 bg-black/60"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
+      <div className="sheet-slide-up absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
         <button
           type="button"
           onClick={onClose}
@@ -229,6 +249,7 @@ export function PostDetailSheet({
                   hasReacted,
                 }}
                 onReact={() => void handleToggleReaction()}
+                onOpenDetail={() => undefined}
                 onComment={() => undefined}
                 onOtherParticipantPress={
                   post.otherParticipant?.username

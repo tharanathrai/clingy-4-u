@@ -86,7 +86,7 @@ export default function Notifications() {
 
   return (
     <Layout>
-      <main className="pb-24">
+      <main>
         <div className="flex items-start justify-between gap-3">
           <h1 className="app-page-title">notifications</h1>
           {unreadCount > 0 ? (

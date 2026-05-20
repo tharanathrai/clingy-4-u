@@ -25,7 +25,7 @@ export default function Settings() {
 
   if (authLoading || profileLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading settings...</p>
       </main>
     )
@@ -53,7 +53,7 @@ export default function Settings() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-6 text-text">
+    <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto w-full max-w-md overflow-y-auto bg-bg px-5 pb-8 pt-6 text-text">
       <Link to="/profile/me" className="inline-flex min-h-11 items-center gap-2 text-sm text-text-2">
         <ArrowLeft size={18} strokeWidth={1.75} />
         back
