@@ -57,72 +57,82 @@ export default function PieceNew() {
   const loadConnections = useCallback(async () => {
     if (!userId) {
       setConnections([])
+      setBridgeStrengthByConnectionId({})
+      setPairSlotUsage({})
       setConnectionsLoading(false)
       return
     }
 
     setConnectionsLoading(true)
-    const { data: connectionRows } = await supabase
-      .from('connections')
-      .select('id, user_a_id, user_b_id')
-      .eq('status', 'active')
-      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+    try {
+      const { data: connectionRows } = await supabase
+        .from('connections')
+        .select('id, user_a_id, user_b_id')
+        .eq('status', 'active')
+        .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
-    const otherIds = (connectionRows ?? []).map((row) =>
-      row.user_a_id === userId ? row.user_b_id : row.user_a_id,
-    )
+      const otherIds = (connectionRows ?? []).map((row) =>
+        row.user_a_id === userId ? row.user_b_id : row.user_a_id,
+      )
 
-    if (otherIds.length === 0) {
-      setConnections([])
-      setBridgeStrengthByConnectionId({})
+      if (otherIds.length === 0) {
+        setConnections([])
+        setBridgeStrengthByConnectionId({})
+        setPairSlotUsage({})
+        setConnectionsLoading(false)
+        return
+      }
+
+      const { data: userRows } = await supabase
+        .from('users')
+        .select('id, display_name, avatar_url')
+        .in('id', otherIds)
+
+      const nextConnections: ActiveConnection[] = (userRows ?? []).map((row) => ({
+        id: row.id,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
+      }))
+
+      // Show selectable connections as soon as names are available.
+      setConnections(nextConnections)
       setConnectionsLoading(false)
-      return
-    }
 
-    const { data: userRows } = await supabase
-      .from('users')
-      .select('id, display_name, avatar_url')
-      .in('id', otherIds)
+      const [{ data: pairRows }, { data: bridgeRows }] = await Promise.all([
+        supabase
+          .from('gum_pieces')
+          .select('creator_id, recipient_id')
+          .in('status', ['placeholder', 'active'])
+          .or(`creator_id.eq.${userId},recipient_id.eq.${userId}`),
+        supabase
+          .from('bridges')
+          .select('user_a_id, user_b_id')
+          .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`),
+      ])
 
-    const nextConnections: ActiveConnection[] = (userRows ?? []).map((row) => ({
-      id: row.id,
-      display_name: row.display_name,
-      avatar_url: row.avatar_url,
-    }))
-
-    setConnections(nextConnections)
-
-    const { data: pairRows } = await supabase
-      .from('gum_pieces')
-      .select('creator_id, recipient_id')
-      .in('status', ['placeholder', 'active'])
-      .or(`creator_id.eq.${userId},recipient_id.eq.${userId}`)
-
-    const nextPairUsage: Record<string, number> = {}
-    for (const row of pairRows ?? []) {
-      const otherId = row.creator_id === userId ? row.recipient_id : row.creator_id
-      if (!otherIds.includes(otherId)) {
-        continue
+      const nextPairUsage: Record<string, number> = {}
+      for (const row of pairRows ?? []) {
+        const otherId = row.creator_id === userId ? row.recipient_id : row.creator_id
+        if (!otherIds.includes(otherId)) {
+          continue
+        }
+        nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
       }
-      nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
-    }
 
-    const { data: bridgeRows } = await supabase
-      .from('bridges')
-      .select('user_a_id, user_b_id')
-      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-    const nextStrength: Record<string, number> = {}
-    for (const row of bridgeRows ?? []) {
-      const otherId = row.user_a_id === userId ? row.user_b_id : row.user_a_id
-      if (!otherIds.includes(otherId)) {
-        continue
+      const nextStrength: Record<string, number> = {}
+      for (const row of bridgeRows ?? []) {
+        const otherId = row.user_a_id === userId ? row.user_b_id : row.user_a_id
+        if (!otherIds.includes(otherId)) {
+          continue
+        }
+        nextStrength[otherId] = (nextStrength[otherId] ?? 0) + 1
       }
-      nextStrength[otherId] = (nextStrength[otherId] ?? 0) + 1
-    }
-    setBridgeStrengthByConnectionId(nextStrength)
 
-    setPairSlotUsage(nextPairUsage)
-    setConnectionsLoading(false)
+      setBridgeStrengthByConnectionId(nextStrength)
+      setPairSlotUsage(nextPairUsage)
+    } finally {
+      setConnectionsLoading(false)
+    }
   }, [userId])
 
   useEffect(() => {
