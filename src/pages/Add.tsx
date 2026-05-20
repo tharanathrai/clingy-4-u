@@ -1,5 +1,6 @@
+import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -59,6 +60,7 @@ function clearCachedToken() {
 
 export default function Add() {
   const { signOut } = useAuth()
+  const navigate = useNavigate()
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [remainingMs, setRemainingMs] = useState(0)
@@ -194,49 +196,66 @@ export default function Add() {
   const remainingSeconds = Math.ceil(remainingMs / 1000)
 
   return (
-    <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
-      <h1 className="app-page-title">Add someone</h1>
-      <p className="mt-3 max-w-xs text-sm text-text-2">
-        Show this to someone you want to connect with. It refreshes every 60 seconds.
-      </p>
+    <main className="safe-screen-height mx-auto flex w-full max-w-md flex-col overflow-hidden bg-bg px-5 pb-28 pt-6 text-center text-text">
+      <button
+        type="button"
+        className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-2"
+        onClick={() => {
+          if (window.history.length > 1) {
+            navigate(-1)
+            return
+          }
+          navigate('/home')
+        }}
+      >
+        <ArrowLeft size={18} strokeWidth={1.75} />
+        Back
+      </button>
 
-      <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
-        <div className="qr-countdown-ring" style={ringStyle} />
-        <div className="relative z-10 rounded-lg bg-white p-4">
-          {loading ? (
-            <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
-              Loading...
-            </div>
-          ) : token ? (
-            <QRCodeSVG value={qrValue} size={208} />
-          ) : (
-            <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
-              Failed to generate code.
-            </div>
-          )}
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <h1 className="app-page-title">Add someone</h1>
+        <p className="mt-3 max-w-xs text-sm text-text-2">
+          Show this to someone you want to connect with. It refreshes every 60 seconds.
+        </p>
+
+        <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
+          <div className="qr-countdown-ring" style={ringStyle} />
+          <div className="relative z-10 rounded-lg bg-white p-4">
+            {loading ? (
+              <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
+                Loading...
+              </div>
+            ) : token ? (
+              <QRCodeSVG value={qrValue} size={208} />
+            ) : (
+              <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
+                Failed to generate code.
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      <p className="mt-5 text-sm text-text-2">{remainingSeconds}s</p>
-      {errorMessage ? <p className="mt-2 text-sm text-playful">{errorMessage}</p> : null}
+        <p className="mt-5 text-sm text-text-2">{remainingSeconds}s</p>
+        {errorMessage ? <p className="mt-2 text-sm text-playful">{errorMessage}</p> : null}
 
-      <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-        <button
-          type="button"
-          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          onClick={() => {
-            clearCachedToken()
-            void fetchToken({ force: true, showLoading: false })
-          }}
-        >
-          Refresh now
-        </button>
-        <Link
-          to="/add/scan"
-          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-        >
-          Switch to scan
-        </Link>
+        <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
+          <button
+            type="button"
+            className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+            onClick={() => {
+              clearCachedToken()
+              void fetchToken({ force: true, showLoading: false })
+            }}
+          >
+            Refresh now
+          </button>
+          <Link
+            to="/add/scan"
+            className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+          >
+            Switch to scan
+          </Link>
+        </div>
       </div>
     </main>
   )

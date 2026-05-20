@@ -28,20 +28,49 @@ const tabs: TabConfig[] = [
   { to: '/profile/me', label: 'Profile', icon: CircleUserRound },
 ]
 
+function getActiveTabPath(pathname: string): TabConfig['to'] | null {
+  if (pathname.startsWith('/home') || pathname.startsWith('/piece')) {
+    return '/home'
+  }
+
+  if (
+    pathname.startsWith('/network') ||
+    pathname.startsWith('/add') ||
+    pathname.startsWith('/connect') ||
+    pathname.startsWith('/connections')
+  ) {
+    return '/network'
+  }
+
+  if (pathname.startsWith('/feed')) {
+    return '/feed'
+  }
+
+  if (pathname.startsWith('/notifications')) {
+    return '/notifications'
+  }
+
+  if (
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/welcome')
+  ) {
+    return '/profile/me'
+  }
+
+  return null
+}
+
 export function BottomTabBar() {
   const location = useLocation()
   const { unreadCount } = useNotifications()
+  const activeTabPath = getActiveTabPath(location.pathname)
 
   return (
     <nav className="app-fixed-frame bottom-0 z-40 border-t border-white/10 bg-surface">
       <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-center justify-between px-5 pb-0.5 pt-1.5">
         {tabs.map((tab) => {
-          const isActive =
-            tab.to === '/home'
-              ? location.pathname === '/home'
-              : tab.to === '/profile/me'
-                ? location.pathname.startsWith('/profile')
-                : location.pathname === tab.to || location.pathname.startsWith(`${tab.to}/`)
+          const isActive = activeTabPath === tab.to
           const Icon = tab.icon
           return (
             <Link
