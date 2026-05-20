@@ -143,6 +143,7 @@ body.modal-scroll-lock {
   inset: 8px;
   border-radius: 9999px;
   pointer-events: none;
+  transition: transform 120ms linear;
 }
 
 .qr-countdown-ring::before {
@@ -160,7 +161,6 @@ body.modal-scroll-lock {
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
-  animation: qr-countdown-spin 60s linear forwards;
 }
 
 .qr-reader-container #qr-reader {
@@ -185,15 +185,6 @@ body.modal-scroll-lock {
 
 .qr-reader-container #qr-reader video {
   border-radius: 14px;
-}
-
-@keyframes qr-countdown-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .safe-bottom-tab {

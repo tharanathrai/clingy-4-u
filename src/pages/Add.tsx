@@ -18,9 +18,14 @@ const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const QR_CACHE_KEY = 'qr_token_cache'
 const MIN_REMAINING_SECONDS = 2
+const QR_TTL_MS = 60_000
 
 function getRemainingSeconds(expiresAt: string): number {
   return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000))
+}
+
+function getRemainingMs(expiresAt: string): number {
+  return Math.max(0, new Date(expiresAt).getTime() - Date.now())
 }
 
 function readCachedToken(): CachedQrToken | null {
@@ -55,7 +60,7 @@ export default function Add() {
   const { signOut } = useAuth()
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
-  const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [remainingMs, setRemainingMs] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const fetchInFlightRef = useRef(false)
@@ -112,7 +117,7 @@ export default function Add() {
       writeCachedToken(data)
       setToken(data.token)
       setExpiresAt(data.expires_at)
-      setRemainingSeconds(getRemainingSeconds(data.expires_at))
+      setRemainingMs(getRemainingMs(data.expires_at))
       setLoading(false)
     } catch {
       setErrorMessage('Something went wrong - try again.')
@@ -127,7 +132,7 @@ export default function Add() {
     if (cached) {
       setToken(cached.token)
       setExpiresAt(cached.expires_at)
-      setRemainingSeconds(getRemainingSeconds(cached.expires_at))
+      setRemainingMs(getRemainingMs(cached.expires_at))
       setLoading(false)
       return
     }
@@ -144,10 +149,10 @@ export default function Add() {
     }
 
     const syncRemainingSeconds = () => {
-      const secondsLeft = getRemainingSeconds(expiresAt)
-      setRemainingSeconds(secondsLeft)
+      const msLeft = getRemainingMs(expiresAt)
+      setRemainingMs(msLeft)
 
-      if (secondsLeft <= 0) {
+      if (msLeft <= 0) {
         clearCachedToken()
         void fetchToken({ showLoading: false })
       }
@@ -157,7 +162,7 @@ export default function Add() {
 
     const intervalId = window.setInterval(() => {
       syncRemainingSeconds()
-    }, 1000)
+    }, 250)
 
     return () => {
       window.clearInterval(intervalId)
@@ -171,16 +176,18 @@ export default function Add() {
     return `${window.location.origin}/connect?token=${token}`
   }, [token])
 
-  const ringAnimationStyle = useMemo(() => {
+  const ringStyle = useMemo(() => {
     if (!expiresAt) {
       return undefined
     }
 
-    const remainingMs = Math.max(0, new Date(expiresAt).getTime() - Date.now())
-    const elapsedMs = Math.min(60_000, 60_000 - remainingMs)
+    const elapsedMs = Math.min(QR_TTL_MS, QR_TTL_MS - remainingMs)
+    const rotation = (elapsedMs / QR_TTL_MS) * 360
 
-    return { animationDelay: `-${elapsedMs}ms` }
-  }, [expiresAt])
+    return { transform: `rotate(${rotation}deg)` }
+  }, [expiresAt, remainingMs])
+
+  const remainingSeconds = Math.ceil(remainingMs / 1000)
 
   return (
     <main className="safe-content-bottom mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
@@ -190,7 +197,7 @@ export default function Add() {
       </p>
 
       <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
-        <div className="qr-countdown-ring" style={ringAnimationStyle} />
+        <div className="qr-countdown-ring" style={ringStyle} />
         <div className="relative z-10 rounded-lg bg-white p-4">
           {loading ? (
             <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
