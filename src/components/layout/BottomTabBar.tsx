@@ -33,7 +33,7 @@ export function BottomTabBar() {
   const { unreadCount } = useNotifications()
 
   return (
-    <nav className="app-fixed-frame safe-fixed-bottom z-40 border-t border-white/10 bg-surface">
+    <nav className="app-fixed-frame bottom-0 z-40 border-t border-white/10 bg-surface">
       <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-center justify-between px-5 pb-0.5 pt-1.5">
         {tabs.map((tab) => {
           const isActive =
