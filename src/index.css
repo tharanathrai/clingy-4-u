@@ -130,6 +130,10 @@ body.modal-scroll-lock .bottom-tab-bar {
   pointer-events: none;
 }
 
+body.modal-scroll-lock .post-detail-viewport {
+  bottom: 0;
+}
+
 .composer-safe-bottom {
   padding-bottom: calc(var(--app-safe-bottom) + 12px);
 }
