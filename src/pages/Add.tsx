@@ -180,7 +180,7 @@ export default function Add() {
 
       <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
         <div className="qr-countdown-ring" />
-        <div className="rounded-lg bg-white p-4">
+        <div className="relative z-10 rounded-lg bg-white p-4">
           {loading ? (
             <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
               Loading...
