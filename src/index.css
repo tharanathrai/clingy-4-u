@@ -195,6 +195,10 @@ body.modal-scroll-lock {
   padding-bottom: calc(var(--app-safe-bottom) + 96px);
 }
 
+.pb-tab-clearance {
+  padding-bottom: calc(var(--app-safe-bottom) + 80px);
+}
+
 .safe-bottom-24 {
   bottom: calc(var(--app-safe-bottom) + 96px);
 }

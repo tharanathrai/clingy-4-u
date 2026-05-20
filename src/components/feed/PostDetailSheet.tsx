@@ -1,4 +1,4 @@
-import { Heart, Send } from 'lucide-react'
+import { Heart, Send, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
@@ -39,6 +39,7 @@ export function PostDetailSheet({
   const [optimisticHasReacted, setOptimisticHasReacted] = useState<boolean | null>(null)
   const [optimisticCommentCount, setOptimisticCommentCount] = useState<number | null>(null)
   const [optimisticComments, setOptimisticComments] = useState<CommentWithUser[]>([])
+  const [keyboardOffset, setKeyboardOffset] = useState(0)
   const commentInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -49,18 +50,40 @@ export function PostDetailSheet({
     setCommentBody('')
   }, [postId])
 
+
+  useEffect(() => {
+    if (!postId) {
+      setKeyboardOffset(0)
+      return
+    }
+
+    const viewport = window.visualViewport
+    if (!viewport) {
+      return
+    }
+
+    const updateKeyboardOffset = () => {
+      const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      setKeyboardOffset(offset)
+    }
+
+    viewport.addEventListener('resize', updateKeyboardOffset)
+    viewport.addEventListener('scroll', updateKeyboardOffset)
+    updateKeyboardOffset()
+
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardOffset)
+      viewport.removeEventListener('scroll', updateKeyboardOffset)
+      setKeyboardOffset(0)
+    }
+  }, [postId])
+
   useEffect(() => {
     if (!postId || !autoFocusComposer) {
       return
     }
 
-    const timeoutId = window.setTimeout(() => {
-      commentInputRef.current?.focus({ preventScroll: true })
-    }, 120)
-
-    return () => {
-      window.clearTimeout(timeoutId)
-    }
+    commentInputRef.current?.focus()
   }, [autoFocusComposer, postId])
 
   useEffect(() => {
@@ -221,15 +244,20 @@ export function PostDetailSheet({
         className="absolute inset-0 bg-black/60"
       />
 
-      <div className="sheet-slide-up absolute inset-x-0 bottom-0 top-0 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close post details"
-          className="flex min-h-11 justify-center py-3"
-        >
-          <span className="h-1 w-9 rounded-full bg-white/20" />
-        </button>
+      <div
+        className="sheet-slide-up absolute inset-x-0 top-0 flex flex-col overflow-hidden rounded-t-xl border-t border-white/10 bg-surface"
+        style={{ bottom: keyboardOffset, transition: 'bottom 100ms ease-out' }}
+      >
+        <div className="flex min-h-11 items-center justify-end px-4 py-2">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close post details"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
+          >
+            <X size={18} strokeWidth={1.75} />
+          </button>
+        </div>
 
         <div className="flex min-h-0 flex-1 flex-col px-5 pb-3">
           {loading ? <p className="text-sm text-text-2">Loading post...</p> : null}
@@ -316,7 +344,7 @@ export function PostDetailSheet({
           ) : null}
         </div>
 
-        <div className="composer-safe-bottom border-t border-white/10 bg-surface px-5 pt-3">
+        <div className="border-t border-white/10 bg-surface px-5 pb-3 pt-3">
           <div className="flex items-center gap-2">
             <input
               ref={commentInputRef}

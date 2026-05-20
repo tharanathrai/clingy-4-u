@@ -92,7 +92,7 @@ export function NodeProfileSheet({
 
   return (
     <section className="absolute inset-x-0 bottom-0 z-20 rounded-t-xl border-t border-white/10 bg-surface shadow-card">
-      <div className="px-5 pb-8 pt-6">
+      <div className="px-5 pb-tab-clearance pt-6">
       <button
         type="button"
         onClick={onClose}
