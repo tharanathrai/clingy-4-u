@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
+import { supabase } from '../../lib/supabase.ts'
 import { BottomTabBar } from './BottomTabBar.tsx'
 
 interface AuthGuardProps {
@@ -10,6 +11,45 @@ interface AuthGuardProps {
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const location = useLocation()
+  const [profileReady, setProfileReady] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!user) {
+      setProfileReady(null)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    setProfileReady(null)
+
+    const checkProfile = async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (cancelled) {
+        return
+      }
+
+      if (error) {
+        setProfileReady(false)
+        return
+      }
+
+      setProfileReady(Boolean(data))
+    }
+
+    void checkProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   if (loading) {
     return (
@@ -23,10 +63,28 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <Navigate to="/" replace state={{ from: location.pathname }} />
   }
 
+  if (profileReady === null) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+        <p className="text-sm text-text-2">Loading your account...</p>
+      </main>
+    )
+  }
+
+  if (!profileReady && location.pathname !== '/welcome') {
+    return <Navigate to="/welcome" replace />
+  }
+
+  if (profileReady && location.pathname === '/welcome') {
+    return <Navigate to="/add" replace />
+  }
+
+  const showBottomTabBar = profileReady && location.pathname !== '/welcome'
+
   return (
     <>
       {children}
-      <BottomTabBar />
+      {showBottomTabBar ? <BottomTabBar /> : null}
     </>
   )
 }
