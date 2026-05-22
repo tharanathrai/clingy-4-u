@@ -2,36 +2,24 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { supabase } from '../lib/supabase.ts'
-
-interface ValidateQrResponse {
-  success: boolean
-  user: {
-    display_name: string
-    username: string
-    avatar_url: string | null
-  }
-}
-
-interface ValidateQrError {
-  error?: string
-  error_code?: string
-  user?: ValidateQrResponse['user']
-}
+import {
+  type ValidateQrIssue,
+  type ValidateQrUser,
+  mapValidateQrIssue,
+  validateQrTokenRequest,
+} from '../lib/validateQrToken.ts'
 
 interface ScanIssue {
   message: string
   type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'network' | 'generic'
-  connectedUser?: ValidateQrResponse['user']
+  connectedUser?: ValidateQrUser
 }
-
-const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
-const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export default function AddScan() {
   const [scannedToken, setScannedToken] = useState<string | null>(null)
   const [scanError, setScanError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [successUser, setSuccessUser] = useState<ValidateQrResponse['user'] | null>(null)
+  const [successUser, setSuccessUser] = useState<ValidateQrUser | null>(null)
   const [scanIssue, setScanIssue] = useState<ScanIssue | null>(null)
 
   useEffect(() => {
@@ -98,38 +86,19 @@ export default function AddScan() {
     }
 
     try {
-      const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: publishableKey,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ token: scannedToken }),
+      const result = await validateQrTokenRequest({
+        token: scannedToken,
+        accessToken,
       })
 
-      const responseText = await response.text()
-      let data: ValidateQrResponse | ValidateQrError | null = null
-      if (responseText) {
-        try {
-          data = JSON.parse(responseText) as ValidateQrResponse | ValidateQrError
-        } catch {
-          data = null
-        }
-      }
-
-      if (!response.ok || !data || !('success' in data) || !data.success) {
-        const issue = getScanIssue(
-          typeof data === 'object' && data && 'error' in data
-            ? (data as ValidateQrError)
-            : { error: responseText },
-        )
-        setScanIssue(issue)
+      if (!result.success) {
+        const issue = mapValidateQrIssue(result.error)
+        setScanIssue(toScanIssue(issue))
         setSubmitting(false)
         return
       }
 
-      setSuccessUser(data.user)
+      setSuccessUser(result.user)
     } catch {
       setScanIssue({
         message: 'Something went wrong — try again.',
@@ -261,49 +230,10 @@ function extractToken(decodedValue: string): string | null {
   }
 }
 
-function getScanIssue(errorPayload: ValidateQrError): ScanIssue {
-  const normalizedMessage = (errorPayload.error ?? '').toLowerCase()
-  const errorCode = errorPayload.error_code ?? ''
-
-  if (errorCode === 'expired' || normalizedMessage.includes('expired')) {
-    return {
-      message: 'This code has expired. Ask them to refresh.',
-      type: 'expired',
-    }
-  }
-
-  if (
-    errorCode === 'already_connected' ||
-    normalizedMessage.includes('already connected')
-  ) {
-    const name = errorPayload.user?.display_name ?? 'this person'
-    return {
-      message: `You're already connected with ${name}.`,
-      type: 'already_connected',
-      connectedUser: errorPayload.user,
-    }
-  }
-
-  if (errorCode === 'request_pending' || normalizedMessage.includes('pending request')) {
-    return {
-      message: "There's already a pending request with this person.",
-      type: 'request_pending',
-    }
-  }
-
-  if (
-    errorCode === 'own_qr' ||
-    normalizedMessage.includes('own qr') ||
-    normalizedMessage.includes('your own')
-  ) {
-    return {
-      message: "That's your own code.",
-      type: 'own',
-    }
-  }
-
+function toScanIssue(issue: ValidateQrIssue): ScanIssue {
   return {
-    message: 'Something went wrong — try again.',
-    type: 'generic',
+    message: issue.message,
+    type: issue.type,
+    connectedUser: issue.connectedUser,
   }
 }

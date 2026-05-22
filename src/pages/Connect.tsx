@@ -2,30 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
-
-interface ValidateQrResponse {
-  success: boolean
-  user: {
-    display_name: string
-    username: string
-    avatar_url: string | null
-  }
-}
-
-interface ValidateQrError {
-  error?: string
-  error_code?: string
-  user?: ValidateQrResponse['user']
-}
+import {
+  type ValidateQrIssue,
+  type ValidateQrUser,
+  mapValidateQrIssue,
+  validateQrTokenRequest,
+} from '../lib/validateQrToken.ts'
 
 interface ConnectIssue {
   message: string
   type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'generic'
-  connectedUser?: ValidateQrResponse['user']
+  connectedUser?: ValidateQrUser
 }
 
-const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
-const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const postAuthReturnToKey = 'postAuthReturnTo'
 
 export default function Connect() {
@@ -34,7 +23,7 @@ export default function Connect() {
   const [params] = useSearchParams()
   const token = params.get('token')
   const [submitting, setSubmitting] = useState(false)
-  const [successUser, setSuccessUser] = useState<ValidateQrResponse['user'] | null>(null)
+  const [successUser, setSuccessUser] = useState<ValidateQrUser | null>(null)
   const [connectIssue, setConnectIssue] = useState<ConnectIssue | null>(null)
   const hasSubmittedRef = useRef(false)
 
@@ -51,54 +40,47 @@ export default function Connect() {
     const submitToken = async () => {
       hasSubmittedRef.current = true
       setSubmitting(true)
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData.session?.access_token
 
-      if (!accessToken) {
+        if (!accessToken) {
+          if (!cancelled) {
+            setConnectIssue({
+              type: 'generic',
+              message: 'No active session. Please sign in again.',
+            })
+            hasSubmittedRef.current = false
+          }
+          return
+        }
+
+        const result = await validateQrTokenRequest({
+          token,
+          accessToken,
+        })
+
+        if (!result.success) {
+          if (!cancelled) {
+            const issue = mapValidateQrIssue(result.error)
+            setConnectIssue(toConnectIssue(issue))
+            hasSubmittedRef.current = false
+          }
+          return
+        }
+
+        if (!cancelled) {
+          setSuccessUser(result.user)
+        }
+      } catch {
         if (!cancelled) {
           setConnectIssue({
             type: 'generic',
-            message: 'No active session. Please sign in again.',
+            message: 'Something went wrong — try again.',
           })
-          setSubmitting(false)
           hasSubmittedRef.current = false
         }
-        return
-      }
-
-      const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: publishableKey,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ token }),
-      })
-
-      const responseText = await response.text()
-      let data: ValidateQrResponse | ValidateQrError | null = null
-      if (responseText) {
-        try {
-          data = JSON.parse(responseText) as ValidateQrResponse | ValidateQrError
-        } catch {
-          data = null
-        }
-      }
-
-      if (!response.ok || !data || !('success' in data) || !data.success) {
-        if (!cancelled) {
-          const issuePayload =
-            data && 'error' in data ? (data as ValidateQrError) : ({ error: responseText } as ValidateQrError)
-          setConnectIssue(getConnectIssue(issuePayload))
-          setSubmitting(false)
-          hasSubmittedRef.current = false
-        }
-        return
-      }
-
-      if (!cancelled) {
-        setSuccessUser(data.user)
+      } finally {
         setSubmitting(false)
       }
     }
@@ -237,49 +219,10 @@ export default function Connect() {
   )
 }
 
-function getConnectIssue(errorPayload: ValidateQrError): ConnectIssue {
-  const normalizedMessage = (errorPayload.error ?? '').toLowerCase()
-  const errorCode = errorPayload.error_code ?? ''
-
-  if (errorCode === 'expired' || normalizedMessage.includes('expired')) {
-    return {
-      message: 'This code has expired. Ask them to refresh.',
-      type: 'expired',
-    }
-  }
-
-  if (
-    errorCode === 'already_connected' ||
-    normalizedMessage.includes('already connected')
-  ) {
-    const name = errorPayload.user?.display_name ?? 'this person'
-    return {
-      message: `You're already connected with ${name}.`,
-      type: 'already_connected',
-      connectedUser: errorPayload.user,
-    }
-  }
-
-  if (errorCode === 'request_pending' || normalizedMessage.includes('pending request')) {
-    return {
-      message: "There's already a pending request with this person.",
-      type: 'request_pending',
-    }
-  }
-
-  if (
-    errorCode === 'own_qr' ||
-    normalizedMessage.includes('own qr') ||
-    normalizedMessage.includes('your own')
-  ) {
-    return {
-      message: "That's your own code.",
-      type: 'own',
-    }
-  }
-
+function toConnectIssue(issue: ValidateQrIssue): ConnectIssue {
   return {
-    message: 'Something went wrong — try again.',
-    type: 'generic',
+    message: issue.message,
+    type: issue.type,
+    connectedUser: issue.connectedUser,
   }
 }
