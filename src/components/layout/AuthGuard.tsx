@@ -8,6 +8,8 @@ interface AuthGuardProps {
   children: ReactNode
 }
 
+const profileReadyCache = new Map<string, boolean>()
+
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, loading } = useAuth()
   const location = useLocation()
@@ -18,6 +20,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     if (!user) {
       setProfileReady(null)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const cachedProfileReady = profileReadyCache.get(user.id)
+    if (cachedProfileReady !== undefined) {
+      setProfileReady(cachedProfileReady)
       return () => {
         cancelled = true
       }
@@ -37,11 +47,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
       }
 
       if (error) {
+        profileReadyCache.set(user.id, false)
         setProfileReady(false)
         return
       }
 
-      setProfileReady(Boolean(data))
+      const ready = Boolean(data)
+      profileReadyCache.set(user.id, ready)
+      setProfileReady(ready)
     }
 
     void checkProfile()
