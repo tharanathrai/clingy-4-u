@@ -18,6 +18,7 @@ export type NotificationType =
   | 'post_comment'
   | 'post_reaction'
   | 'connection_request'
+  | 'connection_accepted'
 
 export interface User {
   id: string

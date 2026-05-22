@@ -20,7 +20,7 @@ interface ValidateQrError {
 
 interface ScanIssue {
   message: string
-  type: 'expired' | 'own' | 'already_connected' | 'network' | 'generic'
+  type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'network' | 'generic'
   connectedUser?: ValidateQrResponse['user']
 }
 
@@ -174,7 +174,12 @@ export default function AddScan() {
             <div className="mt-4 rounded-lg border border-white/10 bg-surface-2 p-3 text-left">
               <p className="text-sm text-playful">{scanIssue.message}</p>
               <div className="mt-3 flex items-center gap-2">
-                {(scanIssue.type === 'expired' || scanIssue.type === 'own' || scanIssue.type === 'generic') ? (
+                {(
+                  scanIssue.type === 'expired' ||
+                  scanIssue.type === 'own' ||
+                  scanIssue.type === 'request_pending' ||
+                  scanIssue.type === 'generic'
+                ) ? (
                   <button
                     type="button"
                     onClick={() => setScanIssue(null)}
@@ -276,6 +281,13 @@ function getScanIssue(errorPayload: ValidateQrError): ScanIssue {
       message: `You're already connected with ${name}.`,
       type: 'already_connected',
       connectedUser: errorPayload.user,
+    }
+  }
+
+  if (errorCode === 'request_pending' || normalizedMessage.includes('pending request')) {
+    return {
+      message: "There's already a pending request with this person.",
+      type: 'request_pending',
     }
   }
 

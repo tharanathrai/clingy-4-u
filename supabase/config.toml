@@ -16,6 +16,9 @@ verify_jwt = false
 [functions.respond-gum-piece]
 verify_jwt = false
 
+[functions.respond-connection]
+verify_jwt = false
+
 [functions.run-expiry]
 verify_jwt = false
 

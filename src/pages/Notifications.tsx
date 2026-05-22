@@ -3,16 +3,24 @@ import { Layout } from '../components/layout/Layout.tsx'
 import { useNavigate } from 'react-router-dom'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { ConnectionRequestSheet } from '../components/connections/ConnectionRequestSheet.tsx'
+import { useAuth } from '../hooks/useAuth.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
+import { invalidateNetworkGraphCache } from '../hooks/useNetworkGraph.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
   const navigate = useNavigate()
-  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, loading } =
+  const { user } = useAuth()
+  const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, loading, error } =
     useNotifications()
   const [toast, setToast] = useState<string | null>(null)
+  const [activeConnectionRequest, setActiveConnectionRequest] = useState<{
+    connectionId: string
+    notificationId: string
+  } | null>(null)
   const {
     visibleItems: visibleNotifications,
     hasMore,
@@ -56,7 +64,10 @@ export default function Notifications() {
     }
 
     if (type === 'connection_request') {
-      void navigate('/connections/requests')
+      setActiveConnectionRequest({
+        connectionId: referenceId,
+        notificationId: id,
+      })
       return
     }
     if (
@@ -71,6 +82,15 @@ export default function Notifications() {
     }
 
     if (type === 'bridge_formed') {
+      void navigate('/network', {
+        state: tappedNotification?.target_user_id
+          ? { selectUserId: tappedNotification.target_user_id }
+          : undefined,
+      })
+      return
+    }
+
+    if (type === 'connection_accepted') {
       void navigate('/network', {
         state: tappedNotification?.target_user_id
           ? { selectUserId: tappedNotification.target_user_id }
@@ -108,14 +128,20 @@ export default function Notifications() {
           </section>
         ) : null}
 
-        {!loading && notifications.length === 0 ? (
+        {!loading && error ? (
+          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
+            <p className="text-sm text-playful">{error}</p>
+          </section>
+        ) : null}
+
+        {!loading && !error && notifications.length === 0 ? (
           <section className="mt-8 text-center">
             <EmptyStateIllustration />
             <p className="font-display text-2xl text-text">All caught up.</p>
           </section>
         ) : null}
 
-        {!loading && notifications.length > 0 ? (
+        {!loading && !error && notifications.length > 0 ? (
           <ul className="mt-6 space-y-2">
             {visibleNotifications.map((notification) => (
               <li key={notification.id}>
@@ -134,7 +160,7 @@ export default function Notifications() {
           </ul>
         ) : null}
 
-        {!loading && hasMore ? (
+        {!loading && !error && hasMore ? (
           <div className="mt-4 flex justify-center">
             <button
               type="button"
@@ -154,6 +180,37 @@ export default function Notifications() {
           </div>
         ) : null}
       </main>
+      <ConnectionRequestSheet
+        connectionId={activeConnectionRequest?.connectionId ?? null}
+        onClose={() => setActiveConnectionRequest(null)}
+        onResolved={({ action, otherUserId }) => {
+          const activeRequest = activeConnectionRequest
+          setActiveConnectionRequest(null)
+
+          if (!activeRequest) {
+            return
+          }
+
+          if (action === 'invalid') {
+            void dismissNotification(activeRequest.notificationId)
+            setToast('This request is no longer available.')
+            return
+          }
+
+          if (action === 'reject') {
+            void dismissNotification(activeRequest.notificationId)
+            setToast('Request declined.')
+            return
+          }
+
+          void dismissNotification(activeRequest.notificationId)
+          invalidateNetworkGraphCache(user?.id)
+          setToast('Connection accepted.')
+          if (otherUserId) {
+            void navigate('/network', { state: { selectUserId: otherUserId } })
+          }
+        }}
+      />
     </Layout>
   )
 }

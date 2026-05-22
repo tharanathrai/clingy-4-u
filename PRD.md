@@ -168,7 +168,7 @@ id              uuid PK
 user_id         uuid FK → users
 type            enum: invite_received | invite_accepted | invite_rejected | 
                        plan_turned_down | plan_expiring_soon | bridge_formed | 
-                       post_comment | post_reaction | connection_request
+                       post_comment | post_reaction | connection_request | connection_accepted
 reference_id    uuid  -- points to relevant row (gum_piece, post, etc.)
 read            boolean DEFAULT false
 created_at      timestamptz

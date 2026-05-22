@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { invalidateNetworkGraphCache } from '../hooks/useNetworkGraph.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
@@ -20,7 +21,6 @@ export default function ConnectionRequests() {
   const [fetching, setFetching] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null)
-  const [ignoredIds, setIgnoredIds] = useState<Set<string>>(new Set())
 
   const loadRequests = useCallback(async () => {
     if (!userId) {
@@ -87,49 +87,38 @@ export default function ConnectionRequests() {
     void loadRequests()
   }, [loadRequests])
 
-  const visibleRequests = useMemo(() => {
-    return requests.filter((request) => !ignoredIds.has(request.id))
-  }, [ignoredIds, requests])
   const {
     visibleItems: paginatedRequests,
     hasMore,
     loadMore,
-  } = usePaginatedItems(visibleRequests, 6)
+  } = usePaginatedItems(requests, 6)
 
-  const handleAccept = async (request: PendingConnectionRequest) => {
+  const handleRespond = async (request: PendingConnectionRequest, action: 'accept' | 'reject') => {
     setBusyRequestId(request.id)
+    setErrorMessage(null)
 
-    const { error: updateError } = await supabase
-      .from('connections')
-      .update({
-        status: 'active',
-        accepted_at: new Date().toISOString(),
-      })
-      .eq('id', request.id)
+    const { data, error } = await supabase.functions.invoke<{
+      success: boolean
+      action: 'accept' | 'reject'
+      connection_id: string
+    }>('respond-connection', {
+      body: {
+        connection_id: request.id,
+        action,
+      },
+    })
 
-    if (updateError) {
+    if (error || !data?.success) {
       setErrorMessage('Something went wrong - try again.')
       setBusyRequestId(null)
       return
     }
 
-    const { error: notificationError } = await supabase.from('notifications').insert({
-      user_id: request.requested_by,
-      type: 'connection_request',
-      reference_id: request.id,
-      read: false,
-    })
-
-    if (notificationError) {
-      setErrorMessage('Connection accepted, but notification failed.')
-    }
-
     setRequests((current) => current.filter((item) => item.id !== request.id))
+    if (action === 'accept') {
+      invalidateNetworkGraphCache(userId)
+    }
     setBusyRequestId(null)
-  }
-
-  const handleIgnore = (requestId: string) => {
-    setIgnoredIds((current) => new Set(current).add(requestId))
   }
 
   if (loading || fetching) {
@@ -152,13 +141,26 @@ export default function ConnectionRequests() {
     <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
       <h1 className="app-page-title">Connection requests</h1>
 
-      {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}
+      {errorMessage && !fetching && requests.length === 0 ? (
+        <div className="mt-8 rounded-lg bg-surface p-6 text-center">
+          <p className="text-sm text-playful">{errorMessage}</p>
+          <button
+            type="button"
+            className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            onClick={() => void loadRequests()}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
 
-      {visibleRequests.length === 0 ? (
+      {errorMessage && requests.length > 0 ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}
+
+      {!errorMessage && requests.length === 0 ? (
         <div className="mt-8 rounded-lg bg-surface p-6 text-center">
           <p className="text-sm text-text-2">No pending requests.</p>
         </div>
-      ) : (
+      ) : requests.length > 0 ? (
         <ul className="mt-6 space-y-3">
           {paginatedRequests.map((request) => (
             <li
@@ -186,7 +188,7 @@ export default function ConnectionRequests() {
                 <button
                   type="button"
                   className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => void handleAccept(request)}
+                  onClick={() => void handleRespond(request, 'accept')}
                   disabled={busyRequestId === request.id}
                 >
                   {busyRequestId === request.id ? 'Accepting...' : 'Accept'}
@@ -194,17 +196,18 @@ export default function ConnectionRequests() {
                 <button
                   type="button"
                   className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2"
-                  onClick={() => handleIgnore(request.id)}
+                  onClick={() => void handleRespond(request, 'reject')}
+                  disabled={busyRequestId === request.id}
                 >
-                  Ignore
+                  {busyRequestId === request.id ? 'Declining...' : 'Decline'}
                 </button>
               </div>
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
 
-      {!fetching && hasMore ? (
+      {!fetching && !errorMessage && hasMore ? (
         <button
           type="button"
           onClick={loadMore}

@@ -20,7 +20,7 @@ interface ValidateQrError {
 
 interface ConnectIssue {
   message: string
-  type: 'expired' | 'own' | 'already_connected' | 'generic'
+  type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'generic'
   connectedUser?: ValidateQrResponse['user']
 }
 
@@ -257,6 +257,13 @@ function getConnectIssue(errorPayload: ValidateQrError): ConnectIssue {
       message: `You're already connected with ${name}.`,
       type: 'already_connected',
       connectedUser: errorPayload.user,
+    }
+  }
+
+  if (errorCode === 'request_pending' || normalizedMessage.includes('pending request')) {
+    return {
+      message: "There's already a pending request with this person.",
+      type: 'request_pending',
     }
   }
 

@@ -299,6 +299,7 @@ export interface Database {
             | 'post_comment'
             | 'post_reaction'
             | 'connection_request'
+            | 'connection_accepted'
           reference_id: string
           read: boolean
           created_at: string
@@ -317,6 +318,7 @@ export interface Database {
             | 'post_comment'
             | 'post_reaction'
             | 'connection_request'
+            | 'connection_accepted'
           reference_id: string
           read?: boolean
           created_at?: string
@@ -335,6 +337,7 @@ export interface Database {
             | 'post_comment'
             | 'post_reaction'
             | 'connection_request'
+            | 'connection_accepted'
           reference_id?: string
           read?: boolean
           created_at?: string

@@ -13,6 +13,7 @@ export type NotificationType =
   | 'post_comment'
   | 'post_reaction'
   | 'connection_request'
+  | 'connection_accepted'
 
 export interface Notification {
   id: string
@@ -33,6 +34,7 @@ interface UseNotificationsResult {
   markAllAsRead: () => Promise<void>
   dismissNotification: (id: string) => Promise<void>
   loading: boolean
+  error: string | null
 }
 
 const notificationsCache = new Map<string, Notification[]>()
@@ -42,12 +44,14 @@ export function useNotifications(): UseNotificationsResult {
   const userId = user?.id ?? null
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const channelIdRef = useRef(crypto.randomUUID())
 
   const loadNotifications = useCallback(async () => {
     if (!userId) {
       setNotifications([])
       setLoading(false)
+      setError(null)
       return
     }
 
@@ -58,16 +62,23 @@ export function useNotifications(): UseNotificationsResult {
     } else {
       setLoading(true)
     }
-    const { data } = await supabase
+    const { data: notificationRows, error: notificationsError } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
+    if (notificationsError) {
+      setError('Something went wrong - try again.')
+      setLoading(false)
+      return
+    }
+
     const nextNotifications = await enrichNotifications(
       userId,
-      (data ?? []) as Notification[],
+      (notificationRows ?? []) as Notification[],
     )
+    setError(null)
     notificationsCache.set(userId, nextNotifications)
     setNotifications(nextNotifications)
     setLoading(false)
@@ -216,6 +227,7 @@ export function useNotifications(): UseNotificationsResult {
     markAllAsRead,
     dismissNotification,
     loading: loading || authLoading,
+    error,
   }
 }
 
@@ -242,7 +254,10 @@ async function enrichNotifications(
     .map((notification) => notification.reference_id)
 
   const connectionIds = notifications
-    .filter((notification) => notification.type === 'connection_request')
+    .filter((notification) =>
+      notification.type === 'connection_request' ||
+      notification.type === 'connection_accepted',
+    )
     .map((notification) => notification.reference_id)
 
   const gumPiecesById = new Map<
@@ -253,7 +268,10 @@ async function enrichNotifications(
     string,
     { id: string; user_a_id: string; user_b_id: string }
   >()
-  const connectionsById = new Map<string, { id: string; requested_by: string }>()
+  const connectionsById = new Map<
+    string,
+    { id: string; requested_by: string; user_a_id: string; user_b_id: string }
+  >()
 
   if (gumPieceIds.length > 0) {
     const { data: gumPieces } = await supabase
@@ -286,12 +304,14 @@ async function enrichNotifications(
   if (connectionIds.length > 0) {
     const { data: connections } = await supabase
       .from('connections')
-      .select('id, requested_by')
+      .select('id, requested_by, user_a_id, user_b_id')
       .in('id', connectionIds)
     for (const connection of connections ?? []) {
       connectionsById.set(connection.id, {
         id: connection.id,
         requested_by: connection.requested_by,
+        user_a_id: connection.user_a_id,
+        user_b_id: connection.user_b_id,
       })
     }
   }
@@ -359,7 +379,10 @@ function getActorAndTargetUserId(
   userId: string,
   gumPiecesById: Map<string, { id: string; creator_id: string; recipient_id: string }>,
   bridgesById: Map<string, { id: string; user_a_id: string; user_b_id: string }>,
-  connectionsById: Map<string, { id: string; requested_by: string }>,
+  connectionsById: Map<
+    string,
+    { id: string; requested_by: string; user_a_id: string; user_b_id: string }
+  >,
 ): { actorId: string | null; targetUserId: string | null } {
   if (notification.type === 'bridge_formed') {
     const bridge = bridgesById.get(notification.reference_id)
@@ -375,6 +398,21 @@ function getActorAndTargetUserId(
     return {
       actorId: connection?.requested_by ?? null,
       targetUserId: connection?.requested_by ?? null,
+    }
+  }
+
+  if (notification.type === 'connection_accepted') {
+    const connection = connectionsById.get(notification.reference_id)
+    if (!connection) {
+      return { actorId: null, targetUserId: null }
+    }
+    const accepterId =
+      connection.user_a_id === connection.requested_by
+        ? connection.user_b_id
+        : connection.user_a_id
+    return {
+      actorId: accepterId,
+      targetUserId: accepterId,
     }
   }
 

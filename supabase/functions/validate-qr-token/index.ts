@@ -16,6 +16,12 @@ interface ScannedUser {
   avatar_url: string | null
 }
 
+interface ExistingConnection {
+  id: string
+  status: 'pending' | 'active'
+  requested_by: string
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -94,16 +100,29 @@ Deno.serve(async (request) => {
 
     const { data: existingConnection, error: existingConnectionError } = await serviceClient
       .from('connections')
-      .select('id')
+      .select('id, status, requested_by')
       .eq('user_a_id', userA)
       .eq('user_b_id', userB)
-      .maybeSingle()
+      .maybeSingle<ExistingConnection>()
 
     if (existingConnectionError) {
       return jsonResponse(500, { error: existingConnectionError.message })
     }
 
     if (existingConnection) {
+      if (existingConnection.status === 'pending') {
+        const message =
+          existingConnection.requested_by === authData.user.id
+            ? 'You already sent a request to this person.'
+            : "There's already a pending request with this person."
+
+        return jsonResponse(400, {
+          error: message,
+          error_code: 'request_pending',
+          user: scannedUser as ScannedUser,
+        })
+      }
+
       return jsonResponse(400, {
         error: "You're already connected with this person.",
         error_code: 'already_connected',
@@ -135,6 +154,25 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: createConnectionError?.message ?? 'Failed to connect.' })
     }
 
+    const { error: notificationError } = await serviceClient.from('notifications').insert({
+      user_id: tokenRow.user_id,
+      type: 'connection_request',
+      reference_id: createdConnection.id,
+      read: false,
+    })
+
+    if (notificationError) {
+      return jsonResponse(500, { error: notificationError.message })
+    }
+
+    void sendConnectionRequestEmail({
+      serviceClient,
+      supabaseUrl,
+      serviceRoleKey: supabaseServiceRoleKey,
+      requesterId: authData.user.id,
+      recipientId: tokenRow.user_id,
+    }).catch(() => undefined)
+
     return jsonResponse(200, {
       success: true,
       user: scannedUser,
@@ -151,5 +189,41 @@ function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function sendConnectionRequestEmail(params: {
+  serviceClient: ReturnType<typeof createClient>
+  supabaseUrl: string
+  serviceRoleKey: string
+  requesterId: string
+  recipientId: string
+}): Promise<void> {
+  const { data: requesterProfile } = await params.serviceClient
+    .from('users')
+    .select('display_name')
+    .eq('id', params.requesterId)
+    .maybeSingle<{ display_name: string }>()
+
+  const requesterName = requesterProfile?.display_name ?? 'Someone'
+  const { data: recipientAuthData } = await params.serviceClient.auth.admin.getUserById(
+    params.recipientId,
+  )
+  const recipientEmail = recipientAuthData.user?.email
+  if (!recipientEmail) {
+    return
+  }
+
+  await fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${params.serviceRoleKey}`,
+    },
+    body: JSON.stringify({
+      to: recipientEmail,
+      subject: `${requesterName} wants to connect with you`,
+      body: `${requesterName} sent you a connection request. Open the app to accept or decline.`,
+    }),
   })
 }

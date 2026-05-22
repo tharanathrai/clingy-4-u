@@ -86,6 +86,9 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   if (type === 'connection_request') {
     return `${name} wants to connect`
   }
+  if (type === 'connection_accepted') {
+    return `${name} accepted your connection request`
+  }
   if (type === 'post_reaction') {
     return 'Someone reacted to your post'
   }

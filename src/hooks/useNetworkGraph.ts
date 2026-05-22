@@ -34,6 +34,13 @@ interface NetworkGraphCacheEntry {
 
 const networkGraphCache = new Map<string, NetworkGraphCacheEntry>()
 
+export function invalidateNetworkGraphCache(userId: string | null | undefined): void {
+  if (!userId) {
+    return
+  }
+  networkGraphCache.delete(userId)
+}
+
 export function useNetworkGraph(): UseNetworkGraphResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
@@ -224,9 +231,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     loading: loading || authLoading,
     error,
     refetch: () => {
-      if (userId) {
-        networkGraphCache.delete(userId)
-      }
+      invalidateNetworkGraphCache(userId)
       setRefreshIndex((current) => current + 1)
     },
   }
