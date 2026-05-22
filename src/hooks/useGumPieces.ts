@@ -81,7 +81,7 @@ export function useGumPieces(): UseGumPiecesResult {
     }
 
     const channel = supabase
-      .channel(`gum-pieces-rt-${userId}`)
+      .channel(`gum-pieces-rt-${userId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

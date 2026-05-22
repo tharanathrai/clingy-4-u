@@ -116,7 +116,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     if (!userId) return
 
     const channel = supabase
-      .channel(`network-graph-rt-${userId}`)
+      .channel(`network-graph-rt-${userId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'connections' },

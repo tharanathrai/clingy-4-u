@@ -76,7 +76,7 @@ export function useNotifications(): UseNotificationsResult {
     }
 
     const channel = supabase
-      .channel(`notifications-rt-${userId}`)
+      .channel(`notifications-rt-${userId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {

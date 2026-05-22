@@ -192,7 +192,7 @@ export function useFeed(): UseFeedResult {
     }
 
     const channel = supabase
-      .channel(`feed-rt-${userId}`)
+      .channel(`feed-rt-${userId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'posts' },

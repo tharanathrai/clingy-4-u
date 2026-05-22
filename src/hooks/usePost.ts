@@ -141,7 +141,7 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
     }
 
     const channel = supabase
-      .channel(`post-rt-${postId}-${userId}`)
+      .channel(`post-rt-${postId}-${userId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'posts', filter: `id=eq.${postId}` },

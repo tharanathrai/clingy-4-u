@@ -86,7 +86,7 @@ export function useConfirmationSession({
     if (!gumPieceId) return
 
     const channel = supabase
-      .channel(`confirmation-session-rt-${gumPieceId}`)
+      .channel(`confirmation-session-rt-${gumPieceId}-${crypto.randomUUID()}`)
       .on(
         'postgres_changes',
         {
