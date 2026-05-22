@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
@@ -46,8 +47,6 @@ export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBr
     error: error instanceof Error ? error.message : null,
   }
 }
-
-import type { QueryClient } from '@tanstack/react-query'
 
 export function invalidateBridgesByPairCache(userId: string, queryClient: QueryClient, otherUserId?: string): void {
   if (otherUserId) {
