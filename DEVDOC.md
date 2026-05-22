@@ -8,14 +8,13 @@ Living snapshot of implementation status as of code review (PRD v0.1, DESIGN v0.
 
 ### Auth
 
-- **Status:** Partially working
+- **Status:** Partially working (Google OAuth only — intentional scope)
 - **What works**
   - Google OAuth via `useAuth` → `signInWithOAuth` with redirect to `/auth/callback`
   - `AuthCallback` checks `users` row and routes to `/welcome` or `/home` (or `sessionStorage` return path for `/connect`)
   - `AuthGuard` blocks unauthenticated routes, redirects incomplete profiles to `/welcome`, completed profiles away from `/welcome` to `/add`
   - Session persisted through Supabase; module-level auth store dedupes listeners across components
 - **Known gaps / bugs**
-  - PRD Week 1 lists Apple OAuth; only Google is implemented
   - Signed-in users hitting `/` go to `/home`, not `/add` (DESIGN says onboarding should land on add screen)
   - No explicit handling of OAuth error query params on Landing (`/?error=...`)
 - **Components / hooks:** `pages/Landing.tsx`, `pages/AuthCallback.tsx`, `hooks/useAuth.ts`, `components/layout/AuthGuard.tsx`
@@ -247,42 +246,41 @@ Living snapshot of implementation status as of code review (PRD v0.1, DESIGN v0.
 
 ### Auth & onboarding
 
-6. **Apple OAuth not implemented** despite PRD Week 1.
-7. **Landing redirects authenticated users to `/home`**, bypassing DESIGN-first `/add` for returning sessions.
+6. **Landing redirects authenticated users to `/home`**, bypassing DESIGN-first `/add` for returning sessions.
 
 ### Gum lifecycle
 
-8. **Client pocket full check** may disagree with server until refetch.
-9. **Accept after slots filled** — invitee can receive invite but fail accept with slot errors.
-10. **`start-confirmation` auto-sets `initiator_confirmed: true`** — asymmetric confirm flow.
+7. **Client pocket full check** may disagree with server until refetch.
+8. **Accept after slots filled** — invitee can receive invite but fail accept with slot errors.
+9. **`start-confirmation` auto-sets `initiator_confirmed: true`** — asymmetric confirm flow.
 
 ### Notifications & email
 
-11. **Settings email toggles are localStorage only** — `send-email` / invite / turn-down emails ignore them.
-12. **`plan_expiring_soon` notification** — type exists; client copy exists; cron behavior not visible in `src/`.
-13. **Post notification navigation** — comment/reaction opens feed, not specific post.
+10. **Settings email toggles are localStorage only** — `send-email` / invite / turn-down emails ignore them.
+11. **`plan_expiring_soon` notification** — type exists; client copy exists; cron behavior not visible in `src/`.
+12. **Post notification navigation** — comment/reaction opens feed, not specific post.
 
 ### Feed & social
 
-14. **Reaction optimistic UI without rollback** on API failure.
-15. **Feed cache** may show stale counts until realtime fires.
+13. **Reaction optimistic UI without rollback** on API failure.
+14. **Feed cache** may show stale counts until realtime fires.
 
 ### Network & graph
 
-16. **Network graph cache** — new bridge may not appear until refresh/refetch.
-17. **Export uses canvas draw**, not `html2canvas` (dependency unused).
+15. **Network graph cache** — new bridge may not appear until refresh/refetch.
+16. **Export uses canvas draw**, not `html2canvas` (dependency unused).
 
 ### Realtime & RLS
 
-18. **Confirmation session client SELECT** may fail under RLS; relies on edge function + realtime.
-19. **Broad realtime on `gum_pieces`** without filter — all piece changes trigger refetch for user channel.
+17. **Confirmation session client SELECT** may fail under RLS; relies on edge function + realtime.
+18. **Broad realtime on `gum_pieces`** without filter — all piece changes trigger refetch for user channel.
 
 ### Misc
 
-20. **`console.error` in `respond-gum-piece`** edge function (AGENTS.md says no console.log in committed code — server-side exception).
-21. **`PageStub` component** unused in routes (dead code).
-22. **Profile `connectionCount`** counts unique bridge partners, not active connection count — label can confuse.
-23. **validate-qr-token** does not notify token owner (QR display user) that someone scanned — only scanner sees success.
+19. **`console.error` in `respond-gum-piece`** edge function (AGENTS.md says no console.log in committed code — server-side exception).
+20. **`PageStub` component** unused in routes (dead code).
+21. **Profile `connectionCount`** counts unique bridge partners, not active connection count — label can confuse.
+22. **validate-qr-token** does not notify token owner (QR display user) that someone scanned — only scanner sees success.
 
 ---
 
@@ -314,6 +312,45 @@ These cannot be confirmed from static review alone:
 | Deep link `/connect?token=` cold start | sessionStorage + OAuth return |
 | Settings email toggles | Confirm they do nothing server-side today |
 | Capacitor build (if used) | Native shell not exercised in web-only review |
+
+---
+
+## Changelog
+
+### 2026-05-22 — Auth scope: Google only
+
+**Scope:** Documentation and planning only. Auth code was already Google-only (`useAuth.signInWithGoogle`, `Landing`, `Connect`).
+
+**Changes:**
+- `PRD.md` Week 1 shipping plan: Google OAuth only.
+- `WEEK1_TASKS.md`: Auth tasks and snapshot aligned with Google-only implementation.
+- `DEVDOC.md`: Removed stale auth-provider gap entries; renumbered known issues.
+
+**Auth flow trace (verified by reading code):**
+
+| Step | Layer |
+|------|--------|
+| User taps "Sign in with Google" | `Landing.tsx` / `Connect.tsx` |
+| `signInWithGoogle()` | `useAuth.ts` → `supabase.auth.signInWithOAuth({ provider: 'google', redirectTo: origin + '/auth/callback' })` |
+| OAuth provider redirect | Supabase Auth (no edge function) |
+| Return to app | `AuthCallback.tsx` → `getUser()` → `users` profile lookup |
+| Route decision | No profile → `/welcome`; profile + `sessionStorage` return path → stored path; else profile → `/home` |
+| Protected app | `AuthGuard.tsx` → profile check → `/welcome` or `/add` (if on welcome with profile) |
+
+**Regression surface (shared auth pieces):**
+- `useAuth`: `Landing`, `Connect`, `Settings`, `AuthGuard`, and any page using sign-out
+- `AuthCallback`: all OAuth returns (including Connect deep link via `postAuthReturnTo` session key)
+- `AuthGuard`: all routes under authenticated layout
+
+**Four-state check (auth-related pages):**
+
+| Page | Loading | Error | Empty | Happy |
+|------|---------|-------|-------|-------|
+| `Landing` | Session check spinner | Sign-in catch → playful message | N/A | Google CTA |
+| `AuthCallback` | Spinner + copy | Redirect `/?error=...` (Landing does not display it yet) | N/A | Auto-navigate |
+| `Connect` | Session / submit loading | `connectIssue` panel + CTAs | Missing token message | Success card + auto-nav |
+
+**Flows needing manual testing (unchanged):** Google OAuth on production redirect URLs; deep link `/connect?token=` cold start.
 
 ---
 

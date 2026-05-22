@@ -364,7 +364,7 @@ Emails sent via Supabase + SendGrid (free tier: 100 emails/day).
 
 ### Week 1 — Foundation
 - Supabase project setup (auth, DB schema, RLS policies)
-- Google + Apple OAuth
+- Google OAuth
 - Onboarding flow (display name, username, avatar upload)
 - Rotating QR + first contact edge function
 - Connection request + accept flow
