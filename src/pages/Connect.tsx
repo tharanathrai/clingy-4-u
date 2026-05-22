@@ -213,14 +213,33 @@ export default function Connect() {
               >
                 View profile
               </Link>
-            ) : (
-              <Link
-                to="/home"
-                className="rounded-full bg-surface-2 px-4 py-2 text-xs text-text-2"
+            ) : null}
+            {(connectIssue.type === 'expired' ||
+              connectIssue.type === 'own' ||
+              connectIssue.type === 'request_pending') ? (
+              <button
+                type="button"
+                onClick={() => setConnectIssue(null)}
+                className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
               >
-                Back to app
-              </Link>
-            )}
+                Dismiss
+              </button>
+            ) : null}
+            {connectIssue.type === 'generic' ? (
+              <button
+                type="button"
+                onClick={retrySubmit}
+                className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
+              >
+                Retry
+              </button>
+            ) : null}
+            <Link
+              to="/home"
+              className="rounded-full bg-surface-2 px-4 py-2 text-xs text-text-2"
+            >
+              Back to app
+            </Link>
           </div>
         </section>
       ) : null}

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, User } from '../types/index.ts'
@@ -21,8 +22,8 @@ interface UseProfileResult {
   refetch: () => void
 }
 
-interface ProfileCacheEntry {
-  profile: User | null
+interface ProfileData {
+  profile: User
   bridgeCount: number
   connectionCount: number
   categoryBreakdown: Record<CategorySlug, number>
@@ -42,233 +43,149 @@ const createEmptyCategoryBreakdown = (): Record<CategorySlug, number> => ({
 
 const isCategorySlug = (value: string): value is CategorySlug => value in CATEGORIES
 
-const profileCache = new Map<string, ProfileCacheEntry>()
+async function fetchProfile(
+  identifier: string,
+  byUserId: boolean,
+  viewerId: string | null,
+): Promise<ProfileData> {
+  let profileQuery = supabase.from('users').select('*')
+  if (byUserId) {
+    profileQuery = profileQuery.eq('id', identifier)
+  } else {
+    profileQuery = profileQuery.eq('username', identifier.trim().toLowerCase())
+  }
+
+  const { data: profileData, error: profileError } = await profileQuery.maybeSingle()
+
+  if (profileError) {
+    throw new Error(profileError.message)
+  }
+
+  if (!profileData) {
+    throw new Error('Profile not found.')
+  }
+
+  const resolvedProfile = profileData as User
+
+  const { data: bridgesData, error: bridgesError } = await supabase
+    .from('bridges')
+    .select('*')
+    .or(`user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${resolvedProfile.id}`)
+    .order('formed_at', { ascending: false })
+
+  if (bridgesError) {
+    throw new Error(bridgesError.message)
+  }
+
+  const profileBridges = (bridgesData ?? []) as Bridge[]
+  const uniquePartners = new Set<string>()
+  const breakdown = createEmptyCategoryBreakdown()
+
+  for (const bridge of profileBridges) {
+    const partnerId =
+      bridge.user_a_id === resolvedProfile.id ? bridge.user_b_id : bridge.user_a_id
+    uniquePartners.add(partnerId)
+    if (isCategorySlug(bridge.category)) {
+      breakdown[bridge.category] += 1
+    }
+  }
+
+  if (!viewerId || viewerId === resolvedProfile.id) {
+    return {
+      profile: resolvedProfile,
+      bridgeCount: profileBridges.length,
+      connectionCount: uniquePartners.size,
+      categoryBreakdown: breakdown,
+      sharedBridges: [],
+      isConnected: viewerId === resolvedProfile.id,
+    }
+  }
+
+  const { data: connectionData, error: connectionError } = await supabase
+    .from('connections')
+    .select('id')
+    .eq('status', 'active')
+    .or(
+      `and(user_a_id.eq.${viewerId},user_b_id.eq.${resolvedProfile.id}),and(user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${viewerId})`,
+    )
+    .maybeSingle()
+
+  if (connectionError) {
+    throw new Error(connectionError.message)
+  }
+
+  const connected = Boolean(connectionData)
+
+  if (!connected) {
+    return {
+      profile: resolvedProfile,
+      bridgeCount: profileBridges.length,
+      connectionCount: uniquePartners.size,
+      categoryBreakdown: breakdown,
+      sharedBridges: [],
+      isConnected: false,
+    }
+  }
+
+  const { data: sharedBridgesData, error: sharedBridgesError } = await supabase
+    .from('bridges')
+    .select('*')
+    .or(
+      `and(user_a_id.eq.${viewerId},user_b_id.eq.${resolvedProfile.id}),and(user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${viewerId})`,
+    )
+    .order('formed_at', { ascending: false })
+
+  if (sharedBridgesError) {
+    throw new Error(sharedBridgesError.message)
+  }
+
+  return {
+    profile: resolvedProfile,
+    bridgeCount: profileBridges.length,
+    connectionCount: uniquePartners.size,
+    categoryBreakdown: breakdown,
+    sharedBridges: (sharedBridgesData ?? []) as Bridge[],
+    isConnected: true,
+  }
+}
 
 export function useProfile({
   username,
   userId,
 }: UseProfileParams): UseProfileResult {
   const { user: viewer, loading: authLoading } = useAuth()
-  const [profile, setProfile] = useState<User | null>(null)
-  const [bridgeCount, setBridgeCount] = useState(0)
-  const [connectionCount, setConnectionCount] = useState(0)
-  const [categoryBreakdown, setCategoryBreakdown] = useState<Record<CategorySlug, number>>(
-    createEmptyCategoryBreakdown(),
+  const viewerId = viewer?.id ?? null
+  const queryClient = useQueryClient()
+
+  const normalizedUsername = username?.trim().toLowerCase() ?? ''
+  const normalizedUserId = userId?.trim() ?? ''
+
+  const identifier = normalizedUserId || normalizedUsername || viewerId || ''
+  const byUserId = Boolean(normalizedUserId || (!normalizedUsername && viewerId))
+
+  const queryKey = useMemo(
+    () => ['profile', identifier, byUserId ? 'id' : 'username', viewerId],
+    [byUserId, identifier, viewerId],
   )
-  const [sharedBridges, setSharedBridges] = useState<Bridge[]>([])
-  const [isConnected, setIsConnected] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [refreshIndex, setRefreshIndex] = useState(0)
 
-  const normalizedUsername = useMemo(() => username?.trim().toLowerCase() ?? '', [username])
-  const normalizedUserId = useMemo(() => userId?.trim() ?? '', [userId])
-  const cacheKey = useMemo(() => {
-    const target = normalizedUserId || normalizedUsername || 'self'
-    const viewerId = viewer?.id ?? 'viewer-anon'
-    return `${target}::${viewerId}`
-  }, [normalizedUserId, normalizedUsername, viewer?.id])
-
-  useEffect(() => {
-    if (authLoading) {
-      return
-    }
-
-    let cancelled = false
-
-    const loadProfile = async () => {
-      const cached = profileCache.get(cacheKey)
-      if (cached) {
-        setProfile(cached.profile)
-        setBridgeCount(cached.bridgeCount)
-        setConnectionCount(cached.connectionCount)
-        setCategoryBreakdown(cached.categoryBreakdown)
-        setSharedBridges(cached.sharedBridges)
-        setIsConnected(cached.isConnected)
-        setLoading(false)
-      } else {
-        setLoading(true)
-      }
-      setError(null)
-
-      const fallbackProfileId = !normalizedUsername ? viewer?.id ?? '' : ''
-      const profileIdOrUsername = normalizedUserId || normalizedUsername || fallbackProfileId
-      if (!profileIdOrUsername) {
-        if (!cancelled) {
-          setProfile(null)
-          setBridgeCount(0)
-          setConnectionCount(0)
-          setCategoryBreakdown(createEmptyCategoryBreakdown())
-          setSharedBridges([])
-          setIsConnected(false)
-          setError('Profile not found.')
-          setLoading(false)
-        }
-        return
-      }
-
-      let profileQuery = supabase.from('users').select('*')
-      if (normalizedUserId || fallbackProfileId) {
-        profileQuery = profileQuery.eq('id', normalizedUserId || fallbackProfileId)
-      } else {
-        profileQuery = profileQuery.eq('username', normalizedUsername)
-      }
-
-      const { data: profileData, error: profileError } = await profileQuery.maybeSingle()
-
-      if (cancelled) {
-        return
-      }
-
-      if (profileError) {
-        setError(profileError.message)
-        setLoading(false)
-        return
-      }
-
-      if (!profileData) {
-        setError('Profile not found.')
-        setLoading(false)
-        return
-      }
-
-      const resolvedProfile = profileData as User
-      setProfile(resolvedProfile)
-
-      const { data: bridgesData, error: bridgesError } = await supabase
-        .from('bridges')
-        .select('*')
-        .or(`user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${resolvedProfile.id}`)
-        .order('formed_at', { ascending: false })
-
-      if (cancelled) {
-        return
-      }
-
-      if (bridgesError) {
-        setError(bridgesError.message)
-        setLoading(false)
-        return
-      }
-
-      const profileBridges = (bridgesData ?? []) as Bridge[]
-      setBridgeCount(profileBridges.length)
-
-      const uniquePartners = new Set<string>()
-      const breakdown = createEmptyCategoryBreakdown()
-
-      for (const bridge of profileBridges) {
-        const partnerId =
-          bridge.user_a_id === resolvedProfile.id ? bridge.user_b_id : bridge.user_a_id
-        uniquePartners.add(partnerId)
-
-        if (isCategorySlug(bridge.category)) {
-          breakdown[bridge.category] += 1
-        }
-      }
-
-      setConnectionCount(uniquePartners.size)
-      setCategoryBreakdown(breakdown)
-
-      if (!viewer || viewer.id === resolvedProfile.id) {
-        setIsConnected(viewer?.id === resolvedProfile.id)
-        profileCache.set(cacheKey, {
-          profile: resolvedProfile,
-          bridgeCount: profileBridges.length,
-          connectionCount: uniquePartners.size,
-          categoryBreakdown: breakdown,
-          sharedBridges: [],
-          isConnected: viewer?.id === resolvedProfile.id,
-        })
-        setLoading(false)
-        return
-      }
-
-      const { data: connectionData, error: connectionError } = await supabase
-        .from('connections')
-        .select('id')
-        .eq('status', 'active')
-        .or(
-          `and(user_a_id.eq.${viewer.id},user_b_id.eq.${resolvedProfile.id}),and(user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${viewer.id})`,
-        )
-        .maybeSingle()
-
-      if (cancelled) {
-        return
-      }
-
-      if (connectionError) {
-        setError(connectionError.message)
-        setLoading(false)
-        return
-      }
-
-      const connected = Boolean(connectionData)
-      setIsConnected(connected)
-
-      if (!connected) {
-        profileCache.set(cacheKey, {
-          profile: resolvedProfile,
-          bridgeCount: profileBridges.length,
-          connectionCount: uniquePartners.size,
-          categoryBreakdown: breakdown,
-          sharedBridges: [],
-          isConnected: false,
-        })
-        setLoading(false)
-        return
-      }
-
-      const { data: sharedBridgesData, error: sharedBridgesError } = await supabase
-        .from('bridges')
-        .select('*')
-        .or(
-          `and(user_a_id.eq.${viewer.id},user_b_id.eq.${resolvedProfile.id}),and(user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${viewer.id})`,
-        )
-        .order('formed_at', { ascending: false })
-
-      if (cancelled) {
-        return
-      }
-
-      if (sharedBridgesError) {
-        setError(sharedBridgesError.message)
-        setLoading(false)
-        return
-      }
-
-      setSharedBridges((sharedBridgesData ?? []) as Bridge[])
-      profileCache.set(cacheKey, {
-        profile: resolvedProfile,
-        bridgeCount: profileBridges.length,
-        connectionCount: uniquePartners.size,
-        categoryBreakdown: breakdown,
-        sharedBridges: (sharedBridgesData ?? []) as Bridge[],
-        isConnected: connected,
-      })
-      setLoading(false)
-    }
-
-    void loadProfile()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authLoading, cacheKey, normalizedUserId, normalizedUsername, refreshIndex, viewer])
-
-  const refetch = useCallback(() => {
-    setRefreshIndex((previous) => previous + 1)
-  }, [])
+  const { data, isLoading, error } = useQuery({
+    queryKey,
+    queryFn: () => fetchProfile(identifier, byUserId, viewerId),
+    enabled: !authLoading && Boolean(identifier),
+    staleTime: Infinity,
+  })
 
   return {
-    profile,
-    bridgeCount,
-    connectionCount,
-    categoryBreakdown,
-    sharedBridges,
-    isConnected,
-    loading: loading || authLoading,
-    error,
-    refetch,
+    profile: data?.profile ?? null,
+    bridgeCount: data?.bridgeCount ?? 0,
+    connectionCount: data?.connectionCount ?? 0,
+    categoryBreakdown: data?.categoryBreakdown ?? createEmptyCategoryBreakdown(),
+    sharedBridges: data?.sharedBridges ?? [],
+    isConnected: data?.isConnected ?? false,
+    loading: authLoading || isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch: () => {
+      void queryClient.invalidateQueries({ queryKey })
+    },
   }
 }

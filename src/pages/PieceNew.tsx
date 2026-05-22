@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
@@ -35,6 +36,7 @@ export default function PieceNew() {
   const userId = user?.id ?? null
   const location = useLocation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [connections, setConnections] = useState<ActiveConnection[]>([])
   const [bridgeStrengthByConnectionId, setBridgeStrengthByConnectionId] = useState<
     Record<string, number>
@@ -47,7 +49,6 @@ export default function PieceNew() {
   const [title, setTitle] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   const locationState = location.state as LocationState | null
@@ -189,7 +190,67 @@ export default function PieceNew() {
 
   const backTarget = locationState?.returnTo ?? '/home'
 
-  const canSubmit = recipientId.trim().length > 0 && title.trim().length > 0 && !submitting
+  const createPieceMutation = useMutation({
+    mutationFn: async ({
+      recipientId: rId,
+      title: t,
+      category,
+      recipientName,
+    }: {
+      recipientId: string
+      title: string
+      category: CategorySlug | null
+      recipientName: string | undefined
+    }) => {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('Session expired — try again.')
+
+      const response = await fetch(`${functionsBaseUrl}/create-gum-piece`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient_id: rId,
+          title: t,
+          ...(category ? { category } : {}),
+        }),
+      })
+
+      let payload: CreatePieceResponse | CreatePieceErrorResponse = {}
+      try {
+        payload = (await response.json()) as CreatePieceResponse | CreatePieceErrorResponse
+      } catch {
+        payload = {}
+      }
+
+      if (!response.ok) {
+        const errorCode = 'error' in payload ? payload.error : undefined
+        if (errorCode === 'slot_limit_global') throw new Error('Your pocket is full (25/25). Complete or clear a plan first.')
+        if (errorCode === 'slot_limit_pair') throw new Error('You have 5 plans with this person already.')
+        if (errorCode === 'connection_required') throw new Error('You can only make plans with active connections.')
+        if (errorCode === 'title_required') throw new Error('Add a title first.')
+        throw new Error(errorCode ?? 'Something went wrong - try again.')
+      }
+
+      return { recipientName }
+    },
+    onSuccess: ({ recipientName }) => {
+      void queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
+      navigate('/home', {
+        replace: true,
+        state: { toast: `Plan sent to ${recipientName ?? 'them'}!` },
+      })
+    },
+    onError: (err) => {
+      setToast(err instanceof Error ? err.message : 'Something went wrong - try again.')
+    },
+  })
+
+  const canSubmit = recipientId.trim().length > 0 && title.trim().length > 0 && !createPieceMutation.isPending
 
   const selectedRecipientName = useMemo(() => {
     return connections.find((connection) => connection.id === recipientId)?.display_name
@@ -229,68 +290,14 @@ export default function PieceNew() {
     selectedCategory ??
     (title.trim() ? categorizeTitle(title.trim()) : null)
 
-  const handleSubmit = async () => {
-    if (!canSubmit) {
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData.session?.access_token
-      if (!accessToken) {
-        setToast('Something went wrong - try again.')
-        setSubmitting(false)
-        return
-      }
-
-      const response = await fetch(`${functionsBaseUrl}/create-gum-piece`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: publishableKey,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          recipient_id: recipientId,
-          title: title.trim(),
-          ...(resolvedCategory ? { category: resolvedCategory } : {}),
-        }),
-      })
-
-      let payload: CreatePieceResponse | CreatePieceErrorResponse = {}
-      try {
-        payload = (await response.json()) as CreatePieceResponse | CreatePieceErrorResponse
-      } catch {
-        payload = {}
-      }
-
-      if (!response.ok) {
-        const errorCode = 'error' in payload ? payload.error : undefined
-        if (errorCode === 'slot_limit_global') {
-          setToast('Your pocket is full (25/25). Complete or clear a plan first.')
-        } else if (errorCode === 'slot_limit_pair') {
-          setToast('You have 5 plans with this person already.')
-        } else if (errorCode === 'connection_required') {
-          setToast('You can only make plans with active connections.')
-        } else if (errorCode === 'title_required') {
-          setToast('Add a title first.')
-        } else {
-          setToast(errorCode ?? 'Something went wrong - try again.')
-        }
-
-        setSubmitting(false)
-        return
-      }
-
-      navigate('/home', {
-        replace: true,
-        state: { toast: `Plan sent to ${selectedRecipientName ?? 'them'}!` },
-      })
-    } catch {
-      setToast('Something went wrong - try again.')
-      setSubmitting(false)
-    }
+  const handleSubmit = () => {
+    if (!canSubmit) return
+    createPieceMutation.mutate({
+      recipientId,
+      title: title.trim(),
+      category: resolvedCategory,
+      recipientName: selectedRecipientName,
+    })
   }
 
   return (
@@ -313,7 +320,11 @@ export default function PieceNew() {
       <h1 className="app-page-title">new gum</h1>
 
       {connectionsLoading ? (
-        <p className="mt-6 text-sm text-text-2">Loading connections...</p>
+        <section className="mt-6 space-y-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="skeleton h-12 rounded-lg" />
+          ))}
+        </section>
       ) : (
         <section className="mt-6">
           <p className="text-xs uppercase text-text-3">Choose someone</p>
@@ -443,7 +454,7 @@ export default function PieceNew() {
         onClick={() => void handleSubmit()}
         className="mt-8 w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {submitting ? 'wrapping...' : 'wrap it'}
+        {createPieceMutation.isPending ? 'wrapping...' : 'wrap it'}
       </button>
 
       {toast ? (

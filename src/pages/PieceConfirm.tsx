@@ -196,8 +196,12 @@ export default function PieceConfirm() {
 
   if (authLoading || flowState === 'loading' || sessionLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
-        <p className="text-sm text-text-2">Preparing confirmation...</p>
+      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 text-text">
+        <div className="skeleton h-24 w-24 rounded-full" />
+        <div className="skeleton mt-6 h-8 w-48 rounded" />
+        <div className="skeleton mt-3 h-4 w-32 rounded-full" />
+        <div className="mt-10 skeleton h-24 w-48 rounded-xl" />
+        <div className="skeleton mt-6 h-12 w-full rounded-full" />
       </main>
     )
   }

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
 import { GumPieceCard } from '../components/gum/GumPieceCard.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
@@ -8,48 +9,30 @@ import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 
-const connectionsCountCache = new Map<string, number>()
+async function fetchConnectionsCount(userId: string): Promise<number> {
+  const { count } = await supabase
+    .from('connections')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+  return count ?? 0
+}
 
 export default function Home() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const { pieces, loading, error, refetch } = useGumPieces()
   const navigate = useNavigate()
   const location = useLocation()
-  const [connectionsCount, setConnectionsCount] = useState(0)
-  const [loadingConnections, setLoadingConnections] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const pocketFull = pieces.length >= 25
 
-  const loadConnectionsCount = useCallback(async () => {
-    if (!userId) {
-      setConnectionsCount(0)
-      setLoadingConnections(false)
-      return
-    }
-
-    const cachedCount = connectionsCountCache.get(userId)
-    if (typeof cachedCount === 'number') {
-      setConnectionsCount(cachedCount)
-      setLoadingConnections(false)
-    } else {
-      setLoadingConnections(true)
-    }
-    const { count } = await supabase
-      .from('connections')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active')
-      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-
-    const nextCount = count ?? 0
-    connectionsCountCache.set(userId, nextCount)
-    setConnectionsCount(nextCount)
-    setLoadingConnections(false)
-  }, [userId])
-
-  useEffect(() => {
-    void loadConnectionsCount()
-  }, [loadConnectionsCount])
+  const { data: connectionsCount = 0, isLoading: loadingConnections } = useQuery({
+    queryKey: ['connections-count', userId],
+    queryFn: () => fetchConnectionsCount(userId!),
+    enabled: !authLoading && userId !== null,
+    staleTime: Infinity,
+  })
 
   useEffect(() => {
     if (!toast) {
@@ -107,8 +90,11 @@ export default function Home() {
   return (
     <Layout>
       <main>
-        <header>
+        <header className="flex items-end justify-between">
           <h1 className="app-page-title">your pocket</h1>
+          {!loading && !loadingConnections ? (
+            <p className="text-xs text-text-3 pb-1">{pieces.length} / 25</p>
+          ) : null}
         </header>
 
         {loading || loadingConnections ? (
@@ -126,7 +112,6 @@ export default function Home() {
               type="button"
               onClick={() => {
                 void refetch()
-                void loadConnectionsCount()
               }}
               className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
             >
@@ -154,15 +139,13 @@ export default function Home() {
         {!loading && !loadingConnections && !error && connectionsCount > 0 && sortedPieces.length === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <EmptyStateIllustration />
-            <h2 className="font-display text-2xl text-text">Nothing brewing yet.</h2>
-            <p className="mt-2 text-sm text-text-2">
-              Who do you want to do something with?
-            </p>
+            <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
+            <p className="mt-2 text-sm text-text-2">Make a plan with someone you love.</p>
             <Link
               to="/piece/new"
               className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
-              New gum
+              New plan
             </Link>
           </section>
         ) : null}

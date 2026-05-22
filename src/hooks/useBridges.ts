@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 
@@ -24,61 +24,45 @@ interface UseBridgesResult {
   refetch: () => Promise<void>
 }
 
-export function useBridges({
-  otherUserId,
-}: UseBridgesParams = {}): UseBridgesResult {
+async function fetchBridges(userId: string, otherUserId?: string): Promise<Bridge[]> {
+  let query = supabase
+    .from('bridges')
+    .select('*')
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+    .order('formed_at', { ascending: false })
+
+  if (otherUserId) {
+    query = query.or(
+      `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
+    )
+  }
+
+  const { data, error: queryError } = await query
+  if (queryError) {
+    throw new Error(queryError.message)
+  }
+
+  return (data ?? []) as Bridge[]
+}
+
+export function useBridges({ otherUserId }: UseBridgesParams = {}): UseBridgesResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const [bridges, setBridges] = useState<Bridge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  const loadBridges = useCallback(async () => {
-    if (!userId) {
-      setBridges([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    let query = supabase
-      .from('bridges')
-      .select('*')
-      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-      .order('formed_at', { ascending: false })
-
-    if (otherUserId) {
-      query = query.or(
-        `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
-      )
-    }
-
-    const { data, error: queryError } = await query
-    if (queryError) {
-      setError(queryError.message)
-      setBridges([])
-      setLoading(false)
-      return
-    }
-
-    setBridges((data ?? []) as Bridge[])
-    setLoading(false)
-  }, [otherUserId, userId])
-
-  useEffect(() => {
-    if (authLoading) {
-      return
-    }
-    void loadBridges()
-  }, [authLoading, loadBridges])
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['bridges', userId, otherUserId ?? null],
+    queryFn: () => fetchBridges(userId!, otherUserId),
+    enabled: !authLoading && userId !== null,
+    staleTime: Infinity,
+  })
 
   return {
-    bridges,
-    loading: loading || authLoading,
-    error,
-    refetch: loadBridges,
+    bridges: data ?? [],
+    loading: authLoading || isLoading,
+    error: error instanceof Error ? error.message : null,
+    refetch: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['bridges', userId] })
+    },
   }
 }

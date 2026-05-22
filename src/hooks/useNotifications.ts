@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 
@@ -37,70 +38,45 @@ interface UseNotificationsResult {
   error: string | null
 }
 
-const notificationsCache = new Map<string, Notification[]>()
+async function fetchNotifications(userId: string): Promise<Notification[]> {
+  const { data: notificationRows, error: notificationsError } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (notificationsError) {
+    throw new Error('Something went wrong - try again.')
+  }
+
+  // post_reaction is intentionally excluded from the in-app list (PRD section 14)
+  const filtered = ((notificationRows ?? []) as Notification[]).filter(
+    (notification) => notification.type !== 'post_reaction',
+  )
+
+  return enrichNotifications(userId, filtered)
+}
 
 export function useNotifications(): UseNotificationsResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const channelIdRef = useRef(crypto.randomUUID())
+  const queryClient = useQueryClient()
 
-  const loadNotifications = useCallback(async () => {
-    if (!userId) {
-      setNotifications([])
-      setLoading(false)
-      setError(null)
-      return
-    }
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['notifications', userId],
+    queryFn: () => fetchNotifications(userId!),
+    enabled: !authLoading && userId !== null,
+    staleTime: 30 * 1000,
+  })
 
-    const cached = notificationsCache.get(userId)
-    if (cached) {
-      setNotifications(cached)
-      setLoading(false)
-    } else {
-      setLoading(true)
-    }
-    const { data: notificationRows, error: notificationsError } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-
-    if (notificationsError) {
-      setError('Something went wrong - try again.')
-      setLoading(false)
-      return
-    }
-
-    const nextNotifications = await enrichNotifications(
-      userId,
-      ((notificationRows ?? []) as Notification[]).filter(
-        (notification) => notification.type !== 'post_reaction',
-      ),
-    )
-    setError(null)
-    notificationsCache.set(userId, nextNotifications)
-    setNotifications(nextNotifications)
-    setLoading(false)
-  }, [userId])
-
-  useEffect(() => {
-    if (authLoading) {
-      return
-    }
-
-    void loadNotifications()
-  }, [authLoading, loadNotifications])
-
+  // Real-time: INSERT — enrich and prepend; UPDATE — patch in place
   useEffect(() => {
     if (!userId) {
       return
     }
 
     const channel = supabase
-      .channel(`notifications-${userId}-${channelIdRef.current}`)
+      .channel(`notifications-rt-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -111,16 +87,16 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const inserted = payload.new as Notification
+          // post_reaction not shown in UI
           if (inserted.type === 'post_reaction') {
             return
           }
           void (async () => {
             const [enriched] = await enrichNotifications(userId, [inserted])
-            setNotifications((current) => {
-              const next = [enriched ?? inserted, ...current]
-              notificationsCache.set(userId, next)
-              return next
-            })
+            queryClient.setQueryData<Notification[]>(
+              ['notifications', userId],
+              (current) => [enriched ?? inserted, ...(current ?? [])],
+            )
           })()
         },
       )
@@ -134,20 +110,20 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const updated = payload.new as Notification
-          setNotifications((current) => {
-            const next = current.map((notification) =>
-              notification.id === updated.id
-                ? {
-                    ...updated,
-                    actor_name: notification.actor_name,
-                    actor_avatar_url: notification.actor_avatar_url,
-                    target_user_id: notification.target_user_id,
-                  }
-                : notification,
-            )
-            notificationsCache.set(userId, next)
-            return next
-          })
+          queryClient.setQueryData<Notification[]>(
+            ['notifications', userId],
+            (current) =>
+              (current ?? []).map((notification) =>
+                notification.id === updated.id
+                  ? {
+                      ...updated,
+                      actor_name: notification.actor_name,
+                      actor_avatar_url: notification.actor_avatar_url,
+                      target_user_id: notification.target_user_id,
+                    }
+                  : notification,
+              ),
+          )
         },
       )
       .subscribe()
@@ -155,84 +131,96 @@ export function useNotifications(): UseNotificationsResult {
     return () => {
       void supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [queryClient, userId])
 
-  const markAsRead = useCallback(
-    async (id: string) => {
-      if (!userId) {
-        return
-      }
-
-      setNotifications((current) => {
-        const next = current.map((notification) =>
-          notification.id === id ? { ...notification, read: true } : notification,
-        )
-        notificationsCache.set(userId, next)
-        return next
-      })
-
+  const markAsReadMutation = useMutation({
+    mutationFn: async (id: string) => {
       await supabase
         .from('notifications')
         .update({ read: true })
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
     },
-    [userId],
-  )
-
-  const markAllAsRead = useCallback(async () => {
-    if (!userId) {
-      return
-    }
-
-    setNotifications((current) => {
-      const next = current.map((notification) => ({ ...notification, read: true }))
-      notificationsCache.set(userId, next)
-      return next
-    })
-
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', userId)
-      .eq('read', false)
-  }, [userId])
-
-  const dismissNotification = useCallback(
-    async (id: string) => {
-      if (!userId) {
-        return
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
+      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      queryClient.setQueryData<Notification[]>(
+        ['notifications', userId],
+        (current) =>
+          (current ?? []).map((n) => (n.id === id ? { ...n, read: true } : n)),
+      )
+      return { previous }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['notifications', userId], context.previous)
       }
+    },
+  })
 
-      setNotifications((current) => {
-        const next = current.filter((notification) => notification.id !== id)
-        notificationsCache.set(userId, next)
-        return next
-      })
+  const markAllAsReadMutation = useMutation({
+    mutationFn: async () => {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', userId!)
+        .eq('read', false)
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
+      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      queryClient.setQueryData<Notification[]>(
+        ['notifications', userId],
+        (current) => (current ?? []).map((n) => ({ ...n, read: true })),
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['notifications', userId], context.previous)
+      }
+    },
+  })
 
+  const dismissMutation = useMutation({
+    mutationFn: async (id: string) => {
       await supabase
         .from('notifications')
         .delete()
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('user_id', userId!)
     },
-    [userId],
-  )
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
+      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      queryClient.setQueryData<Notification[]>(
+        ['notifications', userId],
+        (current) => (current ?? []).filter((n) => n.id !== id),
+      )
+      return { previous }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['notifications', userId], context.previous)
+      }
+    },
+  })
 
-  const unreadCount = useMemo(() => {
-    return notifications.reduce((count, notification) => {
-      return notification.read ? count : count + 1
-    }, 0)
-  }, [notifications])
+  const notifications = data ?? []
+
+  const unreadCount = useMemo(
+    () => notifications.reduce((count, n) => (n.read ? count : count + 1), 0),
+    [notifications],
+  )
 
   return {
     notifications,
     unreadCount,
-    markAsRead,
-    markAllAsRead,
-    dismissNotification,
-    loading: loading || authLoading,
-    error,
+    markAsRead: (id) => markAsReadMutation.mutateAsync(id),
+    markAllAsRead: () => markAllAsReadMutation.mutateAsync(),
+    dismissNotification: (id) => dismissMutation.mutateAsync(id),
+    loading: authLoading || isLoading,
+    error: error instanceof Error ? error.message : null,
   }
 }
 
@@ -245,25 +233,23 @@ async function enrichNotifications(
   }
 
   const gumPieceIds = notifications
-    .filter((notification) =>
-      notification.type === 'invite_received' ||
-      notification.type === 'invite_accepted' ||
-      notification.type === 'invite_rejected' ||
-      notification.type === 'plan_turned_down' ||
-      notification.type === 'plan_expiring_soon',
+    .filter((n) =>
+      n.type === 'invite_received' ||
+      n.type === 'invite_accepted' ||
+      n.type === 'invite_rejected' ||
+      n.type === 'plan_turned_down' ||
+      n.type === 'plan_expiring_soon' ||
+      n.type === 'plan_expired',  // included so expiry notifications show actor name
     )
-    .map((notification) => notification.reference_id)
+    .map((n) => n.reference_id)
 
   const bridgeIds = notifications
-    .filter((notification) => notification.type === 'bridge_formed')
-    .map((notification) => notification.reference_id)
+    .filter((n) => n.type === 'bridge_formed')
+    .map((n) => n.reference_id)
 
   const connectionIds = notifications
-    .filter((notification) =>
-      notification.type === 'connection_request' ||
-      notification.type === 'connection_accepted',
-    )
-    .map((notification) => notification.reference_id)
+    .filter((n) => n.type === 'connection_request' || n.type === 'connection_accepted')
+    .map((n) => n.reference_id)
 
   const gumPiecesById = new Map<
     string,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
@@ -14,10 +15,22 @@ import type { Bridge, User } from '../types/index.ts'
 
 const networkUserCache = new Map<string, User>()
 
+async function fetchPendingRequestCount(userId: string): Promise<number> {
+  const { count } = await supabase
+    .from('connections')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+    .neq('requested_by', userId)
+  return count ?? 0
+}
+
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const userId = user?.id ?? null
+  const queryClient = useQueryClient()
   const { usersById } = useNetworkGraph()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -30,48 +43,33 @@ export default function Network() {
     loading: true,
     error: null as string | null,
   })
-  const [pendingRequestCount, setPendingRequestCount] = useState(0)
 
+  const { data: pendingRequestCount = 0 } = useQuery({
+    queryKey: ['pending-request-count', userId],
+    queryFn: () => fetchPendingRequestCount(userId!),
+    enabled: userId !== null,
+    staleTime: 60 * 1000,
+  })
+
+  // Real-time update for pending count
   useEffect(() => {
-    if (!user?.id) {
-      setPendingRequestCount(0)
-      return
-    }
-
-    let cancelled = false
-    const loadPendingCount = async () => {
-      const { count, error } = await supabase
-        .from('connections')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
-        .neq('requested_by', user.id)
-
-      if (cancelled || error) {
-        return
-      }
-
-      setPendingRequestCount(count ?? 0)
-    }
-
-    void loadPendingCount()
+    if (!userId) return
 
     const channel = supabase
-      .channel(`network-pending-requests-${user.id}`)
+      .channel(`network-pending-requests-${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'connections' },
         () => {
-          void loadPendingCount()
+          void queryClient.invalidateQueries({ queryKey: ['pending-request-count', userId] })
         },
       )
       .subscribe()
 
     return () => {
-      cancelled = true
       void supabase.removeChannel(channel)
     }
-  }, [user?.id])
+  }, [queryClient, userId])
 
   useEffect(() => {
     const state = location.state as { selectUserId?: string } | null
@@ -148,6 +146,18 @@ export default function Network() {
       </header>
 
       <main className="h-full w-full">
+        {!graphState.loading && graphState.error ? (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg px-8 text-center">
+            <p className="text-sm text-playful">Couldn&apos;t load your network.</p>
+            <button
+              type="button"
+              onClick={() => setGraphState((s) => ({ ...s, error: null, loading: true }))}
+              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
         <NetworkGraph
           onNodeSelect={(userId, user) => {
             if (!userId) {

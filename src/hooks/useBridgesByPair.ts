@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
@@ -13,96 +13,46 @@ interface UseBridgesByPairResult {
   error: string | null
 }
 
-const bridgesByPairCache = new Map<string, Bridge[]>()
+async function fetchBridgesByPair(userId: string, otherUserId: string): Promise<Bridge[]> {
+  const { data, error: queryError } = await supabase
+    .from('bridges')
+    .select('*')
+    .or(
+      `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
+    )
+    .order('formed_at', { ascending: false })
 
-function pairCacheKey(userId: string, otherUserId: string): string {
-  return `${userId}:${otherUserId}`
+  if (queryError) {
+    throw new Error(queryError.message)
+  }
+
+  return (data ?? []) as Bridge[]
 }
 
-export function useBridgesByPair({
-  otherUserId,
-}: UseBridgesByPairParams): UseBridgesByPairResult {
+export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBridgesByPairResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
-  const [bridges, setBridges] = useState<Bridge[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (authLoading) {
-      return
-    }
-
-    if (!userId || !otherUserId) {
-      setBridges([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    const cacheKey = pairCacheKey(userId, otherUserId)
-    const cached = bridgesByPairCache.get(cacheKey)
-    if (cached) {
-      setBridges(cached)
-      setLoading(false)
-      setError(null)
-      return
-    }
-
-    let cancelled = false
-
-    const loadBridgesByPair = async () => {
-      setLoading(true)
-      setError(null)
-
-      const { data, error: queryError } = await supabase
-        .from('bridges')
-        .select('*')
-        .or(
-          `and(user_a_id.eq.${userId},user_b_id.eq.${otherUserId}),and(user_a_id.eq.${otherUserId},user_b_id.eq.${userId})`,
-        )
-        .order('formed_at', { ascending: false })
-
-      if (cancelled) {
-        return
-      }
-
-      if (queryError) {
-        setError(queryError.message)
-        setBridges([])
-        setLoading(false)
-        return
-      }
-
-      const nextBridges = (data ?? []) as Bridge[]
-      bridgesByPairCache.set(cacheKey, nextBridges)
-      setBridges(nextBridges)
-      setLoading(false)
-    }
-
-    void loadBridgesByPair()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authLoading, otherUserId, userId])
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['bridges-pair', userId, otherUserId],
+    queryFn: () => fetchBridgesByPair(userId!, otherUserId),
+    enabled: !authLoading && userId !== null && Boolean(otherUserId),
+    staleTime: Infinity,
+  })
 
   return {
-    bridges,
-    loading: loading || authLoading,
-    error,
+    bridges: data ?? [],
+    loading: authLoading || isLoading,
+    error: error instanceof Error ? error.message : null,
   }
 }
 
-export function invalidateBridgesByPairCache(userId: string, otherUserId?: string): void {
+import type { QueryClient } from '@tanstack/react-query'
+
+export function invalidateBridgesByPairCache(userId: string, queryClient: QueryClient, otherUserId?: string): void {
   if (otherUserId) {
-    bridgesByPairCache.delete(pairCacheKey(userId, otherUserId))
+    void queryClient.invalidateQueries({ queryKey: ['bridges-pair', userId, otherUserId] })
     return
   }
-
-  for (const key of bridgesByPairCache.keys()) {
-    if (key.startsWith(`${userId}:`)) {
-      bridgesByPairCache.delete(key)
-    }
-  }
+  void queryClient.invalidateQueries({ queryKey: ['bridges-pair', userId] })
 }

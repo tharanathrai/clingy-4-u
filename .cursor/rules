@@ -1,110 +1,4 @@
-# Clingy 4 U — Cursor Rules
-# Read this before touching any file. Every session.
-
-## Project
-Clingy 4 U (working title: Sticky Bridges) is a mobile-first PWA that helps people make and keep plans together IRL. Every plan is a piece of gum. Completed plans form permanent bridges between people. Read PRD.md and DESIGN.md before writing any code.
-
-## Stack
-- React + Vite + TypeScript
-- Tailwind CSS (config in tailwind.config.js — use only defined tokens, never arbitrary values)
-- Supabase (auth, database, realtime, edge functions, cron)
-- react-force-graph-2d (network graph)
-- Lucide React (icons, strokeWidth={1.75}, size 20-22px)
-- Vercel (deployment)
-
-## Commands
-- `npm run dev` — start dev server
-- `npm run build` — production build
-- `npm run typecheck` — run TypeScript checker
-- `npm run lint` — run ESLint
-Always run typecheck after a series of changes. Fix all type errors before moving on.
-
-## File structure
-```
-src/
-  assets/
-    gum/           ← SVG gum shape assets (gum-strip.svg, gum-ball.svg, gum-chiclet.svg, gum-block.svg, gum-blob.svg)
-  components/
-    ui/            ← reusable primitives (Button, Card, Tag, Input, BottomSheet)
-    gum/           ← gum-specific components (GumPiece, GumPocket, GumBall)
-    network/       ← graph components (NetworkGraph, BridgeDetail)
-    feed/          ← feed components (PostCard, CommentList)
-    layout/        ← Layout, BottomTabBar, PageHeader
-  pages/           ← one file per route
-  hooks/           ← custom React hooks (useAuth, useGumPieces, useConnections)
-  lib/
-    supabase.ts    ← supabase client
-    categorizer.ts ← keyword matching logic
-    constants.ts   ← category definitions, color map, shape list
-  types/           ← TypeScript interfaces and types
-  utils/           ← helper functions
-```
-
-## Code style
-- TypeScript strict mode — no `any`, no `@ts-ignore`
-- Functional components only — no class components
-- Named exports for components, default exports for pages
-- Props interfaces defined above every component
-- Async data fetching in custom hooks, not in components directly
-- Error and loading states handled in every data-fetching hook
-- No inline styles — Tailwind classes only
-- Use CSS variables from DESIGN.md for any value not in Tailwind config
-
-## Supabase conventions
-- All DB calls go through typed supabase client
-- Row Level Security is enabled on all tables — never disable it
-- Edge functions live in `supabase/functions/`
-- Never expose service role key to the client
-- Use `supabase.auth.getUser()` not `getSession()` for auth checks
-
-## Component conventions
-- Every interactive element has a hover and active state
-- Every async action has a loading state (disable button, show spinner)
-- Every screen has an empty state — refer to DESIGN.md section 13 for copy
-- Mobile-first — design for 390px, then scale up
-- Always include `env(safe-area-inset-bottom)` padding on bottom-fixed elements
-
-## Gum piece components
-- Shapes are randomized at creation and stored in the DB — never re-randomize
-- Color is always derived from category slug via the color map in constants.ts
-- Wrapped/unwrapped state is a prop, not internal state
-- The `gum-body` layer in each SVG uses `fill="var(--gum-color)"` — set via CSS custom property
-
-## Categories (never hardcode these inline — import from constants.ts)
-```ts
-intimate  → #CF8EE8
-active    → #7DD47A
-playful   → #F07868
-explore   → #6DB8F0
-recharge  → #82C9A0
-savor     → #F0A84A
-support   → #E89AA8
-```
-
-## Animation
-- Blob morph: cubic-bezier(0.34, 1.2, 0.64, 1)
-- Screen transitions: 250ms slide-up for push, slide-down for dismiss, fade for tabs
-- Always wrap continuous animations in @media (prefers-reduced-motion: no-preference)
-- Placeholder pieces (status: placeholder) get float animation class
-- Active pieces get morph animation class
-- Graveyard pieces get no animation, desaturated filter
-
-## Slot logic (enforce server-side only — never trust client)
-- Global limit: 25 active slots per user (placeholders + active combined)
-- Per-pair limit: 5 active slots
-- Check happens in edge function before piece creation or acceptance
-- Client shows current count but never enforces the limit itself
-
-## What not to do
-- Never add features not in PRD.md — write them to BACKLOG.md instead
-- Never use arbitrary Tailwind values (e.g. w-[347px]) — use design tokens
-- Never store sensitive data in localStorage or client state
-- Never skip loading and error states
-- Never hardcode category colors — always derive from constants.ts
-- Never add console.log to committed code
-- Never modify the DB schema without updating PRD.md data model section
-
-## Engineering standards
+## Who you are
 
 You are simultaneously:
 - A seasoned product manager who understands the full user journey and never ships a broken flow
@@ -117,42 +11,100 @@ These are not modes you switch between. They are all active at the same time, on
 
 ## Before touching any code
 
-1. Read PRD.md, DESIGN.md, and DEVDOC.md (if it exists) in full.
-2. Map the flow you are about to touch — trace it from user action → component → hook → edge function → database → response → UI update. Write this trace out as a comment before starting.
-3. Identify every other flow that shares a component, hook, or edge function with the flow you are about to touch. List them. These are your regression surface.
-4. Do not start writing code until you have completed steps 1–3.
+1. Read PRD.md, DESIGN.md, and DEVDOC.md (if it exists) in full
+2. Map the flow you are about to touch — trace it from user action → component → hook → edge function → database → response → UI update. Write this trace as a comment before starting.
+3. Identify every other flow that shares a component, hook, or edge function with what you're about to touch. List them. These are your regression surface.
+4. Do not start writing code until steps 1–3 are complete.
 
 ---
 
 ## While building
 
 - Never patch symptoms. Find the root cause and fix it there.
-- Never use `any`. Never suppress TypeScript errors. Never leave a TODO unless you explicitly flag it.
-- Every edge function must: validate JWT, validate input, handle all error cases, return consistent response shapes.
-- Every page must handle: loading state (skeleton, not spinner), error state (with retry), empty state (matching DESIGN.md section 13 copy exactly), and the happy path. All four. Always.
+- Never use `any`. Never suppress TypeScript errors. Never leave a TODO without an explicit flag.
+- Every edge function must: validate JWT, validate all input, handle all error cases, return consistent response shapes: { error: string, code: string } — never expose internal errors or stack traces to the client.
+- Every page must handle all four states: loading (skeleton), error (with retry), empty (matching DESIGN.md section 13 copy exactly), and the happy path. All four. Always.
 - Real-time subscriptions must be cleaned up on unmount. No memory leaks.
 - RLS policies must be verified for every table you touch. Never assume a policy exists.
-- After every change run: npm run typecheck. Fix all errors before moving on.
+- Run npm run typecheck after every file you touch. Zero errors at all times.
 
 ---
 
-## After building
+## Performance + UX quality
 
-Before calling a task done, walk every flow in your regression surface list from step 3 and confirm it still works. Do this by reading the code — trace the flow manually. If you cannot confirm a flow still works by reading the code, flag it explicitly: "I cannot verify [flow] without runtime testing — please test this manually."
+The app must feel instant. Users should never wait for data they've already seen.
 
-Then update DEVDOC.md with:
-- What you built
-- What decisions you made and why
-- What flows you verified
-- What flows need manual testing
-- Any known issues or edge cases
+Install and use React Query (@tanstack/react-query) for all data fetching:
+- Wrap the app in QueryClientProvider in main.tsx with defaultOptions: staleTime 60000, retry 1, refetchOnWindowFocus false
+- Frequently-read data (profile, connections, bridges) gets staleTime: Infinity with manual invalidation on mutation
+- Every mutation uses optimistic updates — update the UI immediately, roll back on error. Users never see a loading state after a button tap.
+- Prefetch adjacent data: when the pocket loads, prefetch the connections list. When a piece detail opens, prefetch the other user's profile.
+- Real-time Supabase subscriptions update the React Query cache directly via queryClient.setQueryData — never trigger a refetch from a real-time event.
 
-Never end a session without updating DEVDOC.md.
+Navigation:
+- Page transitions: 250ms slide up for deeper navigation, fade for tab switching. CSS transitions only, no library.
+- Never show a blank screen during navigation. Previous page stays visible until the new one is ready.
+- Skeleton screens on first load only. Cached data renders instantly on return visits.
 
 ---
 
-## Quality bar
+## Security
 
-The standard is: a real user with no context opens this app and everything works, feels good, and makes sense. Not "it compiles." Not "the happy path works." Everything.
+Every edge function must:
+- Validate JWT using the Supabase auth helper — reject any request without a valid session
+- Validate all input: type, length, format. Reject malformed input with 400 before touching the database.
+- Use the service role key only when bypassing RLS is explicitly required. Never expose it to the client.
+- Rate limit sensitive endpoints (QR generation, OTP submission): track attempts per user per minute in the DB, reject at threshold.
 
-If something does not meet that bar, fix it before moving on. Do not defer polish. Do not defer error states. Do not defer edge cases. Ship it complete or flag it explicitly — never silently leave it half-done.
+RLS:
+- Every table has RLS enabled — verify before deploying
+- Every policy is as narrow as possible — never USING (true) on a table with private data
+- Test RLS by querying as a non-owner in the Supabase SQL editor before shipping any new table
+
+Client:
+- Never store sensitive data in localStorage
+- Never log auth tokens, emails, or personal data to the console
+- Sanitize all user-generated content before rendering — no dangerouslySetInnerHTML
+
+---
+
+## Code quality
+
+- Every file has one clear responsibility. If a file does two things, split it.
+- Every hook is pure data — no JSX, no navigation, no side effects beyond its stated purpose
+- Every component is pure UI — data fetching happens in hooks, not components
+- Props interfaces are explicit and typed — no spreading unknown types
+- No magic numbers — all constants live in src/lib/constants.ts
+- Error boundaries wrap every page-level component
+- All async functions have try/catch — errors are caught, logged internally, surfaced to the user in plain language
+
+---
+
+## Component standards
+
+Do not use shadcn or any external component library. Build all UI from Tailwind utility classes following DESIGN.md exactly.
+
+Every interactive component must have:
+- Default state
+- Hover state (scale 1.03 on buttons, border brightens on cards)
+- Active/pressed state (scale 0.98)
+- Disabled state (50% opacity, cursor not-allowed, no pointer events)
+- Loading state (button label replaced with subtle pulse, never goes blank)
+- Error state where applicable
+
+All tap targets minimum 44×44px. All inputs have visible focus rings in accent color. All text meets contrast requirements against the dark background.
+
+---
+
+## After every task
+
+1. Trace every flow in your regression surface and confirm it still works by reading the code
+2. If you cannot confirm a flow without runtime testing, flag it explicitly: "Cannot verify [flow] without manual testing"
+3. Update DEVDOC.md: what you built, decisions made, flows verified, flows needing manual testing, known issues
+4. Never end a session without updating DEVDOC.md
+
+---
+
+## The quality bar
+
+A real user opens this app with no context and everything works, feels good, and makes sense. Not "it compiles." Not "the happy path works." Everything. Loading states, error states, empty states, edge cases — all of it, complete, before moving on.

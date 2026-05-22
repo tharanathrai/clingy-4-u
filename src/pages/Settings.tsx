@@ -25,8 +25,23 @@ export default function Settings() {
 
   if (authLoading || profileLoading) {
     return (
-      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
-        <p className="text-sm text-text-2">Loading settings...</p>
+      <main className="safe-screen-height mx-auto w-full max-w-md bg-bg px-5 py-8 text-text">
+        <div className="skeleton mb-6 h-7 w-24 rounded" />
+        <section className="rounded-lg bg-surface p-4">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+            <div className="skeleton h-14 w-14 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="skeleton h-4 w-32 rounded" />
+              <div className="skeleton h-3 w-48 rounded" />
+            </div>
+          </div>
+          <div className="skeleton mt-4 h-4 w-28 rounded" />
+        </section>
+        <section className="mt-6 rounded-lg bg-surface p-4 space-y-3">
+          <div className="skeleton h-4 w-40 rounded" />
+          <div className="skeleton h-10 w-full rounded" />
+          <div className="skeleton h-10 w-full rounded" />
+        </section>
       </main>
     )
   }

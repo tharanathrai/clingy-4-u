@@ -106,7 +106,13 @@ export default function Graveyard() {
       <h1 className="app-page-title mt-6">graveyard</h1>
       <p className="mt-3 text-sm text-text-2">Plans that didn&apos;t happen.</p>
 
-      {loading ? <p className="mt-8 text-sm text-text-2">Loading...</p> : null}
+      {loading ? (
+        <section className="mt-8 space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="skeleton h-24 rounded-lg" />
+          ))}
+        </section>
+      ) : null}
       {error ? <p className="mt-8 text-sm text-playful">{error}</p> : null}
 
       {empty ? (

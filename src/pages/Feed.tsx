@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
-import { useFeed } from '../hooks/useFeed.ts'
+import { useFeed, type FeedPost } from '../hooks/useFeed.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
+import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const { posts, loading, error, refetch } = useFeed()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [localPosts, setLocalPosts] = useState(posts)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [focusComposerOnOpen, setFocusComposerOnOpen] = useState(false)
@@ -83,28 +88,42 @@ export default function Feed() {
     }
   }, [selectedPostId])
 
-  const handleReact = async (postId: string) => {
-    setLocalPosts((current) =>
-      current.map((post) => {
-        if (post.id !== postId) {
-          return post
-        }
+  const toggleReactionMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const { error: fnError } = await supabase.functions.invoke('toggle-reaction', {
+        body: { post_id: postId },
+      })
+      if (fnError) throw fnError
+    },
+    onMutate: async (postId) => {
+      await queryClient.cancelQueries({ queryKey: ['feed', userId] })
+      const previous = queryClient.getQueryData<FeedPost[]>(['feed', userId])
+      const applyToggle = (list: FeedPost[]) =>
+        list.map((post) => {
+          if (post.id !== postId) return post
+          const nextHasReacted = !post.hasReacted
+          return {
+            ...post,
+            hasReacted: nextHasReacted,
+            reactionCount: Math.max(0, post.reactionCount + (nextHasReacted ? 1 : -1)),
+          }
+        })
+      queryClient.setQueryData<FeedPost[]>(['feed', userId], (current) =>
+        current ? applyToggle(current) : current,
+      )
+      setLocalPosts((current) => applyToggle(current))
+      return { previous }
+    },
+    onError: (_err, _postId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['feed', userId], context.previous)
+        setLocalPosts(context.previous)
+      }
+    },
+  })
 
-        const nextHasReacted = !post.hasReacted
-        return {
-          ...post,
-          hasReacted: nextHasReacted,
-          reactionCount: Math.max(
-            0,
-            post.reactionCount + (nextHasReacted ? 1 : -1),
-          ),
-        }
-      }),
-    )
-
-    await supabase.functions.invoke('toggle-reaction', {
-      body: { post_id: postId },
-    })
+  const handleReact = (postId: string) => {
+    toggleReactionMutation.mutate(postId)
   }
 
   const openPostDetail = (postId: string, options?: { focusComposer?: boolean }) => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout.tsx'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { ConnectionRequestSheet } from '../components/connections/ConnectionRequestSheet.tsx'
@@ -14,6 +15,7 @@ import { supabase } from '../lib/supabase.ts'
 export default function Notifications() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, loading, error } =
     useNotifications()
   const [toast, setToast] = useState<string | null>(null)
@@ -131,6 +133,13 @@ export default function Notifications() {
         {!loading && error ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <p className="text-sm text-playful">{error}</p>
+            <button
+              type="button"
+              onClick={() => void queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] })}
+              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+            >
+              Retry
+            </button>
           </section>
         ) : null}
 
@@ -204,7 +213,7 @@ export default function Notifications() {
           }
 
           void dismissNotification(activeRequest.notificationId)
-          invalidateNetworkGraphCache(user?.id)
+          invalidateNetworkGraphCache(user?.id, queryClient)
           setToast('Connection accepted.')
           if (otherUserId) {
             void navigate('/network', { state: { selectUserId: otherUserId } })
