@@ -7,7 +7,9 @@ import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { useAuth } from '../hooks/useAuth.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
+import { supabase } from '../lib/supabase.ts'
 import type { Bridge, User } from '../types/index.ts'
 
 const networkUserCache = new Map<string, User>()
@@ -15,6 +17,7 @@ const networkUserCache = new Map<string, User>()
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { user } = useAuth()
   const { usersById } = useNetworkGraph()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -27,6 +30,48 @@ export default function Network() {
     loading: true,
     error: null as string | null,
   })
+  const [pendingRequestCount, setPendingRequestCount] = useState(0)
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPendingRequestCount(0)
+      return
+    }
+
+    let cancelled = false
+    const loadPendingCount = async () => {
+      const { count, error } = await supabase
+        .from('connections')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .or(`user_a_id.eq.${user.id},user_b_id.eq.${user.id}`)
+        .neq('requested_by', user.id)
+
+      if (cancelled || error) {
+        return
+      }
+
+      setPendingRequestCount(count ?? 0)
+    }
+
+    void loadPendingCount()
+
+    const channel = supabase
+      .channel(`network-pending-requests-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'connections' },
+        () => {
+          void loadPendingCount()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      void supabase.removeChannel(channel)
+    }
+  }, [user?.id])
 
   useEffect(() => {
     const state = location.state as { selectUserId?: string } | null
@@ -73,6 +118,19 @@ export default function Network() {
       <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5">
         <h1 className="app-page-title">your network</h1>
         <div className="relative flex items-center gap-2">
+          <Link
+            to="/connections/requests"
+            className="relative rounded-full border border-white/10 bg-surface px-3 py-2 text-xs font-medium text-text-2 transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
+            aria-label="Open connection requests"
+            title="Connection requests"
+          >
+            Requests
+            {pendingRequestCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-playful px-1.5 py-0.5 text-[10px] leading-none text-white">
+                {pendingRequestCount}
+              </span>
+            ) : null}
+          </Link>
           <Link
             to="/add"
             className="rounded-full border border-white/10 bg-surface px-3 py-2 text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95"

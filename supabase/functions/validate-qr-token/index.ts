@@ -161,8 +161,9 @@ Deno.serve(async (request) => {
       read: false,
     })
 
+    // Keep the core connect flow successful even if notification insert fails.
     if (notificationError) {
-      return jsonResponse(500, { error: notificationError.message })
+      // Intentionally non-fatal: connection row is already created.
     }
 
     void sendConnectionRequestEmail({

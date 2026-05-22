@@ -89,7 +89,7 @@ export default function Connect() {
     return () => {
       cancelled = true
     }
-  }, [connectIssue, loading, successUser, token, user])
+  }, [connectIssue, loading, successUser, token, user?.id])
 
   useEffect(() => {
     if (!successUser) {
