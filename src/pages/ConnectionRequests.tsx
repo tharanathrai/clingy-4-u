@@ -24,6 +24,7 @@ export default function ConnectionRequests() {
 
   const loadRequests = useCallback(async () => {
     if (!userId) {
+      setFetching(false)
       return
     }
 
@@ -218,10 +219,10 @@ export default function ConnectionRequests() {
       ) : null}
 
       <Link
-        to="/add"
+        to="/network"
         className="mt-auto rounded-full bg-surface-2 px-7 py-3.5 text-center text-sm font-medium text-text-2"
       >
-        Back
+        Back to network
       </Link>
     </main>
   )

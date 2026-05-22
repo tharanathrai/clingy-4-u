@@ -42,6 +42,7 @@ Living snapshot of implementation status as of code review (PRD v0.1, DESIGN v0.
   - Edge function enforces expiry, own-QR, duplicate active/pending handling; consumes token; creates `pending` connection
   - On successful request creation, `validate-qr-token` now inserts `connection_request` notification for the QR owner and sends email via `send-email`
   - Scanner UI now handles a dedicated `request_pending` error path
+  - `Connect` includes a manual retry CTA to avoid blank-state dead ends during transient deep-link submit races
 - **Known gaps / bugs**
   - PRD domain `stickybridges.app`; QR uses `window.location.origin`
   - `generate-qr-token` not reviewed here for duplicate-token / force behavior beyond client `force` flag
@@ -55,8 +56,9 @@ Living snapshot of implementation status as of code review (PRD v0.1, DESIGN v0.
   - Accept/decline now call `respond-connection` edge function (service-role path): accept activates connection + sends `connection_accepted`; decline deletes pending row and cleans stale `connection_request` notifications
   - Paginated list via `usePaginatedItems`
   - Explicit loading, error (retry), empty, and happy states
+  - Requests are always discoverable from `Network` via a persistent `Requests` button with live pending count badge
 - **Known gaps / bugs**
-  - No dedicated tab entry for requests; discovery remains notification-driven or direct route
+  - None currently identified in route discoverability
 - **Components / hooks:** `pages/ConnectionRequests.tsx`, `hooks/useAuth.ts`, `hooks/usePaginatedItems.ts`
 
 ### Gum piece creation
@@ -170,6 +172,7 @@ Living snapshot of implementation status as of code review (PRD v0.1, DESIGN v0.
   - Navigation: gum types → piece; `connection_request` opens `ConnectionRequestSheet`; `connection_accepted`/`bridge_formed` navigate to network with selected user; post types → feed
   - Expired invite tap dismisses + toast
   - Notifications page now has explicit loading, error, empty, and happy states
+  - If notification insertion fails server-side, pending requests remain reachable from Network `Requests` entry point
 - **Known gaps / bugs**
   - `plan_expiring_soon` / `plan_expired` types exist in schema but cron/email integration not verified in client
   - Email prefs in Settings are localStorage only — **not wired** to `send-email`

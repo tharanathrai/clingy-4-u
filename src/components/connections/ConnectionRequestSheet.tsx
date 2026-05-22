@@ -49,7 +49,7 @@ export function ConnectionRequestSheet({
     return () => {
       document.body.classList.remove('modal-scroll-lock')
     }
-  }, [connectionId, reloadNonce])
+  }, [connectionId])
 
   useEffect(() => {
     if (!connectionId) {
@@ -113,7 +113,7 @@ export function ConnectionRequestSheet({
     return () => {
       cancelled = true
     }
-  }, [connectionId])
+  }, [connectionId, reloadNonce])
 
   const initials = useMemo(() => {
     return requester?.display_name.slice(0, 1).toUpperCase() ?? '?'

@@ -19,20 +19,22 @@ const postAuthReturnToKey = 'postAuthReturnTo'
 
 export default function Connect() {
   const { user, loading, signInWithGoogle } = useAuth()
+  const userId = user?.id ?? null
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const token = params.get('token')
   const [submitting, setSubmitting] = useState(false)
   const [successUser, setSuccessUser] = useState<ValidateQrUser | null>(null)
   const [connectIssue, setConnectIssue] = useState<ConnectIssue | null>(null)
+  const [submitAttempt, setSubmitAttempt] = useState(0)
   const hasSubmittedRef = useRef(false)
 
   useEffect(() => {
     hasSubmittedRef.current = false
-  }, [token, user?.id])
+  }, [submitAttempt, token, userId])
 
   useEffect(() => {
-    if (loading || !user || !token || successUser || connectIssue || hasSubmittedRef.current) {
+    if (loading || !userId || !token || successUser || connectIssue || hasSubmittedRef.current) {
       return
     }
 
@@ -89,7 +91,7 @@ export default function Connect() {
     return () => {
       cancelled = true
     }
-  }, [connectIssue, loading, successUser, token, user?.id])
+  }, [connectIssue, loading, submitAttempt, successUser, token, userId])
 
   useEffect(() => {
     if (!successUser) {
@@ -120,6 +122,13 @@ export default function Connect() {
     await signInWithGoogle()
   }
 
+  const retrySubmit = () => {
+    setConnectIssue(null)
+    setSuccessUser(null)
+    hasSubmittedRef.current = false
+    setSubmitAttempt((value) => value + 1)
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
@@ -143,7 +152,7 @@ export default function Connect() {
     )
   }
 
-  if (!user) {
+  if (!userId) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 py-8 text-center text-text">
         <h1 className="app-page-title">Connect</h1>
@@ -213,6 +222,19 @@ export default function Connect() {
               </Link>
             )}
           </div>
+        </section>
+      ) : null}
+
+      {!submitting && !successUser && !connectIssue ? (
+        <section className="mt-8 w-full rounded-lg border border-white/10 bg-surface p-6 text-center">
+          <p className="text-sm text-text-2">Ready to send your connection request.</p>
+          <button
+            type="button"
+            onClick={retrySubmit}
+            className="mt-4 rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-white"
+          >
+            Send request
+          </button>
         </section>
       ) : null}
     </main>
