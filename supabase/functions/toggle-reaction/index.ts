@@ -75,27 +75,6 @@ Deno.serve(async (request) => {
         return jsonResponse(500, { error: insertError.message })
       }
       reacted = true
-
-      const { data: postRow, error: postError } = await serviceClient
-        .from('posts')
-        .select('author_id')
-        .eq('id', postId)
-        .maybeSingle<{ author_id: string }>()
-
-      if (postError) {
-        return jsonResponse(500, { error: postError.message })
-      }
-
-      if (postRow && postRow.author_id !== userId) {
-        const { error: notificationError } = await serviceClient.from('notifications').insert({
-          user_id: postRow.author_id,
-          type: 'post_reaction',
-          reference_id: postId,
-        })
-        if (notificationError) {
-          return jsonResponse(500, { error: notificationError.message })
-        }
-      }
     }
 
     const { count, error: countError } = await serviceClient

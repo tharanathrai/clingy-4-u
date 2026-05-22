@@ -76,7 +76,9 @@ export function useNotifications(): UseNotificationsResult {
 
     const nextNotifications = await enrichNotifications(
       userId,
-      (notificationRows ?? []) as Notification[],
+      ((notificationRows ?? []) as Notification[]).filter(
+        (notification) => notification.type !== 'post_reaction',
+      ),
     )
     setError(null)
     notificationsCache.set(userId, nextNotifications)
@@ -109,6 +111,9 @@ export function useNotifications(): UseNotificationsResult {
         },
         (payload) => {
           const inserted = payload.new as Notification
+          if (inserted.type === 'post_reaction') {
+            return
+          }
           void (async () => {
             const [enriched] = await enrichNotifications(userId, [inserted])
             setNotifications((current) => {
