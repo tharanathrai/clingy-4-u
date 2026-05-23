@@ -99,9 +99,15 @@ export default function Network() {
           </Link>
           <RecenterGraphButton
             onRecenter={handleRecenter}
-            disabled={graphState.loading || !!graphState.error}
+            disabled={
+              graphState.loading ||
+              !!graphState.error ||
+              !graphState.hasConnections
+            }
           />
-          <GraphExportButton graphRef={graphCanvasRef} />
+          {graphState.hasConnections ? (
+            <GraphExportButton graphRef={graphCanvasRef} />
+          ) : null}
         </div>
       </header>
 

@@ -444,7 +444,9 @@ export function NetworkGraph({
     )
   }
 
-  if (loading || graphSize.width <= 0 || graphSize.height <= 0) {
+  const hasConnections = nodes.some((node) => !node.isSelf)
+
+  if (loading) {
     return (
       <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center">
         <div className="relative h-32 w-32">
@@ -456,6 +458,14 @@ export function NetworkGraph({
         </div>
       </div>
     )
+  }
+
+  if (!hasConnections) {
+    return <div ref={graphContainerRef} className="h-full w-full bg-bg" aria-hidden="true" />
+  }
+
+  if (graphSize.width <= 0 || graphSize.height <= 0) {
+    return <div ref={graphContainerRef} className="h-full w-full bg-bg" aria-hidden="true" />
   }
 
   return (
