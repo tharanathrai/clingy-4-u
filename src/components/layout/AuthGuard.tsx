@@ -26,14 +26,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
 
     const cachedProfileReady = profileReadyCache.get(user.id)
+    const shouldRecheckProfile =
+      cachedProfileReady !== true || location.pathname === '/welcome'
+
     if (cachedProfileReady !== undefined) {
       setProfileReady(cachedProfileReady)
-      return () => {
-        cancelled = true
+      if (!shouldRecheckProfile) {
+        return () => {
+          cancelled = true
+        }
       }
     }
 
-    setProfileReady(null)
+    if (cachedProfileReady === undefined) {
+      setProfileReady(null)
+    }
 
     const checkProfile = async () => {
       const { data, error } = await supabase
@@ -62,7 +69,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return () => {
       cancelled = true
     }
-  }, [user])
+  }, [location.pathname, user])
 
   if (loading) {
     return (

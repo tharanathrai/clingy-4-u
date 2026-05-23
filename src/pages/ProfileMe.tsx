@@ -103,9 +103,6 @@ export default function ProfileMe() {
         >
           Finish onboarding
         </Link>
-        <Link to="/settings" className="mt-6 text-sm text-text-2">
-          settings →
-        </Link>
       </main>
     )
   }
@@ -180,9 +177,6 @@ export default function ProfileMe() {
       ) : null}
 
       <div className="mt-10 flex flex-col gap-2">
-        <Link to="/settings" className="text-sm text-text-2">
-          settings →
-        </Link>
         <Link to="/home/graveyard" className="text-sm text-text-3">
           graveyard →
         </Link>
