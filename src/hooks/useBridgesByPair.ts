@@ -3,6 +3,7 @@ import type { QueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
 
 interface UseBridgesByPairParams {
   otherUserId: string
@@ -35,7 +36,7 @@ export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBr
   const userId = user?.id ?? null
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['bridges-pair', userId, otherUserId],
+    queryKey: queryKeys.bridgesPair(userId, otherUserId),
     queryFn: () => fetchBridgesByPair(userId!, otherUserId),
     enabled: !authLoading && userId !== null && Boolean(otherUserId),
     staleTime: Infinity,
@@ -50,8 +51,8 @@ export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBr
 
 export function invalidateBridgesByPairCache(userId: string, queryClient: QueryClient, otherUserId?: string): void {
   if (otherUserId) {
-    void queryClient.invalidateQueries({ queryKey: ['bridges-pair', userId, otherUserId] })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.bridgesPair(userId, otherUserId) })
     return
   }
-  void queryClient.invalidateQueries({ queryKey: ['bridges-pair', userId] })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.bridgesPairPrefix(userId) })
 }

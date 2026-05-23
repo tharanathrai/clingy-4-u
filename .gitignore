@@ -26,3 +26,7 @@ dist-ssr
 WEEK*.md
 ios
 android
+test-results/
+playwright-report/
+blob-report/
+coverage/

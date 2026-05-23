@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface GumPiece {
   id: string
@@ -66,38 +68,26 @@ export function useGumPieces(): UseGumPiecesResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
+  const qk = queryKeys.gumPieces(userId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['gum-pieces', userId],
+    queryKey: qk,
     queryFn: () => fetchGumPieces(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: Infinity,
   })
 
-  // Real-time subscription — update cache directly on any change
   useEffect(() => {
-    if (!userId) {
-      return
-    }
-
-    const channel = supabase
-      .channel(`gum-pieces-rt-${userId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'gum_pieces',
-        },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
+    if (!userId) return
+    return subscribePostgresChannel(`gum-pieces-rt-${userId}`, [
+      {
+        event: '*',
+        table: 'gum_pieces',
+        callback: () => { void queryClient.invalidateQueries({ queryKey: qk }) },
+      },
+    ])
+  // qk is derived from userId — including it would rebuild the array every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, userId])
 
   return {
@@ -105,7 +95,7 @@ export function useGumPieces(): UseGumPiecesResult {
     loading: authLoading || isLoading,
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
+      await queryClient.invalidateQueries({ queryKey: qk })
     },
   }
 }

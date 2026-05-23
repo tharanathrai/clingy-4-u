@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface ConfirmationSession {
   id: string
@@ -55,10 +57,10 @@ export function useConfirmationSession({
     onBridgeFormedRef.current = onBridgeFormed
   }, [onBridgeFormed])
 
-  const queryKey = ['confirmation-session', gumPieceId]
+  const qk = queryKeys.confirmationSession(gumPieceId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey,
+    queryKey: qk,
     queryFn: () => fetchConfirmationSession(gumPieceId!),
     enabled: Boolean(gumPieceId),
     staleTime: 0,
@@ -81,60 +83,42 @@ export function useConfirmationSession({
     handleSessionData(data ?? null)
   }, [data, handleSessionData])
 
-  // Real-time: update cache directly on INSERT/UPDATE/DELETE
   useEffect(() => {
     if (!gumPieceId) return
-
-    const channel = supabase
-      .channel(`confirmation-session-rt-${gumPieceId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'confirmation_sessions',
-          filter: `gum_piece_id=eq.${gumPieceId}`,
-        },
-        (payload) => {
+    const filter = `gum_piece_id=eq.${gumPieceId}`
+    return subscribePostgresChannel(`confirmation-session-rt-${gumPieceId}`, [
+      {
+        event: 'INSERT',
+        table: 'confirmation_sessions',
+        filter,
+        callback: (payload) => {
           const session = payload.new as ConfirmationSession
           hadSessionRef.current = true
-          queryClient.setQueryData<ConfirmationSession | null>(queryKey, session)
+          queryClient.setQueryData<ConfirmationSession | null>(qk, session)
         },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'confirmation_sessions',
-          filter: `gum_piece_id=eq.${gumPieceId}`,
-        },
-        (payload) => {
+      },
+      {
+        event: 'UPDATE',
+        table: 'confirmation_sessions',
+        filter,
+        callback: (payload) => {
           const session = payload.new as ConfirmationSession
           hadSessionRef.current = true
-          queryClient.setQueryData<ConfirmationSession | null>(queryKey, session)
+          queryClient.setQueryData<ConfirmationSession | null>(qk, session)
         },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'confirmation_sessions',
-          filter: `gum_piece_id=eq.${gumPieceId}`,
-        },
-        () => {
-          queryClient.setQueryData<ConfirmationSession | null>(queryKey, null)
+      },
+      {
+        event: 'DELETE',
+        table: 'confirmation_sessions',
+        filter,
+        callback: () => {
+          queryClient.setQueryData<ConfirmationSession | null>(qk, null)
           hadSessionRef.current = false
           onBridgeFormedRef.current?.()
         },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gumPieceId, queryClient])
 
   return {

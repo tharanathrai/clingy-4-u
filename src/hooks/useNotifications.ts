@@ -2,6 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export type NotificationType =
   | 'invite_received'
@@ -61,9 +63,10 @@ export function useNotifications(): UseNotificationsResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
+  const qk = queryKeys.notifications(userId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['notifications', userId],
+    queryKey: qk,
     queryFn: () => fetchNotifications(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: 30 * 1000,
@@ -71,47 +74,32 @@ export function useNotifications(): UseNotificationsResult {
 
   // Real-time: INSERT — enrich and prepend; UPDATE — patch in place
   useEffect(() => {
-    if (!userId) {
-      return
-    }
-
-    const channel = supabase
-      .channel(`notifications-rt-${userId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
+    if (!userId) return
+    return subscribePostgresChannel(`notifications-rt-${userId}`, [
+      {
+        event: 'INSERT',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        callback: (payload) => {
           const inserted = payload.new as Notification
-          // post_reaction not shown in UI
-          if (inserted.type === 'post_reaction') {
-            return
-          }
+          if (inserted.type === 'post_reaction') return
           void (async () => {
             const [enriched] = await enrichNotifications(userId, [inserted])
             queryClient.setQueryData<Notification[]>(
-              ['notifications', userId],
+              qk,
               (current) => [enriched ?? inserted, ...(current ?? [])],
             )
           })()
         },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
+      },
+      {
+        event: 'UPDATE',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        callback: (payload) => {
           const updated = payload.new as Notification
           queryClient.setQueryData<Notification[]>(
-            ['notifications', userId],
+            qk,
             (current) =>
               (current ?? []).map((notification) =>
                 notification.id === updated.id
@@ -125,12 +113,9 @@ export function useNotifications(): UseNotificationsResult {
               ),
           )
         },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
+      },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, userId])
 
   const markAsReadMutation = useMutation({
@@ -142,10 +127,10 @@ export function useNotifications(): UseNotificationsResult {
         .eq('user_id', userId!)
     },
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
-      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      await queryClient.cancelQueries({ queryKey: qk })
+      const previous = queryClient.getQueryData<Notification[]>(qk)
       queryClient.setQueryData<Notification[]>(
-        ['notifications', userId],
+        qk,
         (current) =>
           (current ?? []).map((n) => (n.id === id ? { ...n, read: true } : n)),
       )
@@ -153,7 +138,7 @@ export function useNotifications(): UseNotificationsResult {
     },
     onError: (_err, _id, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['notifications', userId], context.previous)
+        queryClient.setQueryData(qk, context.previous)
       }
     },
   })
@@ -167,17 +152,17 @@ export function useNotifications(): UseNotificationsResult {
         .eq('read', false)
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
-      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      await queryClient.cancelQueries({ queryKey: qk })
+      const previous = queryClient.getQueryData<Notification[]>(qk)
       queryClient.setQueryData<Notification[]>(
-        ['notifications', userId],
+        qk,
         (current) => (current ?? []).map((n) => ({ ...n, read: true })),
       )
       return { previous }
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['notifications', userId], context.previous)
+        queryClient.setQueryData(qk, context.previous)
       }
     },
   })
@@ -191,17 +176,17 @@ export function useNotifications(): UseNotificationsResult {
         .eq('user_id', userId!)
     },
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications', userId] })
-      const previous = queryClient.getQueryData<Notification[]>(['notifications', userId])
+      await queryClient.cancelQueries({ queryKey: qk })
+      const previous = queryClient.getQueryData<Notification[]>(qk)
       queryClient.setQueryData<Notification[]>(
-        ['notifications', userId],
+        qk,
         (current) => (current ?? []).filter((n) => n.id !== id),
       )
       return { previous }
     },
     onError: (_err, _id, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['notifications', userId], context.previous)
+        queryClient.setQueryData(qk, context.previous)
       }
     },
   })

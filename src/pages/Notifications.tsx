@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
-import { invalidateNetworkGraphCache } from '../hooks/useNetworkGraph.ts'
+import { invalidateConnectionFlow } from '../lib/invalidate.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
@@ -213,7 +213,7 @@ export default function Notifications() {
           }
 
           void dismissNotification(activeRequest.notificationId)
-          invalidateNetworkGraphCache(user?.id, queryClient)
+          invalidateConnectionFlow(user?.id, queryClient)
           setToast('Connection accepted.')
           if (otherUserId) {
             void navigate('/network', { state: { selectUserId: otherUserId } })

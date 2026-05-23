@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Camera } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth.ts'
+import { markProfileReady } from '../hooks/useProfileReady.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user, loading } = useAuth()
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -123,6 +126,9 @@ export default function Welcome() {
         throw insertError
       }
 
+      // Immediately update the React Query cache so AuthGuard redirects
+      // without waiting for a network re-check
+      markProfileReady(user.id, queryClient)
       navigate('/add', { replace: true })
     } catch {
       setErrorMessage('Something went wrong - try again.')

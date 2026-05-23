@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, Connection, User } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface NetworkGraphNode {
   id: string
@@ -103,39 +105,23 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
+  const qk = queryKeys.networkGraph(userId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['network-graph', userId],
+    queryKey: qk,
     queryFn: () => fetchNetworkGraph(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: Infinity,
   })
 
-  // Real-time: connections and bridges changes → invalidate
   useEffect(() => {
     if (!userId) return
-
-    const channel = supabase
-      .channel(`network-graph-rt-${userId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'connections' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['network-graph', userId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'bridges' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['network-graph', userId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
+    const invalidate = () => { void queryClient.invalidateQueries({ queryKey: qk }) }
+    return subscribePostgresChannel(`network-graph-rt-${userId}`, [
+      { event: '*', table: 'connections', callback: invalidate },
+      { event: '*', table: 'bridges', callback: invalidate },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, userId])
 
   const connections = data?.connections ?? []
@@ -193,15 +179,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     loading: authLoading || isLoading,
     error: error instanceof Error ? error.message : null,
     refetch: () => {
-      void queryClient.invalidateQueries({ queryKey: ['network-graph', userId] })
+      void queryClient.invalidateQueries({ queryKey: qk })
     },
   }
-}
-
-export function invalidateNetworkGraphCache(
-  userId: string | null | undefined,
-  queryClient?: ReturnType<typeof useQueryClient>,
-): void {
-  if (!userId || !queryClient) return
-  void queryClient.invalidateQueries({ queryKey: ['network-graph', userId] })
 }

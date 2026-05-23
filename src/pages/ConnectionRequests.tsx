@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth.ts'
-import { invalidateNetworkGraphCache } from '../hooks/useNetworkGraph.ts'
+import { invalidateConnectionFlow } from '../lib/invalidate.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
@@ -119,7 +119,7 @@ export default function ConnectionRequests() {
 
     setRequests((current) => current.filter((item) => item.id !== request.id))
     if (action === 'accept') {
-      invalidateNetworkGraphCache(userId, queryClient)
+      invalidateConnectionFlow(userId, queryClient)
     }
     setBusyRequestId(null)
   }

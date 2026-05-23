@@ -17,6 +17,8 @@ Clingy 4 U (working title: Sticky Bridges) is a mobile-first PWA. People make pl
 - `npm run build` — production build  
 - `npm run typecheck` — TypeScript check (run after every set of changes)
 - `npm run lint` — ESLint
+- `npm run test` — Vitest unit tests (37+ tests, must all pass)
+- `npm run quality` — **full gate: typecheck + lint + test + build** — run before marking any work done
 
 ## Key conventions
 
@@ -75,6 +77,29 @@ export const GUM_SHAPES = [
   'gum-blob',
 ] as const;
 ```
+
+## Realtime subscriptions
+Use `subscribePostgresChannel()` from `src/lib/realtime.ts` for every Supabase postgres_changes subscription.
+Never call `supabase.channel()` directly. This prevents the "cannot add callbacks after subscribe()" bug.
+
+## Query keys
+Use `queryKeys.*` from `src/lib/queryKeys.ts` for every React Query key.
+Never inline `['key', userId]` arrays — use the registry.
+
+## Cross-flow cache invalidation
+Use helpers from `src/lib/invalidate.ts` for multi-query invalidations (e.g. accepting a connection).
+
+## Auth / onboarding
+Call `markProfileReady(userId, queryClient)` from `src/hooks/useProfileReady.ts` after successful onboarding.
+Never mutate the `profileReadyCache` Map (it no longer exists).
+
+## Quality gate
+`npm run quality` must pass before marking any work done.
+DEVDOC.md flows must be marked `Verified (automated)` or `Verified (manual)` — never just "Working" without evidence.
+Add a row to `docs/regression-matrix.md` for every session.
+
+## Session workflow
+Follow `docs/AGENT_SESSION.md` for the role-based session checklist.
 
 ## Hard rules
 - No features outside PRD.md — add ideas to BACKLOG.md

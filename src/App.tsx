@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/layout/AuthGuard.tsx'
+import { RouteErrorBoundary } from './components/layout/RouteErrorBoundary.tsx'
 
 const LandingPage = lazy(() => import('./pages/Landing.tsx'))
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallback.tsx'))
@@ -77,6 +78,7 @@ function App() {
     <div className="app-device-frame">
       <div className="app-device-screen">
         <div className="grain-overlay" aria-hidden="true" />
+        <RouteErrorBoundary>
         <Suspense
           fallback={
             <div className="flex min-h-screen items-center justify-center bg-bg">
@@ -213,6 +215,7 @@ function App() {
             </Routes>
           </div>
         </Suspense>
+        </RouteErrorBoundary>
       </div>
     </div>
   )

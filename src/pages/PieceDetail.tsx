@@ -7,6 +7,8 @@ import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 interface PieceDetailRow {
   id: string
@@ -70,7 +72,7 @@ export default function PieceDetail() {
   const [toast, setToast] = useState<string | null>(null)
   const previousStatusRef = useRef<PieceDetailRow['status'] | null>(null)
 
-  const queryKey = ['piece-detail', id, userId]
+  const queryKey = queryKeys.pieceDetail(id, userId)
 
   const { data: pieceData, isLoading, error } = useQuery({
     queryKey,
@@ -79,30 +81,17 @@ export default function PieceDetail() {
     staleTime: 0,
   })
 
-  // Real-time: invalidate on piece changes
   useEffect(() => {
     if (!id || !userId) return
-
-    const channel = supabase
-      .channel(`piece-detail-rt-${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'gum_pieces',
-          filter: `id=eq.${id}`,
-        },
-        () => {
-          void queryClient.invalidateQueries({ queryKey })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return subscribePostgresChannel(`piece-detail-rt-${id}`, [
+      {
+        event: '*',
+        table: 'gum_pieces',
+        filter: `id=eq.${id}`,
+        callback: () => { void queryClient.invalidateQueries({ queryKey }) },
+      },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, queryClient, userId])
 
   useEffect(() => {

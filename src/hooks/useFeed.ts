@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Bridge, Comment, Post, Reaction, User } from '../types/index.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface FeedPost extends Post {
   author: User
@@ -177,48 +179,24 @@ export function useFeed(): UseFeedResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
+  const qk = queryKeys.feed(userId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['feed', userId],
+    queryKey: qk,
     queryFn: () => fetchFeed(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: 60 * 1000,
   })
 
-  // Real-time: invalidate on posts/reactions/comments changes
   useEffect(() => {
-    if (!userId) {
-      return
-    }
-
-    const channel = supabase
-      .channel(`feed-rt-${userId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['feed', userId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reactions' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['feed', userId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comments' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['feed', userId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
+    if (!userId) return
+    const invalidate = () => { void queryClient.invalidateQueries({ queryKey: qk }) }
+    return subscribePostgresChannel(`feed-rt-${userId}`, [
+      { event: '*', table: 'posts', callback: invalidate },
+      { event: '*', table: 'reactions', callback: invalidate },
+      { event: '*', table: 'comments', callback: invalidate },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, userId])
 
   return {
@@ -226,7 +204,7 @@ export function useFeed(): UseFeedResult {
     loading: authLoading || isLoading,
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['feed', userId] })
+      await queryClient.invalidateQueries({ queryKey: qk })
     },
   }
 }

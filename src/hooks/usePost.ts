@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Bridge, Comment, Post, Reaction, User } from '../types/index.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface PostWithDetails extends Post {
   author: User
@@ -126,48 +128,24 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
+  const qk = queryKeys.post(postId, userId)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['post', postId, userId],
+    queryKey: qk,
     queryFn: () => fetchPost(postId, userId!),
     enabled: !authLoading && userId !== null && Boolean(postId),
     staleTime: 30 * 1000,
   })
 
-  // Real-time: invalidate on post/reaction/comment changes
   useEffect(() => {
-    if (!userId || !postId) {
-      return
-    }
-
-    const channel = supabase
-      .channel(`post-rt-${postId}-${userId}-${crypto.randomUUID()}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'posts', filter: `id=eq.${postId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['post', postId, userId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'reactions', filter: `post_id=eq.${postId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['post', postId, userId] })
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'comments', filter: `post_id=eq.${postId}` },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['post', postId, userId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
+    if (!userId || !postId) return
+    const invalidate = () => { void queryClient.invalidateQueries({ queryKey: qk }) }
+    return subscribePostgresChannel(`post-rt-${postId}-${userId}`, [
+      { event: '*', table: 'posts', filter: `id=eq.${postId}`, callback: invalidate },
+      { event: '*', table: 'reactions', filter: `post_id=eq.${postId}`, callback: invalidate },
+      { event: '*', table: 'comments', filter: `post_id=eq.${postId}`, callback: invalidate },
+    ])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, queryClient, userId])
 
   return {
@@ -178,7 +156,7 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
     loading: authLoading || isLoading,
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['post', postId, userId] })
+      await queryClient.invalidateQueries({ queryKey: qk })
     },
   }
 }

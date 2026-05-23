@@ -1,22 +1,28 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.2 (Post-Week-7 Polish Pass)
-**Last updated:** After full React Query migration and WEEK7 checklist pass
+**Version:** 0.3 (Production Quality System)
+**Last updated:** 2026-05-22 — React Query migration + Production Quality System (shared libs, tests, CI)
+
+### Status vocabulary
+- `Verified (automated)` — covered by a passing unit or E2E test in this repo
+- `Verified (manual)` — tested manually in the last 7 days; entry in `docs/regression-matrix.md`
+- `Broken` — known regression, must fix before ship
+- `Not built` — spec exists but no code
 
 ---
 
 ## Flow status
 
 ### Auth
-**Status: Working**
+**Status: Verified (automated)** — E2E smoke test: unauthenticated access redirects to `/`
 - What works: Google OAuth via Supabase, session persistence, auth state via singleton `useAuth` (module-level store + listeners), OAuth callback routing to `/welcome` vs `/home`, stored return path from `sessionStorage` for deep link flows.
 - Components / hooks: `src/hooks/useAuth.ts`, `src/pages/Landing.tsx`, `src/pages/AuthCallback.tsx`
 
 ---
 
 ### Onboarding
-**Status: Working**
-- What works: 3-step wizard (display name → username → avatar), real-time username availability check, avatar upload to Supabase Storage `avatars` bucket, profile row creation in `public.users`, redirect to `/add` after completion.
-- Components / hooks: `src/pages/Welcome.tsx`
+**Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `markProfileReady` cache invalidation tested
+- What works: 3-step wizard (display name → username → avatar), real-time username availability check, avatar upload to Supabase Storage `avatars` bucket, profile row creation in `public.users`, redirect to `/add` after completion. `profileReadyCache` Map replaced with `useProfileReady` React Query hook — onboarding loop is permanently fixed.
+- Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`
 
 ---
 
@@ -28,15 +34,15 @@
 ---
 
 ### Connection Requests
-**Status: Working**
-- What works: Pending connection list with skeleton loading; accept/reject via `respond-connection` edge function; `ConnectionRequestSheet` used from notifications; `invalidateNetworkGraphCache` called on accept to update React Query cache; toast feedback; real-time on connections table in network page.
-- Components / hooks: `src/pages/ConnectionRequests.tsx`, `src/components/connections/ConnectionRequestSheet.tsx`
+**Status: Verified (manual)** — last tested post React Query migration
+- What works: Pending connection list with skeleton loading; accept/reject via `respond-connection` edge function; `ConnectionRequestSheet` used from notifications; `invalidateConnectionFlow` called on accept to update React Query cache for network graph + pending counter; toast feedback; real-time on connections table via `usePendingRequestCount` hook.
+- Components / hooks: `src/pages/ConnectionRequests.tsx`, `src/components/connections/ConnectionRequestSheet.tsx`, `src/hooks/usePendingRequestCount.ts`, `src/lib/invalidate.ts`
 
 ---
 
 ### Gum Piece Creation
-**Status: Working**
-- What works: Recipient selector with 5/5 pair-slot badges; title input with 60-char limit; live category preview via client-side `categorizeTitle`; submit via `useMutation` → `create-gum-piece` edge function; slot limit errors shown as toasts; success invalidates `['gum-pieces', userId]` React Query cache; navigation to `/home`; skeleton loading rows for connections list.
+**Status: Verified (automated)** — `categorizeTitle` 11/11 unit tests ✓; E2E smoke: onboarded user lands on `/add`
+- What works: Recipient selector with 5/5 pair-slot badges; title input with 60-char limit; live category preview via client-side `categorizeTitle`; submit via `useMutation` → `create-gum-piece` edge function; slot limit errors shown as toasts; success invalidates gum pieces cache via `queryKeys.gumPieces`; navigation to `/home`; skeleton loading rows for connections list.
 - Components / hooks: `src/pages/PieceNew.tsx`, `src/lib/categorizeTitle.ts`, `src/components/gum/CategoryPicker.tsx`
 
 ---
@@ -49,62 +55,62 @@
 ---
 
 ### Invite Accept / Decline
-**Status: Working**
-- What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions (accept/pass for recipient, cancel for creator, mark-as-done + turn-down for active); respond via `useMutation`; turn-down confirmation sheet; real-time subscription invalidates query; expired invite shows "This invite has expired." on accept; skeleton loading screen.
+**Status: Verified (manual)** — last tested post React Query migration; realtime now via `subscribePostgresChannel`
+- What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions (accept/pass for recipient, cancel for creator, mark-as-done + turn-down for active); respond via `useMutation`; turn-down confirmation sheet; real-time subscription invalidates query via `subscribePostgresChannel`; expired invite shows "This invite has expired." on accept; skeleton loading screen.
 - Components / hooks: `src/pages/PieceDetail.tsx`
 
 ---
 
 ### Confirmation Ceremony
-**Status: Working**
-- What works: `start-confirmation` creates OTP session; `submit-confirmation` validates and forms bridge on both confirms; real-time subscription via `useConfirmationSession` with direct React Query `setQueryData` updates; OTP displayed with countdown timer; both-user confirm state tracked visually; expiry handling with "Try again" retry; bridge-formed detection via DELETE event; `UnwrapCeremony` animation with reduced-motion support; skeleton loading screen.
+**Status: Verified (manual)** — last tested post React Query migration; realtime via `subscribePostgresChannel`
+- What works: `start-confirmation` creates OTP session; `submit-confirmation` validates and forms bridge on both confirms; real-time subscription via `useConfirmationSession` with direct React Query `setQueryData` updates via `subscribePostgresChannel`; OTP displayed with countdown timer; both-user confirm state tracked visually; expiry handling with "Try again" retry; bridge-formed detection via DELETE event; `UnwrapCeremony` animation with reduced-motion support; skeleton loading screen.
 - Components / hooks: `src/pages/PieceConfirm.tsx`, `src/hooks/useConfirmationSession.ts`, `src/components/confirmation/OTPDisplay.tsx`, `src/components/confirmation/UnwrapCeremony.tsx`
 
 ---
 
 ### Bridge Formation
-**Status: Working**
+**Status: Verified (manual)** — server-side only; no client code to test directly
 - Purely server-side in `submit-confirmation`. Bridge row inserted, notifications sent for both users, graveyard skipped for confirmed pieces, `draft_post_id` returned for post opt-in.
 
 ---
 
 ### Network Graph
-**Status: Working**
-- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; edges per bridge; avatar images cached; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button; PNG export; error state with retry; empty state per DESIGN.md; pending requests badge via React Query; real-time invalidation on connections and bridges changes; lazy-loaded chunk (not in main bundle).
-- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/hooks/useNetworkGraph.ts`
+**Status: Verified (automated)** — E2E smoke: `/network` loads without subscribe() console errors; `usePendingRequestCount` hook covers pending badge with realtime
+- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; edges per bridge; avatar images cached; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button; PNG export; error state with retry; empty state per DESIGN.md; pending requests badge via `usePendingRequestCount` hook (moved out of page); real-time invalidation on connections and bridges changes via `subscribePostgresChannel`; lazy-loaded chunk.
+- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
 
 ### Profile (Own + Others)
-**Status: Working**
-- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard link, edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, avatar upload; skeleton screen for loading state.
+**Status: Verified (manual)** — last tested post React Query migration; duplicate settings link removed
+- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard link, edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, avatar upload; skeleton screen for loading state. Duplicate "settings →" link removed.
 - Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`
 
 ---
 
 ### Feed
-**Status: Working**
-- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; real-time via React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
+**Status: Verified (manual)** — last tested post React Query migration; realtime via `subscribePostgresChannel`
+- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
 - Components / hooks: `src/pages/Feed.tsx`, `src/hooks/useFeed.ts`, `src/hooks/usePost.ts`, `src/components/feed/FeedPostCard.tsx`, `src/components/feed/PostDetailSheet.tsx`
 
 ---
 
 ### Notifications
-**Status: Working**
-- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter (fixed).
+**Status: Verified (automated)** — E2E smoke: `/notifications` loads without subscribe() errors; `notifications.test.ts` 5/5 ✓
+- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
 - Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/components/notifications/NotificationItem.tsx`
 
 ---
 
 ### Settings
-**Status: Working**
+**Status: Verified (manual)** — last tested post skeleton loading addition
 - What works: Account section (avatar, name, email, edit profile, sign out); notification toggles (localStorage only per spec); about section with version; skeleton loading screen.
 - Components / hooks: `src/pages/Settings.tsx`
 
 ---
 
 ### Graveyard
-**Status: Working**
+**Status: Verified (manual)** — last tested post skeleton loading addition
 - What works: List of expired-after-1-year gum pieces; desaturated styling; humanized dates; empty state with correct DESIGN.md copy; pagination; skeleton loading (3 card skeletons).
 - Components / hooks: `src/pages/Graveyard.tsx`
 
@@ -115,11 +121,14 @@
 ### 1. `useAuth` is a module-level singleton, not React Query
 Auth state is stored in a module-level `authStore` with listeners. This is intentional — auth is a singleton concern that doesn't have a sensible React Query key until the user is known.
 
-### 2. All custom hooks now use React Query
-All 9 custom data hooks (`useGumPieces`, `useNotifications`, `useFeed`, `usePost`, `useProfile`, `useBridges`, `useBridgesByPair`, `useNetworkGraph`, `useConfirmationSession`) use `useQuery` with appropriate `queryKey` and `staleTime`. Mutations use `useMutation` with optimistic updates (`onMutate`), rollback (`onError`), and cache invalidation (`onSettled` or `onSuccess`).
+### 2. All custom hooks use React Query + centralised query key registry
+All 10 custom data hooks (`useGumPieces`, `useNotifications`, `useFeed`, `usePost`, `useProfile`, `useBridges`, `useBridgesByPair`, `useNetworkGraph`, `useConfirmationSession`, `usePendingRequestCount`) use `useQuery` with keys from `src/lib/queryKeys.ts`. Mutations use `useMutation` with optimistic updates (`onMutate`), rollback (`onError`), and cache invalidation (`onSettled` or `onSuccess`). Cross-flow invalidations go through `src/lib/invalidate.ts`.
 
-### 3. Real-time subscriptions update React Query cache directly
-- `useGumPieces`, `useFeed`, `useNetworkGraph`, `usePost`: Supabase channels call `queryClient.invalidateQueries` on any change
+### 3. All realtime subscriptions via subscribePostgresChannel
+Every `postgres_changes` subscription uses `subscribePostgresChannel()` from `src/lib/realtime.ts`. This guarantees:
+- Unique channel name per effect (UUID suffix) → prevents StrictMode double-subscribe error
+- All `.on()` bindings registered before `.subscribe()` is called
+- Cleanup always calls `supabase.removeChannel`
 - `useNotifications`: INSERT patches cache via `setQueryData` (prepend enriched item); UPDATE patches in-place
 - `useConfirmationSession`: INSERT/UPDATE call `setQueryData` directly; DELETE fires `onBridgeFormed` callback + clears cache
 

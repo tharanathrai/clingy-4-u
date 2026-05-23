@@ -1,37 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
-import { useAuth } from '../hooks/useAuth.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
-import { supabase } from '../lib/supabase.ts'
+import { usePendingRequestCount } from '../hooks/usePendingRequestCount.ts'
 import type { Bridge, User } from '../types/index.ts'
 
 const networkUserCache = new Map<string, User>()
 
-async function fetchPendingRequestCount(userId: string): Promise<number> {
-  const { count } = await supabase
-    .from('connections')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
-    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-    .neq('requested_by', userId)
-  return count ?? 0
-}
-
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
-  const userId = user?.id ?? null
-  const queryClient = useQueryClient()
   const { usersById } = useNetworkGraph()
+  const pendingRequestCount = usePendingRequestCount()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null)
@@ -44,32 +30,6 @@ export default function Network() {
     error: null as string | null,
   })
 
-  const { data: pendingRequestCount = 0 } = useQuery({
-    queryKey: ['pending-request-count', userId],
-    queryFn: () => fetchPendingRequestCount(userId!),
-    enabled: userId !== null,
-    staleTime: 60 * 1000,
-  })
-
-  // Real-time update for pending count
-  useEffect(() => {
-    if (!userId) return
-
-    const channel = supabase
-      .channel(`network-pending-requests-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'connections' },
-        () => {
-          void queryClient.invalidateQueries({ queryKey: ['pending-request-count', userId] })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      void supabase.removeChannel(channel)
-    }
-  }, [queryClient, userId])
 
   useEffect(() => {
     const state = location.state as { selectUserId?: string } | null
