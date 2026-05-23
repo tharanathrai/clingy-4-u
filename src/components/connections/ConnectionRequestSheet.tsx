@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useAuth } from '../../hooks/useAuth.ts'
 import { supabase } from '../../lib/supabase.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
 
@@ -33,12 +34,19 @@ export function ConnectionRequestSheet({
   onClose,
   onResolved,
 }: ConnectionRequestSheetProps) {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [request, setRequest] = useState<PendingConnection | null>(null)
   const [requester, setRequester] = useState<RequesterProfile | null>(null)
   const [busyAction, setBusyAction] = useState<'accept' | 'reject' | null>(null)
   const [reloadNonce, setReloadNonce] = useState(0)
+  const hasResolvedRef = useRef(false)
+
+  useEffect(() => {
+    hasResolvedRef.current = false
+  }, [connectionId])
 
   useEffect(() => {
     if (!connectionId) {
@@ -51,6 +59,24 @@ export function ConnectionRequestSheet({
     }
   }, [connectionId])
 
+  const resolveAccept = useCallback(
+    (connection: PendingConnection) => {
+      if (!userId || hasResolvedRef.current) {
+        return
+      }
+
+      hasResolvedRef.current = true
+      const otherUserId =
+        connection.user_a_id === userId ? connection.user_b_id : connection.user_a_id
+      onResolved({
+        action: 'accept',
+        connectionId: connection.id,
+        otherUserId,
+      })
+    },
+    [onResolved, userId],
+  )
+
   useEffect(() => {
     if (!connectionId) {
       setLoading(false)
@@ -62,6 +88,10 @@ export function ConnectionRequestSheet({
 
     let cancelled = false
     const load = async () => {
+      if (hasResolvedRef.current) {
+        return
+      }
+
       setLoading(true)
       setError(null)
 
@@ -71,7 +101,7 @@ export function ConnectionRequestSheet({
         .eq('id', connectionId)
         .maybeSingle<PendingConnection>()
 
-      if (cancelled) {
+      if (cancelled || hasResolvedRef.current) {
         return
       }
 
@@ -81,7 +111,19 @@ export function ConnectionRequestSheet({
         return
       }
 
-      if (!connectionRow || connectionRow.status !== 'pending') {
+      if (!connectionRow) {
+        setRequest(null)
+        setRequester(null)
+        setLoading(false)
+        return
+      }
+
+      if (connectionRow.status === 'active') {
+        resolveAccept(connectionRow)
+        return
+      }
+
+      if (connectionRow.status !== 'pending') {
         setRequest(null)
         setRequester(null)
         setLoading(false)
@@ -94,7 +136,7 @@ export function ConnectionRequestSheet({
         .eq('id', connectionRow.requested_by)
         .maybeSingle<RequesterProfile>()
 
-      if (cancelled) {
+      if (cancelled || hasResolvedRef.current) {
         return
       }
 
@@ -113,14 +155,35 @@ export function ConnectionRequestSheet({
     return () => {
       cancelled = true
     }
-  }, [connectionId, reloadNonce])
+  }, [connectionId, reloadNonce, resolveAccept, userId])
 
   const initials = useMemo(() => {
     return requester?.display_name.slice(0, 1).toUpperCase() ?? '?'
   }, [requester])
 
+  const tryRecoverAcceptedConnection = async (
+    action: 'accept' | 'reject',
+  ): Promise<boolean> => {
+    if (!connectionId || action !== 'accept' || !userId) {
+      return false
+    }
+
+    const { data: connectionRow } = await supabase
+      .from('connections')
+      .select('id, user_a_id, user_b_id, status')
+      .eq('id', connectionId)
+      .maybeSingle<PendingConnection>()
+
+    if (connectionRow?.status === 'active') {
+      resolveAccept(connectionRow)
+      return true
+    }
+
+    return false
+  }
+
   const handleRespond = async (action: 'accept' | 'reject') => {
-    if (!connectionId) {
+    if (!connectionId || hasResolvedRef.current) {
       return
     }
 
@@ -139,13 +202,18 @@ export function ConnectionRequestSheet({
       },
     })
 
-    setBusyAction(null)
-
     if (invokeError || !data?.success) {
+      const recovered = await tryRecoverAcceptedConnection(action)
+      setBusyAction(null)
+      if (recovered) {
+        return
+      }
       setError('Something went wrong - try again.')
       return
     }
 
+    hasResolvedRef.current = true
+    setBusyAction(null)
     onResolved({
       action: data.action,
       connectionId: data.connection_id,
@@ -208,11 +276,15 @@ export function ConnectionRequestSheet({
             <button
               type="button"
               className="mt-3 rounded-full bg-surface px-4 py-2 text-xs text-text-2"
-              onClick={() =>
-                onResolved({
-                  action: 'invalid',
-                  connectionId,
-                })}
+              onClick={() => {
+                if (!hasResolvedRef.current) {
+                  hasResolvedRef.current = true
+                  onResolved({
+                    action: 'invalid',
+                    connectionId,
+                  })
+                }
+              }}
             >
               Close
             </button>

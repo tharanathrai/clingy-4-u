@@ -27,6 +27,7 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export async function validateQrTokenRequest(params: {
   token: string
   accessToken: string
+  preview?: boolean
 }): Promise<{ success: true; user: ValidateQrUser } | { success: false; error: ValidateQrErrorResponse }> {
   const response = await fetch(`${functionsBaseUrl}/validate-qr-token`, {
     method: 'POST',
@@ -35,7 +36,10 @@ export async function validateQrTokenRequest(params: {
       apikey: publishableKey,
       Authorization: `Bearer ${params.accessToken}`,
     },
-    body: JSON.stringify({ token: params.token }),
+    body: JSON.stringify({
+      token: params.token,
+      preview: params.preview === true,
+    }),
   })
 
   const responseText = await response.text()

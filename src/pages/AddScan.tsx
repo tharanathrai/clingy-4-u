@@ -28,12 +28,16 @@ export default function AddScan() {
   const scannerRef = useRef<Html5Qrcode | null>(null)
   const [scanMode, setScanMode] = useState<ScanMode>('camera')
   const [scannedToken, setScannedToken] = useState<string | null>(null)
+  const [validatedUser, setValidatedUser] = useState<ValidateQrUser | null>(null)
+  const [validating, setValidating] = useState(false)
   const [scanError, setScanError] = useState<string | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [successUser, setSuccessUser] = useState<ValidateQrUser | null>(null)
   const [scanIssue, setScanIssue] = useState<ScanIssue | null>(null)
   const [imageFileName, setImageFileName] = useState<string | null>(null)
+
+  const showScanInput = !scannedToken && !validating && !validatedUser && !successUser
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current
@@ -53,6 +57,61 @@ export default function AddScan() {
     scannerRef.current = null
   }, [])
 
+  const clearScanState = useCallback(() => {
+    setScannedToken(null)
+    setValidatedUser(null)
+    setScanError(null)
+    setScanIssue(null)
+    setImageFileName(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }, [])
+
+  const validateScannedToken = useCallback(async (token: string) => {
+    setValidating(true)
+    setScanIssue(null)
+    setScanError(null)
+    setValidatedUser(null)
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    const accessToken = sessionData.session?.access_token
+
+    if (sessionError || !accessToken) {
+      setScanIssue({
+        message: 'No active session. Please sign in again.',
+        type: 'generic',
+      })
+      setScannedToken(null)
+      setValidating(false)
+      return
+    }
+
+    try {
+      const result = await validateQrTokenRequest({
+        token,
+        accessToken,
+        preview: true,
+      })
+
+      if (!result.success) {
+        setScanIssue(toScanIssue(mapValidateQrIssue(result.error)))
+        setScannedToken(null)
+        setValidating(false)
+        return
+      }
+
+      setValidatedUser(result.user)
+    } catch {
+      setScanIssue({
+        message: 'Something went wrong — try again.',
+        type: 'network',
+      })
+    } finally {
+      setValidating(false)
+    }
+  }, [])
+
   const handleDecodedText = useCallback(
     (decodedText: string) => {
       const token = extractQrToken(decodedText)
@@ -65,12 +124,13 @@ export default function AddScan() {
       setScanIssue(null)
       setScannedToken(token)
       void stopScanner()
+      void validateScannedToken(token)
     },
-    [stopScanner],
+    [stopScanner, validateScannedToken],
   )
 
   useEffect(() => {
-    if (scanMode !== 'camera' || scannedToken || successUser) {
+    if (scanMode !== 'camera' || !showScanInput) {
       void stopScanner()
       return
     }
@@ -105,10 +165,10 @@ export default function AddScan() {
       cancelled = true
       void stopScanner()
     }
-  }, [handleDecodedText, scanMode, scannedToken, stopScanner, successUser])
+  }, [handleDecodedText, scanMode, showScanInput, stopScanner])
 
   const sendRequest = async () => {
-    if (!scannedToken) {
+    if (!scannedToken || !validatedUser) {
       return
     }
 
@@ -136,6 +196,9 @@ export default function AddScan() {
       if (!result.success) {
         const issue = mapValidateQrIssue(result.error)
         setScanIssue(toScanIssue(issue))
+        if (issue.type === 'expired' || issue.type === 'own' || issue.type === 'generic') {
+          clearScanState()
+        }
         setSubmitting(false)
         return
       }
@@ -152,15 +215,9 @@ export default function AddScan() {
   }
 
   const resetScanner = () => {
-    setScannedToken(null)
-    setScanError(null)
-    setScanIssue(null)
+    clearScanState()
     setSuccessUser(null)
-    setImageFileName(null)
     setCameraError(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
   }
 
   const handleModeChange = (mode: ScanMode) => {
@@ -169,14 +226,8 @@ export default function AddScan() {
     }
 
     setScanMode(mode)
-    setScannedToken(null)
-    setScanError(null)
-    setScanIssue(null)
-    setImageFileName(null)
+    clearScanState()
     setCameraError(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
   }
 
   const handleImageSelected = async (file: File | null) => {
@@ -186,8 +237,9 @@ export default function AddScan() {
 
     setScanError(null)
     setScanIssue(null)
-    setImageFileName(file.name)
+    setValidatedUser(null)
     setScannedToken(null)
+    setImageFileName(file.name)
 
     await stopScanner()
 
@@ -196,10 +248,22 @@ export default function AddScan() {
 
     try {
       const decodedText = await scanner.scanFile(file, false)
-      handleDecodedText(decodedText)
+      const token = extractQrToken(decodedText)
+      if (!token) {
+        setScanError('Unable to read token from this image.')
+        return
+      }
+
+      setScannedToken(token)
+      await validateScannedToken(token)
     } catch {
       setScanError('No QR code found in that image.')
     }
+  }
+
+  const handleDismissIssue = () => {
+    setScanIssue(null)
+    clearScanState()
   }
 
   return (
@@ -228,7 +292,8 @@ export default function AddScan() {
         <button
           type="button"
           onClick={() => handleModeChange('camera')}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+          disabled={validating || submitting}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 disabled:opacity-60 ${
             scanMode === 'camera'
               ? 'bg-accent text-white'
               : 'text-text-2 hover:text-text'
@@ -240,7 +305,8 @@ export default function AddScan() {
         <button
           type="button"
           onClick={() => handleModeChange('image')}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 ${
+          disabled={validating || submitting}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 disabled:opacity-60 ${
             scanMode === 'image'
               ? 'bg-accent text-white'
               : 'text-text-2 hover:text-text'
@@ -251,48 +317,64 @@ export default function AddScan() {
         </button>
       </div>
 
-      {scanMode === 'camera' ? (
+      {showScanInput && scanMode === 'camera' ? (
         <div className="qr-reader-container mt-6 rounded-lg border border-white/10 bg-surface p-4">
           <div id={QR_READER_ID} />
         </div>
-      ) : (
+      ) : null}
+
+      {showScanInput && scanMode === 'image' ? (
         <>
-        <section className="mt-6 rounded-lg border border-white/10 bg-surface p-6 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-accent">
-            <ImageUp size={24} strokeWidth={1.75} />
-          </div>
-          <p className="mt-4 text-sm text-text-2">
-            Choose a photo that includes their QR code.
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null
-              void handleImageSelected(file)
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="mt-5 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
-          >
-            Choose image
-          </button>
-          {imageFileName ? (
-            <p className="mt-3 truncate text-xs text-text-3">{imageFileName}</p>
-          ) : null}
-        </section>
+          <section className="mt-6 rounded-lg border border-white/10 bg-surface p-6 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-accent">
+              <ImageUp size={24} strokeWidth={1.75} />
+            </div>
+            <p className="mt-4 text-sm text-text-2">
+              Choose a photo that includes their QR code.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null
+                void handleImageSelected(file)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-5 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
+            >
+              Choose image
+            </button>
+            {imageFileName ? (
+              <p className="mt-3 truncate text-xs text-text-3">{imageFileName}</p>
+            ) : null}
+          </section>
           <div id={QR_READER_ID} className="hidden" aria-hidden="true" />
         </>
-      )}
+      ) : null}
+
+      {validating ? (
+        <section className="mt-6 rounded-lg border border-white/10 bg-surface p-6 text-center">
+          <p className="text-sm text-text-2">Checking code...</p>
+        </section>
+      ) : null}
+
+      {validatedUser && !successUser ? (
+        <section className="mt-6 rounded-lg border border-white/10 bg-surface p-6 text-center">
+          <p className="text-sm text-text-2">Connect with</p>
+          <p className="mt-2 text-lg text-text">{validatedUser.display_name}</p>
+          <p className="text-sm text-text-2">@{validatedUser.username}</p>
+        </section>
+      ) : null}
 
       {cameraError ? <p className="mt-4 text-sm text-playful">{cameraError}</p> : null}
       {scanError ? <p className="mt-4 text-sm text-playful">{scanError}</p> : null}
 
-      {scannedToken ? (
+      {validatedUser && !successUser ? (
         <button
           type="button"
           className="mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
@@ -315,7 +397,7 @@ export default function AddScan() {
             ) ? (
               <button
                 type="button"
-                onClick={() => setScanIssue(null)}
+                onClick={handleDismissIssue}
                 className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
               >
                 Dismiss
@@ -324,7 +406,11 @@ export default function AddScan() {
             {scanIssue.type === 'network' ? (
               <button
                 type="button"
-                onClick={() => void sendRequest()}
+                onClick={() => {
+                  if (scannedToken) {
+                    void validateScannedToken(scannedToken)
+                  }
+                }}
                 className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
               >
                 Retry
@@ -341,15 +427,6 @@ export default function AddScan() {
           </div>
         </div>
       ) : null}
-
-      <div className="mt-auto pt-8">
-        <Link
-          to="/add"
-          className="block rounded-full bg-surface-2 px-7 py-3.5 text-center text-sm font-medium text-text-2"
-        >
-          Show my code instead
-        </Link>
-      </div>
 
       <ConnectionRequestSentModal
         open={successUser !== null}

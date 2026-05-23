@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface ValidateBody {
   token?: string
+  preview?: boolean
 }
 
 interface ScannedUser {
@@ -127,6 +128,14 @@ Deno.serve(async (request) => {
         error: "You're already connected with this person.",
         error_code: 'already_connected',
         user: scannedUser as ScannedUser,
+      })
+    }
+
+    if (body.preview === true) {
+      return jsonResponse(200, {
+        success: true,
+        preview: true,
+        user: scannedUser,
       })
     }
 

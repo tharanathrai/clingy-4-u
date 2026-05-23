@@ -18,6 +18,8 @@ import { test, expect } from '@playwright/test'
 import {
   injectMockSession,
   mockOnboardedUser,
+  mockPendingConnectionRequest,
+  mockRespondConnection,
   mockUnonboardedUser,
   mockValidateQrTokenSuccess,
   MOCK_SCANNED_USER,
@@ -252,4 +254,27 @@ test('connect success modal dismisses on browser back', async ({ page }) => {
   await page.goBack()
   await expect(dialog).not.toBeVisible()
   await expect(page).toHaveURL(/\/connect\?token=mock-scan-token/)
+})
+
+// ---------------------------------------------------------------------------
+// 10. Connection request accept from notifications
+// ---------------------------------------------------------------------------
+
+test('accepting connection request from notifications does not show invalid error', async ({
+  page,
+}) => {
+  await mockOnboardedUser(page)
+  await mockPendingConnectionRequest(page)
+  await mockRespondConnection(page, 'accept')
+  await injectMockSession(page)
+
+  await page.goto('/notifications')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: /Sam Friend wants to connect/i }).click()
+  await expect(page.getByRole('heading', { name: 'Connection request' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Accept' }).click()
+  await expect(page.getByText('Connection accepted.')).toBeVisible()
+  await expect(page.getByText('This request is no longer available.')).not.toBeVisible()
 })

@@ -104,8 +104,9 @@ Deno.serve(async (request) => {
         read: false,
       })
 
+      // Connection is already active — do not fail the accept if notification insert fails.
       if (notificationError) {
-        return jsonResponse(500, { error: notificationError.message })
+        // Intentionally non-fatal.
       }
 
       const otherUserId = connection.user_a_id === userId ? connection.user_b_id : connection.user_a_id

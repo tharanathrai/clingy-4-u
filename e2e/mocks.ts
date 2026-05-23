@@ -29,6 +29,9 @@ export const MOCK_SCANNED_USER = {
   avatar_url: null,
 }
 
+export const MOCK_REQUESTER_ID = 'mock-requester-id'
+export const MOCK_CONNECTION_ID = 'mock-connection-id'
+
 /**
  * Inject a mock Supabase session into localStorage so the app treats the
  * user as authenticated without going through Google OAuth.
@@ -137,20 +140,144 @@ export async function mockOnboardedUser(page: Page): Promise<void> {
  * Mock validate-qr-token edge function to succeed with a connection request.
  */
 export async function mockValidateQrTokenSuccess(page: Page): Promise<void> {
-  await page.route(`${SUPABASE_URL}/functions/v1/validate-qr-token`, (route) => {
+  await page.route(`${SUPABASE_URL}/functions/v1/validate-qr-token`, async (route) => {
     if (route.request().method() !== 'POST') {
-      void route.continue()
+      await route.continue()
       return
     }
 
-    void route.fulfill({
+    const body = (route.request().postDataJSON() ?? {}) as { preview?: boolean }
+
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
         success: true,
         user: MOCK_SCANNED_USER,
-        connection_id: 'mock-connection-id',
+        preview: body.preview === true,
+        ...(body.preview ? {} : { connection_id: 'mock-connection-id' }),
       }),
+    })
+  })
+}
+
+/**
+ * Mock respond-connection edge function.
+ */
+export async function mockRespondConnection(
+  page: Page,
+  action: 'accept' | 'reject' = 'accept',
+): Promise<void> {
+  await page.route(`${SUPABASE_URL}/functions/v1/respond-connection`, (route) => {
+    void route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        action,
+        connection_id: MOCK_CONNECTION_ID,
+        other_user_id: MOCK_REQUESTER_ID,
+      }),
+    })
+  })
+}
+
+/**
+ * Adds a pending connection request notification and related rows.
+ * Call after mockOnboardedUser — overrides notifications/connections/users routes.
+ */
+export async function mockPendingConnectionRequest(page: Page): Promise<void> {
+  const sortedIds = [MOCK_USER.id, MOCK_REQUESTER_ID].sort()
+  const pendingConnection = {
+    id: MOCK_CONNECTION_ID,
+    user_a_id: sortedIds[0],
+    user_b_id: sortedIds[1],
+    requested_by: MOCK_REQUESTER_ID,
+    status: 'pending',
+  }
+
+  const notification = {
+    id: 'mock-notification-id',
+    user_id: MOCK_USER.id,
+    type: 'connection_request',
+    reference_id: MOCK_CONNECTION_ID,
+    read: false,
+    created_at: new Date().toISOString(),
+  }
+
+  const requesterProfile = {
+    id: MOCK_REQUESTER_ID,
+    display_name: 'Sam Friend',
+    username: 'samfriend',
+    avatar_url: null,
+    bio: null,
+    created_at: new Date().toISOString(),
+  }
+
+  await page.route(`${SUPABASE_URL}/rest/v1/notifications*`, async (route) => {
+    const method = route.request().method()
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([notification]),
+      })
+      return
+    }
+    if (method === 'PATCH') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...notification, read: true }),
+      })
+      return
+    }
+    await route.continue()
+  })
+
+  await page.route(`${SUPABASE_URL}/rest/v1/connections*`, async (route) => {
+    const method = route.request().method()
+    const url = route.request().url()
+
+    if (method === 'GET') {
+      if (url.includes(MOCK_CONNECTION_ID)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(
+            url.includes('id=in.') ? [pendingConnection] : pendingConnection,
+          ),
+        })
+        return
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      })
+      return
+    }
+    await route.continue()
+  })
+
+  await page.route(`${SUPABASE_URL}/rest/v1/users*`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+    const url = route.request().url()
+    if (url.includes(MOCK_REQUESTER_ID)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([requesterProfile]),
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([MOCK_PROFILE]),
     })
   })
 }
