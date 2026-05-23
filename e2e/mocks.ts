@@ -148,6 +148,20 @@ export async function mockValidateQrTokenSuccess(page: Page): Promise<void> {
 
     const body = (route.request().postDataJSON() ?? {}) as { preview?: boolean }
 
+    const token = (body as { token?: string }).token ?? ''
+
+    if (token === 'invalid-random-token') {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: 'This is not a Clingy connection code.',
+          error_code: 'invalid_token',
+        }),
+      })
+      return
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

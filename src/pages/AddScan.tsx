@@ -1,5 +1,5 @@
-import { ArrowLeft, Camera, ImageUp } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Camera, ImageUp, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
@@ -14,7 +14,7 @@ import {
 
 interface ScanIssue {
   message: string
-  type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'network' | 'generic'
+  type: ValidateQrIssue['type']
   connectedUser?: ValidateQrUser
 }
 
@@ -26,6 +26,7 @@ export default function AddScan() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const scannerRef = useRef<Html5Qrcode | null>(null)
+  const handledTokenRef = useRef<string | null>(null)
   const [scanMode, setScanMode] = useState<ScanMode>('camera')
   const [scannedToken, setScannedToken] = useState<string | null>(null)
   const [validatedUser, setValidatedUser] = useState<ValidateQrUser | null>(null)
@@ -37,7 +38,15 @@ export default function AddScan() {
   const [scanIssue, setScanIssue] = useState<ScanIssue | null>(null)
   const [imageFileName, setImageFileName] = useState<string | null>(null)
 
-  const showScanInput = !scannedToken && !validating && !validatedUser && !successUser
+  const awaitingScanResult =
+    validating ||
+    validatedUser !== null ||
+    successUser !== null ||
+    scanIssue !== null ||
+    scanError !== null ||
+    scannedToken !== null
+
+  const showScanInput = !awaitingScanResult
 
   const stopScanner = useCallback(async () => {
     const scanner = scannerRef.current
@@ -58,6 +67,7 @@ export default function AddScan() {
   }, [])
 
   const clearScanState = useCallback(() => {
+    handledTokenRef.current = null
     setScannedToken(null)
     setValidatedUser(null)
     setScanError(null)
@@ -67,6 +77,10 @@ export default function AddScan() {
       fileInputRef.current.value = ''
     }
   }, [])
+
+  const dismissScanResult = useCallback(() => {
+    clearScanState()
+  }, [clearScanState])
 
   const validateScannedToken = useCallback(async (token: string) => {
     setValidating(true)
@@ -82,7 +96,6 @@ export default function AddScan() {
         message: 'No active session. Please sign in again.',
         type: 'generic',
       })
-      setScannedToken(null)
       setValidating(false)
       return
     }
@@ -96,7 +109,6 @@ export default function AddScan() {
 
       if (!result.success) {
         setScanIssue(toScanIssue(mapValidateQrIssue(result.error)))
-        setScannedToken(null)
         setValidating(false)
         return
       }
@@ -112,21 +124,38 @@ export default function AddScan() {
     }
   }, [])
 
-  const handleDecodedText = useCallback(
-    (decodedText: string) => {
-      const token = extractQrToken(decodedText)
-      if (!token) {
-        setScanError('Unable to read token from this code.')
+  const beginTokenScan = useCallback(
+    (token: string) => {
+      if (handledTokenRef.current === token) {
         return
       }
 
+      handledTokenRef.current = token
       setScanError(null)
       setScanIssue(null)
+      setValidatedUser(null)
       setScannedToken(token)
       void stopScanner()
       void validateScannedToken(token)
     },
     [stopScanner, validateScannedToken],
+  )
+
+  const handleDecodedText = useCallback(
+    (decodedText: string) => {
+      const token = extractQrToken(decodedText)
+      if (!token) {
+        if (handledTokenRef.current === '__invalid_format__') {
+          return
+        }
+        handledTokenRef.current = '__invalid_format__'
+        setScanError('This is not a Clingy connection code.')
+        return
+      }
+
+      beginTokenScan(token)
+    },
+    [beginTokenScan],
   )
 
   useEffect(() => {
@@ -196,8 +225,9 @@ export default function AddScan() {
       if (!result.success) {
         const issue = mapValidateQrIssue(result.error)
         setScanIssue(toScanIssue(issue))
-        if (issue.type === 'expired' || issue.type === 'own' || issue.type === 'generic') {
-          clearScanState()
+        setValidatedUser(null)
+        if (issue.type === 'expired' || issue.type === 'own' || issue.type === 'invalid_token') {
+          // Keep scannedToken so the camera stays paused until dismiss.
         }
         setSubmitting(false)
         return
@@ -209,6 +239,7 @@ export default function AddScan() {
         message: 'Something went wrong — try again.',
         type: 'network',
       })
+      setValidatedUser(null)
     } finally {
       setSubmitting(false)
     }
@@ -231,7 +262,7 @@ export default function AddScan() {
   }
 
   const handleImageSelected = async (file: File | null) => {
-    if (!file) {
+    if (!file || awaitingScanResult) {
       return
     }
 
@@ -240,6 +271,7 @@ export default function AddScan() {
     setValidatedUser(null)
     setScannedToken(null)
     setImageFileName(file.name)
+    handledTokenRef.current = null
 
     await stopScanner()
 
@@ -250,20 +282,16 @@ export default function AddScan() {
       const decodedText = await scanner.scanFile(file, false)
       const token = extractQrToken(decodedText)
       if (!token) {
-        setScanError('Unable to read token from this image.')
+        handledTokenRef.current = '__invalid_format__'
+        setScanError('This is not a Clingy connection code.')
         return
       }
 
-      setScannedToken(token)
-      await validateScannedToken(token)
+      beginTokenScan(token)
     } catch {
+      handledTokenRef.current = '__invalid_format__'
       setScanError('No QR code found in that image.')
     }
-  }
-
-  const handleDismissIssue = () => {
-    setScanIssue(null)
-    clearScanState()
   }
 
   return (
@@ -292,7 +320,7 @@ export default function AddScan() {
         <button
           type="button"
           onClick={() => handleModeChange('camera')}
-          disabled={validating || submitting}
+          disabled={awaitingScanResult || submitting}
           className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 disabled:opacity-60 ${
             scanMode === 'camera'
               ? 'bg-accent text-white'
@@ -305,7 +333,7 @@ export default function AddScan() {
         <button
           type="button"
           onClick={() => handleModeChange('image')}
-          disabled={validating || submitting}
+          disabled={awaitingScanResult || submitting}
           className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition active:scale-95 disabled:opacity-60 ${
             scanMode === 'image'
               ? 'bg-accent text-white'
@@ -363,7 +391,7 @@ export default function AddScan() {
         </section>
       ) : null}
 
-      {validatedUser && !successUser ? (
+      {validatedUser && !successUser && !scanIssue ? (
         <section className="mt-6 rounded-lg border border-white/10 bg-surface p-6 text-center">
           <p className="text-sm text-text-2">Connect with</p>
           <p className="mt-2 text-lg text-text">{validatedUser.display_name}</p>
@@ -371,10 +399,15 @@ export default function AddScan() {
         </section>
       ) : null}
 
-      {cameraError ? <p className="mt-4 text-sm text-playful">{cameraError}</p> : null}
-      {scanError ? <p className="mt-4 text-sm text-playful">{scanError}</p> : null}
+      {cameraError ? (
+        <ScanResultBanner message={cameraError} onDismiss={() => setCameraError(null)} />
+      ) : null}
 
-      {validatedUser && !successUser ? (
+      {scanError ? (
+        <ScanResultBanner message={scanError} onDismiss={dismissScanResult} />
+      ) : null}
+
+      {validatedUser && !successUser && !scanIssue ? (
         <button
           type="button"
           className="mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
@@ -386,46 +419,25 @@ export default function AddScan() {
       ) : null}
 
       {scanIssue ? (
-        <div className="mt-4 rounded-lg border border-white/10 bg-surface-2 p-3 text-left">
-          <p className="text-sm text-playful">{scanIssue.message}</p>
-          <div className="mt-3 flex items-center gap-2">
-            {(
-              scanIssue.type === 'expired' ||
-              scanIssue.type === 'own' ||
-              scanIssue.type === 'request_pending' ||
-              scanIssue.type === 'generic'
-            ) ? (
-              <button
-                type="button"
-                onClick={handleDismissIssue}
-                className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
-              >
-                Dismiss
-              </button>
-            ) : null}
-            {scanIssue.type === 'network' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (scannedToken) {
-                    void validateScannedToken(scannedToken)
-                  }
-                }}
-                className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
-              >
-                Retry
-              </button>
-            ) : null}
-            {scanIssue.type === 'already_connected' && scanIssue.connectedUser?.username ? (
-              <Link
-                to={`/profile/${scanIssue.connectedUser.username}`}
-                className="rounded-full bg-accent px-4 py-2 text-xs text-white"
-              >
-                View profile
-              </Link>
-            ) : null}
-          </div>
-        </div>
+        <ScanResultBanner message={scanIssue.message} onDismiss={dismissScanResult}>
+          {scanIssue.type === 'network' && scannedToken ? (
+            <button
+              type="button"
+              onClick={() => void validateScannedToken(scannedToken)}
+              className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
+            >
+              Retry
+            </button>
+          ) : null}
+          {scanIssue.type === 'already_connected' && scanIssue.connectedUser?.username ? (
+            <Link
+              to={`/profile/${scanIssue.connectedUser.username}`}
+              className="rounded-full bg-accent px-4 py-2 text-xs text-white"
+            >
+              View profile
+            </Link>
+          ) : null}
+        </ScanResultBanner>
       ) : null}
 
       <ConnectionRequestSentModal
@@ -434,6 +446,31 @@ export default function AddScan() {
         onClose={resetScanner}
       />
     </main>
+  )
+}
+
+function ScanResultBanner({
+  message,
+  onDismiss,
+  children,
+}: {
+  message: string
+  onDismiss: () => void
+  children?: ReactNode
+}) {
+  return (
+    <div className="relative mt-4 rounded-lg border border-white/10 bg-surface-2 p-4 pr-11 text-left">
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-text-2 transition hover:bg-surface hover:text-text active:scale-95"
+        aria-label="Dismiss"
+      >
+        <X size={18} strokeWidth={1.75} />
+      </button>
+      <p className="text-sm text-playful">{message}</p>
+      {children ? <div className="mt-3 flex flex-wrap items-center gap-2">{children}</div> : null}
+    </div>
   )
 }
 

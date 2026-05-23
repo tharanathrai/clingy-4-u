@@ -17,7 +17,14 @@ export interface ValidateQrErrorResponse {
 
 export interface ValidateQrIssue {
   message: string
-  type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'generic'
+  type:
+    | 'expired'
+    | 'own'
+    | 'already_connected'
+    | 'request_pending'
+    | 'invalid_token'
+    | 'network'
+    | 'generic'
   connectedUser?: ValidateQrUser
 }
 
@@ -104,6 +111,20 @@ export function mapValidateQrIssue(errorPayload: ValidateQrErrorResponse): Valid
     return {
       message: "That's your own code.",
       type: 'own',
+    }
+  }
+
+  if (errorCode === 'invalid_token' || normalizedMessage.includes('not a clingy')) {
+    return {
+      message: 'This is not a Clingy connection code.',
+      type: 'invalid_token',
+    }
+  }
+
+  if (normalizedMessage.includes('invalid token')) {
+    return {
+      message: 'This is not a Clingy connection code.',
+      type: 'invalid_token',
     }
   }
 

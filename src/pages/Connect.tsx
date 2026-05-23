@@ -12,7 +12,7 @@ import {
 
 interface ConnectIssue {
   message: string
-  type: 'expired' | 'own' | 'already_connected' | 'request_pending' | 'generic'
+  type: ValidateQrIssue['type']
   connectedUser?: ValidateQrUser
 }
 

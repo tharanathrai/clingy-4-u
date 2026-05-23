@@ -56,6 +56,17 @@ describe('mapValidateQrIssue', () => {
     expect(issue.type).toBe('own')
   })
 
+  it('maps error_code "invalid_token"', () => {
+    const issue = mapValidateQrIssue({ error_code: 'invalid_token' })
+    expect(issue.type).toBe('invalid_token')
+    expect(issue.message).toMatch(/not a clingy connection code/i)
+  })
+
+  it('maps "invalid token" in error message', () => {
+    const issue = mapValidateQrIssue({ error: 'Invalid token.' })
+    expect(issue.type).toBe('invalid_token')
+  })
+
   it('maps unknown errors to generic', () => {
     const issue = mapValidateQrIssue({ error: 'network timeout' })
     expect(issue.type).toBe('generic')

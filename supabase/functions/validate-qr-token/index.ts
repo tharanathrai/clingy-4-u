@@ -66,7 +66,10 @@ Deno.serve(async (request) => {
       .maybeSingle()
 
     if (tokenError || !tokenRow) {
-      return jsonResponse(400, { error: 'Invalid token.' })
+      return jsonResponse(400, {
+        error: 'This is not a Clingy connection code.',
+        error_code: 'invalid_token',
+      })
     }
 
     const { data: scannedUser, error: scannedUserError } = await serviceClient
