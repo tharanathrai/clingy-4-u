@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -20,11 +21,11 @@ const postAuthReturnToKey = 'postAuthReturnTo'
 export default function Connect() {
   const { user, loading, signInWithGoogle } = useAuth()
   const userId = user?.id ?? null
-  const navigate = useNavigate()
   const [params] = useSearchParams()
   const token = params.get('token')
   const [submitting, setSubmitting] = useState(false)
   const [successUser, setSuccessUser] = useState<ValidateQrUser | null>(null)
+  const [requestSent, setRequestSent] = useState(false)
   const [connectIssue, setConnectIssue] = useState<ConnectIssue | null>(null)
   const [submitAttempt, setSubmitAttempt] = useState(0)
   const hasSubmittedRef = useRef(false)
@@ -73,6 +74,7 @@ export default function Connect() {
 
         if (!cancelled) {
           setSuccessUser(result.user)
+          setRequestSent(true)
         }
       } catch {
         if (!cancelled) {
@@ -93,26 +95,9 @@ export default function Connect() {
     }
   }, [connectIssue, loading, submitAttempt, successUser, token, userId])
 
-  useEffect(() => {
-    if (!successUser) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      navigate('/home')
-    }, 1400)
-
-    return () => {
-      window.clearTimeout(timeoutId)
-    }
-  }, [navigate, successUser])
-
-  const initials = useMemo(() => {
-    if (!successUser) {
-      return '?'
-    }
-    return successUser.display_name.slice(0, 1).toUpperCase()
-  }, [successUser])
+  const handleSuccessClose = () => {
+    setSuccessUser(null)
+  }
 
   const handleSignIn = async () => {
     if (!token) {
@@ -176,32 +161,6 @@ export default function Connect() {
 
       {submitting ? <p className="mt-6 text-sm text-text-2">Sending request...</p> : null}
 
-      {successUser ? (
-        <section className="mt-8 w-full rounded-lg border border-white/10 bg-surface p-6 text-center">
-          {successUser.avatar_url ? (
-            <img
-              src={successUser.avatar_url}
-              alt={successUser.display_name}
-              className="mx-auto h-20 w-20 rounded-full object-cover"
-            />
-          ) : (
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-surface-2 text-2xl font-medium">
-              {initials}
-            </div>
-          )}
-          <p className="mt-4 text-lg text-text">{successUser.display_name}</p>
-          <p className="text-sm text-text-2">@{successUser.username}</p>
-          <p className="mt-3 text-sm text-active">Request sent.</p>
-          <p className="mt-2 text-sm text-text-2">They&apos;ll get a notification to accept.</p>
-          <Link
-            to="/home"
-            className="mt-6 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
-          >
-            Go to your pocket
-          </Link>
-        </section>
-      ) : null}
-
       {connectIssue ? (
         <section className="mt-8 w-full rounded-lg border border-white/10 bg-surface p-6 text-left">
           <p className="text-sm text-playful">{connectIssue.message}</p>
@@ -244,7 +203,20 @@ export default function Connect() {
         </section>
       ) : null}
 
-      {!submitting && !successUser && !connectIssue ? (
+      {requestSent && !successUser && !connectIssue ? (
+        <section className="mt-8 w-full rounded-lg border border-white/10 bg-surface p-6 text-center">
+          <p className="text-sm text-active">Request sent.</p>
+          <p className="mt-2 text-sm text-text-2">They&apos;ll get a notification to accept.</p>
+          <Link
+            to="/home"
+            className="mt-6 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+          >
+            Go to your pocket
+          </Link>
+        </section>
+      ) : null}
+
+      {!submitting && !successUser && !connectIssue && !requestSent ? (
         <section className="mt-8 w-full rounded-lg border border-white/10 bg-surface p-6 text-center">
           <p className="text-sm text-text-2">Ready to send your connection request.</p>
           <button
@@ -256,6 +228,12 @@ export default function Connect() {
           </button>
         </section>
       ) : null}
+
+      <ConnectionRequestSentModal
+        open={successUser !== null}
+        user={successUser}
+        onClose={handleSuccessClose}
+      />
     </main>
   )
 }

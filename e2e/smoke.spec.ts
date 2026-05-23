@@ -10,10 +10,19 @@
  * 3. Onboarded user lands on /add (pocket view), not welcome
  * 4. /network and /notifications open without console errors (realtime subscribe bug)
  * 5. Settings is reachable via /settings; no duplicate bottom link on profile
+ * 6. Network empty state for users with no connections
+ * 7. QR scan modes and connection-request success modal behavior
  */
 
 import { test, expect } from '@playwright/test'
-import { injectMockSession, mockOnboardedUser, mockUnonboardedUser, MOCK_USER } from './mocks.ts'
+import {
+  injectMockSession,
+  mockOnboardedUser,
+  mockUnonboardedUser,
+  mockValidateQrTokenSuccess,
+  MOCK_SCANNED_USER,
+  MOCK_USER,
+} from './mocks.ts'
 
 // ---------------------------------------------------------------------------
 // 1. Landing page
@@ -143,4 +152,104 @@ test('new user who skips avatar completes onboarding and reaches /add', async ({
 
   // The onboarding should be visible (not redirected away since no profile)
   await expect(page).toHaveURL(/\/welcome/)
+})
+
+// ---------------------------------------------------------------------------
+// 7. Network empty state (new user, no connections)
+// ---------------------------------------------------------------------------
+
+test('/network shows empty state without force graph for user with no connections', async ({ page }) => {
+  await mockOnboardedUser(page)
+  await injectMockSession(page)
+
+  await page.goto('/network')
+  await page.waitForLoadState('networkidle')
+
+  await expect(page.getByRole('heading', { name: 'No bridges yet.' })).toBeVisible()
+  await expect(
+    page.locator('a.bg-accent').filter({ hasText: 'Add someone' }),
+  ).toBeVisible()
+  await expect(page.locator('canvas')).toHaveCount(0)
+})
+
+// ---------------------------------------------------------------------------
+// 8. QR scan modes
+// ---------------------------------------------------------------------------
+
+test('/add/scan toggles between camera and image scan modes', async ({ page }) => {
+  await mockOnboardedUser(page)
+  await injectMockSession(page)
+
+  await page.goto('/add/scan')
+  await page.waitForLoadState('networkidle')
+
+  const cameraButton = page.getByRole('button', { name: /Use camera/i })
+  const imageButton = page.getByRole('button', { name: /Scan image/i })
+
+  await expect(cameraButton).toBeVisible()
+  await expect(imageButton).toBeVisible()
+  await expect(page.locator('#qr-reader')).toBeAttached()
+
+  await imageButton.click()
+  await expect(page.getByRole('button', { name: 'Choose image' })).toBeVisible()
+  await expect(page.getByText('Choose a photo that includes their QR code.')).toBeVisible()
+
+  await cameraButton.click()
+  await expect(page.locator('#qr-reader')).toBeAttached()
+})
+
+// ---------------------------------------------------------------------------
+// 9. Connection request success modal (connect deep link)
+// ---------------------------------------------------------------------------
+
+test('connect success modal stays on page and does not auto-redirect', async ({ page }) => {
+  await mockOnboardedUser(page)
+  await mockValidateQrTokenSuccess(page)
+  await injectMockSession(page)
+
+  await page.goto('/connect?token=mock-scan-token')
+  await page.waitForLoadState('networkidle')
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Request sent' })).toBeVisible()
+  await expect(dialog.getByText(MOCK_SCANNED_USER.display_name)).toBeVisible()
+
+  await expect(page).toHaveURL(/\/connect\?token=mock-scan-token/)
+  await page.waitForTimeout(1800)
+  await expect(page).toHaveURL(/\/connect\?token=mock-scan-token/)
+  await expect(page).not.toHaveURL('/home')
+})
+
+test('connect success modal dismisses via close button', async ({ page }) => {
+  await mockOnboardedUser(page)
+  await mockValidateQrTokenSuccess(page)
+  await injectMockSession(page)
+
+  await page.goto('/connect?token=mock-scan-token')
+  await page.waitForLoadState('networkidle')
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page).toHaveURL(/\/connect\?token=mock-scan-token/)
+  await expect(page.getByRole('link', { name: 'Go to your pocket' })).toBeVisible()
+})
+
+test('connect success modal dismisses on browser back', async ({ page }) => {
+  await mockOnboardedUser(page)
+  await mockValidateQrTokenSuccess(page)
+  await injectMockSession(page)
+
+  await page.goto('/connect?token=mock-scan-token')
+  await page.waitForLoadState('networkidle')
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+
+  await page.goBack()
+  await expect(dialog).not.toBeVisible()
+  await expect(page).toHaveURL(/\/connect\?token=mock-scan-token/)
 })

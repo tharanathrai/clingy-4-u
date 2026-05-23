@@ -23,6 +23,12 @@ export const MOCK_PROFILE = {
   created_at: new Date().toISOString(),
 }
 
+export const MOCK_SCANNED_USER = {
+  display_name: 'Scanned Friend',
+  username: 'scannedfriend',
+  avatar_url: null,
+}
+
 /**
  * Inject a mock Supabase session into localStorage so the app treats the
  * user as authenticated without going through Google OAuth.
@@ -124,6 +130,44 @@ export async function mockOnboardedUser(page: Page): Promise<void> {
   // Realtime websocket (block gracefully)
   await page.route(`${SUPABASE_URL}/realtime/**`, (route) => {
     void route.abort()
+  })
+}
+
+/**
+ * Mock validate-qr-token edge function to succeed with a connection request.
+ */
+export async function mockValidateQrTokenSuccess(page: Page): Promise<void> {
+  await page.route(`${SUPABASE_URL}/functions/v1/validate-qr-token`, (route) => {
+    if (route.request().method() !== 'POST') {
+      void route.continue()
+      return
+    }
+
+    void route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        user: MOCK_SCANNED_USER,
+        connection_id: 'mock-connection-id',
+      }),
+    })
+  })
+}
+
+/**
+ * Mock generate-qr-token edge function for the /add screen.
+ */
+export async function mockGenerateQrToken(page: Page): Promise<void> {
+  await page.route(`${SUPABASE_URL}/functions/v1/generate-qr-token`, (route) => {
+    void route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        token: 'mock-qr-token',
+        expires_at: new Date(Date.now() + 60_000).toISOString(),
+      }),
+    })
   })
 }
 
