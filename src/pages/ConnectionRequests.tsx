@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth.ts'
 import { invalidateConnectionFlow } from '../lib/invalidate.ts'
@@ -16,6 +17,7 @@ interface PendingConnectionRequest {
 }
 
 export default function ConnectionRequests() {
+  const navigate = useNavigate()
   const { user, loading } = useAuth()
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
@@ -145,8 +147,24 @@ export default function ConnectionRequests() {
     )
   }
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/network')
+  }
+
   return (
     <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
+      <button
+        type="button"
+        className="mb-4 inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-2"
+        onClick={handleBack}
+      >
+        <ArrowLeft size={18} strokeWidth={1.75} />
+        Back
+      </button>
       <h1 className="app-page-title">Connection requests</h1>
 
       {errorMessage && !fetching && requests.length === 0 ? (
@@ -224,13 +242,6 @@ export default function ConnectionRequests() {
           Load more
         </button>
       ) : null}
-
-      <Link
-        to="/network"
-        className="mt-auto rounded-full bg-surface-2 px-7 py-3.5 text-center text-sm font-medium text-text-2"
-      >
-        Back to network
-      </Link>
     </main>
   )
 }
