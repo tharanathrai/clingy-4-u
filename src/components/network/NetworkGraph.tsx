@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from 'react'
 import { forceCollide } from 'd3-force'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import type { Bridge, User } from '../../types/index.ts'
@@ -7,7 +14,10 @@ import {
   type NetworkGraphEdge,
   type NetworkGraphNode,
 } from '../../hooks/useNetworkGraph.ts'
+import { getMajorityBridgeColor, getPairLinkDistance } from '../../lib/networkPairSummary.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
+
+type GraphLinkKind = 'chalk' | 'bridge'
 
 type GraphNode = NetworkGraphNode & {
   x?: number
@@ -19,8 +29,12 @@ type GraphNode = NetworkGraphNode & {
 }
 
 type GraphEdge = Omit<NetworkGraphEdge, 'source' | 'target'> & {
+  kind: GraphLinkKind
   source: string | GraphNode
   target: string | GraphNode
+  pairCount: number
+  majorityColor?: string
+  pairKey?: string
 }
 
 interface NetworkGraphProps {
@@ -29,7 +43,6 @@ interface NetworkGraphProps {
   onBridgeSelect?: (bridge: Bridge | null) => void
   onGraphStateChange?: (state: {
     hasConnections: boolean
-    hasBridges: boolean
     loading: boolean
     error: string | null
   }) => void
@@ -77,6 +90,7 @@ export function NetworkGraph({
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
   const pointerMovedRef = useRef(false)
   const lastSelectionTsRef = useRef(0)
+  const softPinRef = useRef<Record<string, { x: number; y: number }>>({})
 
   const clearSelection = () => {
     const msSinceSelection = Date.now() - lastSelectionTsRef.current
@@ -178,103 +192,77 @@ export function NetworkGraph({
     graphRef.current?.zoom(zoom, duration)
   }, [graphSize.height, graphSize.width, worldBounds.bottom, worldBounds.left, worldBounds.right, worldBounds.top])
 
-  const pairMeta = useMemo(() => {
-    const groupedByPair: Record<string, GraphEdge[]> = {}
+  const { pairMeta, chalkLinks, bridgeLinks } = useMemo(() => {
+    const groupedByPair: Record<string, NetworkGraphEdge[]> = {}
     for (const edge of edges) {
       const pairKey = normalizePair(edge.bridge.user_a_id, edge.bridge.user_b_id)
       if (!groupedByPair[pairKey]) {
         groupedByPair[pairKey] = []
       }
-      groupedByPair[pairKey].push(edge as GraphEdge)
+      groupedByPair[pairKey].push(edge)
     }
 
     const edgeMetaById: Record<string, { index: number; total: number; pairCount: number }> = {}
-    for (const pairEdges of Object.values(groupedByPair)) {
+    const nextChalkLinks: GraphEdge[] = []
+    const nextBridgeLinks: GraphEdge[] = []
+
+    for (const [pairKey, pairEdges] of Object.entries(groupedByPair)) {
+      const pairCount = pairEdges.length
+      const majorityColor = getMajorityBridgeColor(pairEdges.map((edge) => edge.bridge))
+      const firstEdge = pairEdges[0]
+
+      nextChalkLinks.push({
+        id: `chalk:${pairKey}`,
+        kind: 'chalk',
+        source: firstEdge.source,
+        target: firstEdge.target,
+        bridge: firstEdge.bridge,
+        pairCount,
+        majorityColor,
+        pairKey,
+      })
+
       pairEdges.forEach((edge, index) => {
         edgeMetaById[edge.id] = {
           index,
-          total: pairEdges.length,
-          pairCount: pairEdges.length,
+          total: pairCount,
+          pairCount,
         }
+        nextBridgeLinks.push({
+          ...edge,
+          kind: 'bridge',
+          pairCount,
+          majorityColor,
+          pairKey,
+        } as GraphEdge)
       })
     }
 
-    return edgeMetaById
+    return {
+      pairMeta: edgeMetaById,
+      chalkLinks: nextChalkLinks,
+      bridgeLinks: nextBridgeLinks,
+    }
   }, [edges])
 
-  useEffect(() => {
-    if (!graphRef.current || loading || error || nodes.length === 0) {
-      return
-    }
+  const selfNodeId = useMemo(() => {
+    return nodes.find((node) => node.isSelf)?.id ?? null
+  }, [nodes])
 
-    const linkForce = graphRef.current.d3Force('link') as
-      | {
-          distance?: (value: (link: GraphEdge) => number) => void
-          strength?: (value: (link: GraphEdge) => number) => void
-        }
-      | undefined
-    linkForce?.distance?.((link) => {
-      const pairCount = pairMeta[link.id]?.pairCount ?? 1
-      return Math.max(56, 118 - pairCount * 11)
-    })
-    linkForce?.strength?.((link) => {
-      const pairCount = pairMeta[link.id]?.pairCount ?? 1
-      return Math.min(0.9, 0.32 + pairCount * 0.09)
-    })
-
-    const chargeForce = graphRef.current.d3Force('charge') as
-      | { strength?: (value: number) => void }
-      | undefined
-    chargeForce?.strength?.(-145)
-
-    graphRef.current.d3Force(
-      'collide',
-      forceCollide<GraphNode>((node) => (node.isSelf ? 48 : 28)).strength(0.98),
-    )
-  }, [error, loading, nodes.length, pairMeta])
-
-  useEffect(() => {
-    if (!graphRef.current || loading || error || nodes.length === 0) {
-      return
-    }
-
-    if (hasAppliedInitialRecenterRef.current) {
-      return
-    }
-
-    hasAppliedInitialRecenterRef.current = true
-    recenterGraph(0)
-  }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterGraph, worldBounds.maxRadius])
-
-  useEffect(() => {
-    if (!graphRef.current || loading || error || nodes.length === 0) {
-      return
-    }
-    recenterGraph(220)
-  }, [error, loading, nodes.length, recenterGraph, recenterTrigger])
-
-  useEffect(() => {
-    if (!onGraphStateChange) {
-      return
-    }
-
-    onGraphStateChange({
-      hasConnections: nodes.some((node) => !node.isSelf),
-      hasBridges: edges.length > 0,
-      loading,
-      error,
-    })
-  }, [edges.length, error, loading, nodes, onGraphStateChange])
-
-  useEffect(() => {
-    if (!graphCanvasRef || !graphContainerRef.current) {
-      return
-    }
-    const canvas = graphContainerRef.current.querySelector('canvas')
-    if (canvas) {
-      graphCanvasRef.current = canvas
-    }
-  }, [edges.length, graphCanvasRef, nodes.length])
+  const isSelectedPairLink = useCallback(
+    (link: GraphEdge): boolean => {
+      if (!selectedUserId || !selfNodeId) {
+        return false
+      }
+      const sourceId = typeof link.source === 'string' ? link.source : link.source.id
+      const targetId = typeof link.target === 'string' ? link.target : link.target.id
+      return (
+        (sourceId === selfNodeId && targetId === selectedUserId) ||
+        (sourceId === selectedUserId && targetId === selfNodeId)
+      )
+    },
+    [selectedUserId, selfNodeId],
+  )
 
   const graphData = useMemo(() => {
     const selfNode = nodes.find((node) => node.isSelf)
@@ -303,9 +291,134 @@ export function NetworkGraph({
 
     return {
       nodes: graphNodes,
-      links: edges as GraphEdge[],
+      links: [...chalkLinks, ...bridgeLinks],
     }
-  }, [edges, nodes, worldBounds.maxRadius])
+  }, [bridgeLinks, chalkLinks, nodes, worldBounds.maxRadius])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+
+    const linkForce = graphRef.current.d3Force('link') as
+      | {
+          distance?: (value: (link: GraphEdge) => number) => void
+          strength?: (value: (link: GraphEdge) => number) => void
+        }
+      | undefined
+    linkForce?.distance?.((link) => {
+      const graphLink = link as GraphEdge
+      const pairCount = graphLink.pairCount ?? pairMeta[graphLink.id]?.pairCount ?? 1
+      return getPairLinkDistance(pairCount)
+    })
+    linkForce?.strength?.((link) => {
+      const graphLink = link as GraphEdge
+      const pairCount = graphLink.pairCount ?? pairMeta[graphLink.id]?.pairCount ?? 1
+      const selectedPair = isSelectedPairLink(graphLink)
+
+      if (graphLink.kind === 'bridge') {
+        return selectedPair ? Math.min(0.95, 0.48 + pairCount * 0.09) : 0
+      }
+
+      if (!selectedUserId) {
+        return Math.min(0.28, 0.1 + pairCount * 0.03)
+      }
+
+      if (selectedPair) {
+        return 0
+      }
+
+      return 0.025
+    })
+
+    const chargeForce = graphRef.current.d3Force('charge') as
+      | { strength?: (value: number) => void }
+      | undefined
+    chargeForce?.strength?.(selectedUserId ? -95 : -145)
+
+    graphRef.current.d3Force(
+      'collide',
+      forceCollide<GraphNode>((node) => (node.isSelf ? 48 : 28)).strength(0.98),
+    )
+  }, [error, isSelectedPairLink, loading, nodes.length, pairMeta, selectedUserId])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+
+    if (hasAppliedInitialRecenterRef.current) {
+      return
+    }
+
+    hasAppliedInitialRecenterRef.current = true
+    recenterGraph(0)
+  }, [error, graphSize.height, graphSize.width, loading, nodes.length, recenterGraph, worldBounds.maxRadius])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+    recenterGraph(220)
+  }, [error, loading, nodes.length, recenterGraph, recenterTrigger])
+
+  useEffect(() => {
+    if (!graphRef.current || loading || error || nodes.length === 0) {
+      return
+    }
+
+    softPinRef.current = {}
+
+    if (!selectedUserId) {
+      for (const node of graphData.nodes) {
+        if (node.isSelf) {
+          continue
+        }
+        node.fx = undefined
+        node.fy = undefined
+      }
+      graphRef.current.d3ReheatSimulation()
+      return
+    }
+
+    for (const node of graphData.nodes) {
+      if (node.isSelf || node.id === selectedUserId) {
+        node.fx = undefined
+        node.fy = undefined
+        continue
+      }
+
+      if (typeof node.x === 'number' && typeof node.y === 'number') {
+        softPinRef.current[node.id] = { x: node.x, y: node.y }
+        node.fx = node.x
+        node.fy = node.y
+      }
+    }
+
+    graphRef.current.d3ReheatSimulation()
+  }, [error, graphData, loading, nodes.length, selectedUserId])
+
+  useEffect(() => {
+    if (!onGraphStateChange) {
+      return
+    }
+
+    onGraphStateChange({
+      hasConnections: nodes.some((node) => !node.isSelf),
+      loading,
+      error,
+    })
+  }, [edges.length, error, loading, nodes, onGraphStateChange])
+
+  useEffect(() => {
+    if (!graphCanvasRef || !graphContainerRef.current) {
+      return
+    }
+    const canvas = graphContainerRef.current.querySelector('canvas')
+    if (canvas) {
+      graphCanvasRef.current = canvas
+    }
+  }, [edges.length, graphCanvasRef, nodes.length])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 36 : 18
@@ -389,6 +502,17 @@ export function NetworkGraph({
       return
     }
 
+    if (link.kind === 'chalk') {
+      ctx.beginPath()
+      ctx.moveTo(source.x, source.y)
+      ctx.lineTo(target.x, target.y)
+      ctx.lineWidth = 1.15
+      const chalkColor = link.majorityColor ?? '#F2EFF8'
+      ctx.strokeStyle = `${chalkColor}73`
+      ctx.stroke()
+      return
+    }
+
     const meta = pairMeta[link.id]
     const total = meta?.total ?? 1
     const index = meta?.index ?? 0
@@ -409,24 +533,16 @@ export function NetworkGraph({
     ctx.moveTo(fromX, fromY)
     ctx.lineTo(toX, toY)
     ctx.lineWidth = getLinkWidth(meta?.pairCount ?? 1)
-    ctx.strokeStyle = hoveredEdgeId === link.id ? link.bridge.color_hex : `${link.bridge.color_hex}A6`
+    ctx.strokeStyle =
+      hoveredEdgeId === link.id ? link.bridge.color_hex : `${link.bridge.color_hex}A6`
     ctx.stroke()
   }
 
-  const selfNodeId = useMemo(() => {
-    return nodes.find((node) => node.isSelf)?.id ?? null
-  }, [nodes])
-
-  const isSelectedPairLink = (link: GraphEdge): boolean => {
-    if (!selectedUserId || !selfNodeId) {
-      return false
+  const isLinkVisible = (link: GraphEdge): boolean => {
+    if (link.kind === 'chalk') {
+      return !isSelectedPairLink(link)
     }
-    const sourceId = typeof link.source === 'string' ? link.source : link.source.id
-    const targetId = typeof link.target === 'string' ? link.target : link.target.id
-    return (
-      (sourceId === selfNodeId && targetId === selectedUserId) ||
-      (sourceId === selectedUserId && targetId === selfNodeId)
-    )
+    return isSelectedPairLink(link)
   }
 
   if (error) {
@@ -582,7 +698,7 @@ export function NetworkGraph({
             graphRef.current?.centerAt(clampedX, clampedY, 0)
           }
         }}
-        linkVisibility={(link) => isSelectedPairLink(link as GraphEdge)}
+        linkVisibility={(link) => isLinkVisible(link as GraphEdge)}
         nodeCanvasObject={(node, ctx) => nodeCanvasObject(node as GraphNode, ctx)}
         nodePointerAreaPaint={(node, color, ctx) =>
           nodePointerAreaPaint(node as GraphNode, color, ctx)
@@ -601,10 +717,19 @@ export function NetworkGraph({
           setHoveredNodeId((node as GraphNode | null)?.id ?? null)
         }}
         onLinkHover={(link) => {
-          setHoveredEdgeId((link as GraphEdge | null)?.id ?? null)
+          const graphLink = link as GraphEdge | null
+          if (!graphLink || graphLink.kind !== 'bridge') {
+            setHoveredEdgeId(null)
+            return
+          }
+          setHoveredEdgeId(graphLink.id)
         }}
         onLinkClick={(link) => {
-          onBridgeSelect?.((link as GraphEdge).bridge)
+          const graphLink = link as GraphEdge
+          if (graphLink.kind !== 'bridge') {
+            return
+          }
+          onBridgeSelect?.(graphLink.bridge)
         }}
         onBackgroundClick={() => {
           clearSelection()
@@ -645,11 +770,23 @@ export function NetworkGraph({
             typeof selfNode.x === 'number' &&
             typeof selfNode.y === 'number'
           ) {
-            const minimumDistanceFromSelf = 92
+            const minimumDistanceFromSelf = selectedUserId ? 72 : 92
             for (const node of otherNodes) {
               if (typeof node.x !== 'number' || typeof node.y !== 'number') {
                 continue
               }
+
+              if (selectedUserId && node.id !== selectedUserId) {
+                const pin = softPinRef.current[node.id]
+                if (pin && node.fx !== undefined && node.fy !== undefined) {
+                  const pinDx = pin.x - node.x
+                  const pinDy = pin.y - node.y
+                  node.vx = (node.vx ?? 0) + pinDx * 0.04
+                  node.vy = (node.vy ?? 0) + pinDy * 0.04
+                }
+                continue
+              }
+
               const dx = node.x - selfNode.x
               const dy = node.y - selfNode.y
               const distance = Math.hypot(dx, dy)

@@ -294,16 +294,21 @@ Below it: `"chewed gum with N people"` in DM Sans 400, `--color-text-secondary`.
 - Other nodes: 36px circle, `--color-surface-2` fill, avatar or initial, `--color-border-mid` border
 - Hover: scale(1.1), border brightens to category color of strongest bridge
 
-**Edges (bridges):**
-- Hidden by default
-- Revealed on node tap — all bridges to that node appear
+**Edges (chalk spokes):**
+- Always visible from your node to each bridged connection
+- Thin stroke (~1.15px), ~45% opacity, majority-category color for that pair
+- Link distance in physics scales with bridge count (more bridges = shorter / closer)
+
+**Edges (gummy bridges):**
+- Hidden until node tap — all bridges to that person appear
 - Color: the category color of that individual bridge
-- Thickness: scales with bridge count (1 bridge = 1.5px, 5+ bridges = 4px)
+- Thickness: scales with bridge count (1 bridge = 1.7px, 5+ bridges = 4px)
 - Multiple bridges between same two people: stacked parallel lines, each colored by category
-- Opacity: 0.7 default, 1.0 on hover
+- Opacity: 0.65 default, 1.0 on hover
 
 **Physics:**
-- Bridge weight increases attractive force — more bridges = nodes sit closer
+- Chalk spokes: weak baseline attraction; near-zero on non-selected pairs when someone is selected
+- Selected pair: strong bridge-link attraction; other nodes soft-pinned
 - Drag nodes freely, graph re-balances with elastic easing
 - Collision detection so nodes never fully overlap
 
@@ -313,8 +318,8 @@ Below it: `"chewed gum with N people"` in DM Sans 400, `--color-text-secondary`.
 - Date ("a Tuesday in March" — humanized, not ISO format)
 - Both participants
 
-**Export:**
-`html2canvas` snapshot of the canvas. Exports as PNG with `--color-bg` background. Filename: `my-bridges-[date].png`.
+**Share / export:**
+Canvas snapshot (2× resolution) with `--color-bg` background. Header share button opens a menu: native share sheet (image) when supported, plus Save image. Filename: `my-bridges-[date].png`. Header actions menu combines Add someone and Requests (badge on menu when pending requests > 0).
 
 ---
 

@@ -265,13 +265,13 @@ Swap this function body for an LLM API call later — the interface stays identi
 
 **Behaviour:**
 - Nodes: users in your network (including yourself at center)
-- Edges: only shown when a node is selected — reveals all bridges shared with that person
-- Physics: bridge weight (number of shared bridges) increases attractive force between nodes — more history = nodes sit closer together
+- Chalk spokes: always visible from you to each person you share ≥1 bridge with — thin lines, majority-category color, distance scales with bridge count (more bridges = closer)
+- Gummy bridges: shown only when a node is selected — thick parallel lines per bridge, colored by category
+- Physics: weak chalk attraction by default; on selection, strong pull only between you and the selected person; other nodes soft-pinned with slight drift
 - Interaction: drag nodes, graph rebalances. Click a node to see bridges. Click a bridge to see activity title, date, category color
-- Default state: nodes float freely, no edges visible
-- Selected state: edges to selected node appear, colored by category
+- Connections without bridges: nodes only, no chalk lines, no hint overlay
 
-**Export:** `html2canvas` captures the canvas element as PNG. Static snapshot.
+**Export / share:** Canvas snapshot as PNG (2× resolution). Native share sheet when supported; save/download fallback.
 
 ---
 

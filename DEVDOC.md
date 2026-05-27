@@ -75,9 +75,9 @@
 ---
 
 ### Network Graph
-**Status: Verified (automated)** — E2E smoke: `/network` loads without subscribe() console errors; `usePendingRequestCount` hook covers pending badge with realtime
-- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; edges per bridge; avatar images cached; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button; PNG export; error state with retry; empty state per DESIGN.md; pending requests badge via `usePendingRequestCount` hook (moved out of page); real-time invalidation on connections and bridges changes via `subscribePostgresChannel`; lazy-loaded chunk.
-- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
+**Status: Verified (automated)** — `networkPairSummary.test.ts`; quality gate; manual: chalk mesh, selection physics, share menu
+- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button; share menu (native share + save PNG at 2×); header Add/Requests menu with request badge; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
+- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
 
@@ -204,7 +204,7 @@ After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` 
 
 6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects.
 
-7. **Graph PNG export** — Tap export button on `/network` → verify PNG downloads with correct filename `my-bridges-[YYYY-MM-DD].png` and dark background.
+7. **Graph share / export** — Tap share on `/network` → Save image downloads `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background; Share opens native sheet on mobile when supported.
 
 8. **Nightly cron expiry** — Manually call `run-expiry` after setting a piece's `expires_at` to the past. Verify: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user notifications of type `plan_expired`.
 

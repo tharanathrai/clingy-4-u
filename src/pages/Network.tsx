@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { UserPlus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
-import { GraphExportButton } from '../components/network/GraphExportButton.tsx'
+import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
+import { NetworkHeaderMenu } from '../components/network/NetworkHeaderMenu.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
@@ -25,7 +25,6 @@ export default function Network() {
   const [recenterTrigger, setRecenterTrigger] = useState(0)
   const [graphState, setGraphState] = useState({
     hasConnections: false,
-    hasBridges: false,
     loading: true,
     error: null as string | null,
   })
@@ -76,27 +75,7 @@ export default function Network() {
       <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5">
         <h1 className="app-page-title">your network</h1>
         <div className="relative flex items-center gap-2">
-          <Link
-            to="/connections/requests"
-            className="relative rounded-full border border-white/10 bg-surface px-3 py-2 text-xs font-medium text-text-2 transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
-            aria-label="Open connection requests"
-            title="Connection requests"
-          >
-            Requests
-            {pendingRequestCount > 0 ? (
-              <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-playful px-1.5 py-0.5 text-[10px] leading-none text-white">
-                {pendingRequestCount}
-              </span>
-            ) : null}
-          </Link>
-          <Link
-            to="/add"
-            className="rounded-full border border-white/10 bg-surface px-3 py-2 text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95"
-            aria-label="Add someone"
-            title="Add someone"
-          >
-            <UserPlus size={18} strokeWidth={1.75} />
-          </Link>
+          <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
           <RecenterGraphButton
             onRecenter={handleRecenter}
             disabled={
@@ -106,7 +85,7 @@ export default function Network() {
             }
           />
           {graphState.hasConnections ? (
-            <GraphExportButton graphRef={graphCanvasRef} />
+            <GraphShareButton graphRef={graphCanvasRef} />
           ) : null}
         </div>
       </header>
@@ -165,15 +144,6 @@ export default function Network() {
           </section>
         ) : null}
 
-        {!graphState.loading &&
-        graphState.hasConnections &&
-        !graphState.hasBridges ? (
-          <div className="pointer-events-none absolute inset-x-0 top-24 z-10 flex justify-center px-6 text-center">
-            <p className="rounded-full bg-surface/80 px-4 py-2 text-xs text-text-2 backdrop-blur">
-              Make a plan. Show up. Bridges form here.
-            </p>
-          </div>
-        ) : null}
       </main>
 
       {selectedBridge ? (
