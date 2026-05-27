@@ -106,30 +106,21 @@ export default function Network() {
     }
   }, [selectedBridge, selectedUser, selectedUserId])
 
-  const canShareGraph =
-    !graphState.loading && !graphState.error && graphState.hasConnections
+  const graphActionsDisabled =
+    graphState.loading || !!graphState.error || !graphState.hasConnections
 
   return (
     <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
-      <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5">
+      <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-start justify-between px-5">
         <h1 className="app-page-title">your network</h1>
-        <div className="relative flex items-center gap-2">
+        <div className="relative flex flex-col items-center gap-2">
           <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
-          <RecenterGraphButton
-            onRecenter={handleRecenter}
-            disabled={
-              graphState.loading ||
-              !!graphState.error ||
-              !graphState.hasConnections
-            }
+          <RecenterGraphButton onRecenter={handleRecenter} disabled={graphActionsDisabled} />
+          <GraphShareButton
+            graphRef={graphCanvasRef}
+            disabled={graphActionsDisabled || !graphState.canvasReady}
+            prepareForSnapshot={prepareGraphSnapshot}
           />
-          {canShareGraph ? (
-            <GraphShareButton
-              graphRef={graphCanvasRef}
-              disabled={!graphState.canvasReady}
-              prepareForSnapshot={prepareGraphSnapshot}
-            />
-          ) : null}
         </div>
       </header>
 
