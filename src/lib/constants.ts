@@ -29,3 +29,9 @@ export const getRandomShape = (): GumShape => {
 
   return GUM_SHAPES[randomIndex]
 }
+
+/** Max edge length for exported profile avatar images (square). */
+export const AVATAR_EXPORT_SIZE = 512
+
+/** JPEG quality for avatar uploads (0–1). */
+export const AVATAR_JPEG_QUALITY = 0.9

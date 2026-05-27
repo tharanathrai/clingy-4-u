@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Camera } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
+import { uploadAvatar } from '../hooks/useAvatarUpload.ts'
 import { markProfileReady } from '../hooks/useProfileReady.ts'
 import { supabase } from '../lib/supabase.ts'
 
@@ -14,8 +15,7 @@ export default function Welcome() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [usernameChecking, setUsernameChecking] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -70,20 +70,6 @@ export default function Welcome() {
     }
   }, [isUsernamePatternValid, sanitizedUsername])
 
-  const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null
-    setAvatarFile(file)
-    setErrorMessage(null)
-
-    if (!file) {
-      setAvatarPreviewUrl(null)
-      return
-    }
-
-    const localUrl = URL.createObjectURL(file)
-    setAvatarPreviewUrl(localUrl)
-  }
-
   const handleComplete = async () => {
     if (!user || !canComplete) {
       return
@@ -95,24 +81,8 @@ export default function Welcome() {
     try {
       let avatarUrl: string | null = null
 
-      if (avatarFile) {
-        const extension = avatarFile.name.split('.').pop()?.toLowerCase() ?? 'png'
-        const filePath = `${user.id}/${Date.now()}.${extension}`
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, avatarFile, {
-            upsert: false,
-          })
-
-        if (uploadError) {
-          throw uploadError
-        }
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('avatars').getPublicUrl(filePath)
-
-        avatarUrl = publicUrl
+      if (avatarBlob) {
+        avatarUrl = await uploadAvatar(user.id, avatarBlob, { upsert: false })
       }
 
       const { error: insertError } = await supabase.from('users').insert({
@@ -248,33 +218,18 @@ export default function Welcome() {
             Start with an initial avatar or upload your own.
           </p>
 
-          <div className="mt-8 flex items-center justify-center">
-            {avatarPreviewUrl ? (
-              <img
-                src={avatarPreviewUrl}
-                alt="Avatar preview"
-                className="h-24 w-24 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-surface-2 text-3xl font-medium text-text">
-                {initial}
-              </div>
-            )}
+          <div className="mt-8">
+            <ProfileAvatarField
+              displayName={displayName.trim() || 'You'}
+              imageUrl={null}
+              fallbackInitial={initial}
+              size="lg"
+              onImageReady={(blob) => {
+                setAvatarBlob(blob)
+                setErrorMessage(null)
+              }}
+            />
           </div>
-
-          <label className="mt-6 cursor-pointer text-center" htmlFor="avatar-upload">
-            <span className="inline-flex min-h-11 items-center gap-2 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2">
-              <Camera size={16} strokeWidth={1.75} />
-              Tap to upload
-            </span>
-          </label>
-          <input
-            id="avatar-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarFileChange}
-            className="sr-only"
-          />
 
           {errorMessage ? <p className="mt-3 text-sm text-playful">{errorMessage}</p> : null}
 

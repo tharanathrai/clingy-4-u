@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ProfileAvatarField } from './ProfileAvatarField.tsx'
+import { uploadAvatar } from '../../hooks/useAvatarUpload.ts'
 import { supabase } from '../../lib/supabase.ts'
 import type { User } from '../../types/index.ts'
 
@@ -18,8 +20,8 @@ export function EditProfileSheet({
   const [displayName, setDisplayName] = useState(profile.display_name)
   const [username, setUsername] = useState(profile.username)
   const [bio, setBio] = useState(profile.bio ?? '')
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null)
+  const [avatarRemoved, setAvatarRemoved] = useState(false)
   const [checkingUsername, setCheckingUsername] = useState(false)
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
@@ -54,8 +56,8 @@ export function EditProfileSheet({
     setDisplayName(profile.display_name)
     setUsername(profile.username)
     setBio(profile.bio ?? '')
-    setAvatarFile(null)
-    setAvatarPreviewUrl(null)
+    setAvatarBlob(null)
+    setAvatarRemoved(false)
     setErrorMessage(null)
     setUsernameAvailable(null)
     setCheckingUsername(false)
@@ -107,17 +109,15 @@ export function EditProfileSheet({
     }
   }, [hasUsernameChanged, isOpen, isUsernamePatternValid, normalizedUsername, profile.id])
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null
-    setAvatarFile(file)
-
-    if (!file) {
-      setAvatarPreviewUrl(null)
+  const handleAvatarReady = (blob: Blob | null) => {
+    if (blob) {
+      setAvatarBlob(blob)
+      setAvatarRemoved(false)
       return
     }
 
-    const localPreviewUrl = URL.createObjectURL(file)
-    setAvatarPreviewUrl(localPreviewUrl)
+    setAvatarBlob(null)
+    setAvatarRemoved(true)
   }
 
   const handleSave = async () => {
@@ -130,21 +130,11 @@ export function EditProfileSheet({
 
     try {
       let avatarUrl = profile.avatar_url
-      if (avatarFile) {
-        const extension = avatarFile.name.split('.').pop()?.toLowerCase() ?? 'png'
-        const filePath = `${profile.id}/${Date.now()}.${extension}`
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, avatarFile, { upsert: true })
 
-        if (uploadError) {
-          throw uploadError
-        }
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('avatars').getPublicUrl(filePath)
-        avatarUrl = publicUrl
+      if (avatarRemoved) {
+        avatarUrl = null
+      } else if (avatarBlob) {
+        avatarUrl = await uploadAvatar(profile.id, avatarBlob, { upsert: true })
       }
 
       const updates = {
@@ -176,6 +166,8 @@ export function EditProfileSheet({
   if (!isOpen) {
     return null
   }
+
+  const avatarImageUrl = avatarRemoved ? null : profile.avatar_url
 
   return (
     <section className="app-fixed-viewport z-50">
@@ -231,19 +223,15 @@ export function EditProfileSheet({
 
           <div>
             <span className="text-xs uppercase text-text-3">Avatar</span>
-            <div className="mt-2 flex items-center gap-3">
-              {avatarPreviewUrl || profile.avatar_url ? (
-                <img
-                  src={avatarPreviewUrl ?? profile.avatar_url ?? ''}
-                  alt={profile.display_name}
-                  className="h-14 w-14 rounded-full border-2 border-white object-cover"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-surface-2 text-lg text-text">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <input type="file" accept="image/*" onChange={handleAvatarChange} />
+            <div className="mt-3">
+              <ProfileAvatarField
+                displayName={profile.display_name}
+                imageUrl={avatarImageUrl}
+                fallbackInitial={profile.display_name.charAt(0).toUpperCase()}
+                size="md"
+                allowRemove
+                onImageReady={handleAvatarReady}
+              />
             </div>
           </div>
 

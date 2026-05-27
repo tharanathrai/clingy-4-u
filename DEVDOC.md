@@ -20,9 +20,9 @@
 ---
 
 ### Onboarding
-**Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `markProfileReady` cache invalidation tested
-- What works: 3-step wizard (display name → username → avatar), real-time username availability check, avatar upload to Supabase Storage `avatars` bucket, profile row creation in `public.users`, redirect to `/add` after completion. `profileReadyCache` Map replaced with `useProfileReady` React Query hook — onboarding loop is permanently fixed.
-- Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`
+**Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `markProfileReady` cache invalidation tested; `avatarImage.test.ts` 3/3 ✓
+- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. `profileReadyCache` Map replaced with `useProfileReady` React Query hook — onboarding loop is permanently fixed.
+- Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
 
 ---
 
@@ -82,9 +82,9 @@
 ---
 
 ### Profile (Own + Others)
-**Status: Verified (manual)** — last tested post React Query migration; duplicate settings link removed
-- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard link, edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, avatar upload; skeleton screen for loading state. Duplicate "settings →" link removed.
-- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`
+**Status: Verified (automated)** — `avatarImage.test.ts` 3/3 ✓; avatar crop/upload shared with onboarding; edit save state fix verified 2026-05-26
+- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard link, edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Duplicate "settings →" link removed.
+- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
 
 ---
 
@@ -202,7 +202,7 @@ After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` 
 
 5. **Email delivery** — Verify invite email received (check spam), turn-down email received, expiry email received. Requires `RESEND_API_KEY` (or SendGrid) set in Supabase edge function secrets.
 
-6. **Avatar upload from Edit Profile sheet** — Tap avatar → file picker opens → image uploads to Supabase Storage → avatar URL updates in profile (React Query cache invalidated).
+6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects.
 
 7. **Graph PNG export** — Tap export button on `/network` → verify PNG downloads with correct filename `my-bridges-[YYYY-MM-DD].png` and dark background.
 
