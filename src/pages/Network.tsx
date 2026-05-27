@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
@@ -25,6 +25,7 @@ export default function Network() {
   const [recenterTrigger, setRecenterTrigger] = useState(0)
   const [graphState, setGraphState] = useState({
     hasConnections: false,
+    canvasReady: false,
     loading: true,
     error: null as string | null,
   })
@@ -70,6 +71,44 @@ export default function Network() {
     setRecenterTrigger((value) => value + 1)
   }
 
+  const prepareGraphSnapshot = useCallback(async (): Promise<() => void> => {
+    const previousUserId = selectedUserId
+    const previousBridge = selectedBridge
+    const previousUser = selectedUser
+
+    if (!previousUserId && !previousBridge) {
+      return () => {}
+    }
+
+    setSelectedBridge(null)
+    setSelectedUserId(null)
+    setSelectedUser(null)
+
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => resolve())
+      })
+    })
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 120)
+    })
+
+    return () => {
+      if (previousUserId) {
+        setSelectedUserId(previousUserId)
+        if (previousUser) {
+          setSelectedUser(previousUser)
+        }
+      }
+      if (previousBridge) {
+        setSelectedBridge(previousBridge)
+      }
+    }
+  }, [selectedBridge, selectedUser, selectedUserId])
+
+  const canShareGraph =
+    !graphState.loading && !graphState.error && graphState.hasConnections
+
   return (
     <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5">
@@ -84,8 +123,12 @@ export default function Network() {
               !graphState.hasConnections
             }
           />
-          {graphState.hasConnections ? (
-            <GraphShareButton graphRef={graphCanvasRef} />
+          {canShareGraph ? (
+            <GraphShareButton
+              graphRef={graphCanvasRef}
+              disabled={!graphState.canvasReady}
+              prepareForSnapshot={prepareGraphSnapshot}
+            />
           ) : null}
         </div>
       </header>

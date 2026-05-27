@@ -271,7 +271,7 @@ Swap this function body for an LLM API call later — the interface stays identi
 - Interaction: drag nodes, graph rebalances. Click a node to see bridges. Click a bridge to see activity title, date, category color
 - Connections without bridges: nodes only, no chalk lines, no hint overlay
 
-**Export / share:** Canvas snapshot as PNG (2× resolution). Native share sheet when supported; save/download fallback.
+**Export / share:** Available whenever the graph is loaded (no node selection required). Captures the default chalk-spoke mesh; if a node is selected, selection clears briefly for the snapshot then restores. Canvas PNG at 2× resolution. Native share sheet when supported; save/download fallback.
 
 ---
 

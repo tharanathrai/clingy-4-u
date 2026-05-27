@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
 **Version:** 0.3 (Production Quality System)
-**Last updated:** 2026-05-22 — React Query migration + Production Quality System (shared libs, tests, CI)
+**Last updated:** 2026-05-26 — Network graph chalk spokes, share menu, header menu, export without selection
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -76,7 +76,7 @@
 
 ### Network Graph
 **Status: Verified (automated)** — `networkPairSummary.test.ts`; quality gate; manual: chalk mesh, selection physics, share menu
-- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button; share menu (native share + save PNG at 2×); header Add/Requests menu with request badge; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
+- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button (round 44×44); share menu whenever graph has connections—no node selection required; export briefly clears selection so PNG includes full chalk mesh; header Add/Requests menu with request badge; `ConnectionRequests` uses standard Back button; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
 - Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
@@ -139,7 +139,7 @@ All 12 edge functions manually validate the JWT by calling `supabase.auth.getUse
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
 
 ### 6. Graph export via direct canvas snapshot
-Network graph export uses `canvas.toDataURL()` directly (the graph IS a canvas), avoiding `html2canvas` dependency.
+Network graph export uses `captureGraphSnapshot()` in `src/lib/graphSnapshot.ts` (2× canvas draw, no `html2canvas`). Share/save does not require a selected node; `prepareGraphSnapshot` on `Network.tsx` clears selection before capture and restores afterward so exports show chalk spokes, not gummy bridge lines.
 
 ### 7. `submit-confirmation` auto-creates draft posts
 On bridge formation, a `posts` row with `is_public = false` is created. The `draft_post_id` drives the post opt-in prompt in `UnwrapCeremony`.
@@ -204,7 +204,7 @@ After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` 
 
 6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects.
 
-7. **Graph share / export** — Tap share on `/network` → Save image downloads `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background; Share opens native sheet on mobile when supported.
+7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background. With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported.
 
 8. **Nightly cron expiry** — Manually call `run-expiry` after setting a piece's `expires_at` to the past. Verify: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user notifications of type `plan_expired`.
 

@@ -319,7 +319,7 @@ Below it: `"chewed gum with N people"` in DM Sans 400, `--color-text-secondary`.
 - Both participants
 
 **Share / export:**
-Canvas snapshot (2× resolution) with `--color-bg` background. Header share button opens a menu: native share sheet (image) when supported, plus Save image. Filename: `my-bridges-[date].png`. Header actions menu combines Add someone and Requests (badge on menu when pending requests > 0).
+Canvas snapshot (2× resolution) with `--color-bg` background. Share button is visible whenever the network graph has loaded (does not require selecting a node). Export always uses the chalk-spoke view; active selection is cleared briefly during capture so thick gummy lines do not replace spokes in the PNG. Header share button opens a menu: native share sheet (image) when supported, plus Save image. Filename: `my-bridges-[date].png`. Header actions menu combines Add someone and Requests (badge on menu when pending requests > 0). Connection requests page uses the standard Back control (not “Back to network”).
 
 ---
 

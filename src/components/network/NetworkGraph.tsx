@@ -43,6 +43,7 @@ interface NetworkGraphProps {
   onBridgeSelect?: (bridge: Bridge | null) => void
   onGraphStateChange?: (state: {
     hasConnections: boolean
+    canvasReady: boolean
     loading: boolean
     error: string | null
   }) => void
@@ -403,12 +404,15 @@ export function NetworkGraph({
       return
     }
 
+    const hasConnections = nodes.some((node) => !node.isSelf)
     onGraphStateChange({
-      hasConnections: nodes.some((node) => !node.isSelf),
+      hasConnections,
+      canvasReady:
+        hasConnections && graphSize.width > 0 && graphSize.height > 0 && !loading && !error,
       loading,
       error,
     })
-  }, [edges.length, error, loading, nodes, onGraphStateChange])
+  }, [edges.length, error, graphSize.height, graphSize.width, loading, nodes, onGraphStateChange])
 
   useEffect(() => {
     if (!graphCanvasRef || !graphContainerRef.current) {

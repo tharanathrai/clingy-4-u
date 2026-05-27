@@ -3,9 +3,8 @@
 ## Network Graph Viewport + Export
 
 1. Share image quality is poor for social posting.
-   - Current square export keeps nodes too small relative to canvas.
-   - Need a social-first export preset (larger node scale, better framing, clearer labels, optional safe margins).
-   - Status: TODO (intentionally deferred)
+   - 2× canvas export + chalk mesh without selection implemented (2026-05-26); still room for a social-first preset (larger node scale, better framing, clearer labels, optional safe margins).
+   - Status: TODO (intentionally deferred beyond 2× export)
 
 2. Desktop graph framing can start far from the visible viewport. ✅ Addressed
    - Implemented container-based canvas sizing (instead of viewport-only sizing).

@@ -8,11 +8,17 @@ import {
 
 interface GraphShareButtonProps {
   graphRef: RefObject<HTMLCanvasElement | null>
+  disabled?: boolean
+  prepareForSnapshot?: () => Promise<() => void>
 }
 
 type ToastMessage = 'shared' | 'saved' | null
 
-export function GraphShareButton({ graphRef }: GraphShareButtonProps) {
+export function GraphShareButton({
+  graphRef,
+  disabled = false,
+  prepareForSnapshot,
+}: GraphShareButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState<ToastMessage>(null)
@@ -56,11 +62,17 @@ export function GraphShareButton({ graphRef }: GraphShareButtonProps) {
       return null
     }
 
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 100)
-    })
+    const restoreSnapshot = prepareForSnapshot ? await prepareForSnapshot() : undefined
 
-    return captureGraphSnapshot(graphRef.current)
+    try {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 100)
+      })
+
+      return captureGraphSnapshot(graphRef.current)
+    } finally {
+      restoreSnapshot?.()
+    }
   }
 
   const handleSave = async () => {
@@ -127,11 +139,11 @@ export function GraphShareButton({ graphRef }: GraphShareButtonProps) {
         onClick={() => {
           setMenuOpen((value) => !value)
         }}
-        className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-surface px-3 py-2 text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95 disabled:opacity-50"
+        className="flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/10 bg-surface text-text transition hover:border-white/25 hover:bg-surface-2 active:scale-95 disabled:opacity-50"
         aria-label="Share network graph"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
-        disabled={busy}
+        disabled={busy || disabled}
       >
         <Share2 size={18} strokeWidth={1.75} />
       </button>

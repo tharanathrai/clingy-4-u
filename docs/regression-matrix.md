@@ -29,6 +29,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-05-26 Edit Profile save state fix | Profile (own), Settings | None | None | `npm run quality` pass | Manual: save → reopen → second save on `/profile/me` and `/settings` | None |
 | 2026-05-26 Avatar upload UX | Onboarding, Profile (own), Settings | `constants.ts`, `avatarImage.ts` (new), `useAvatarUpload.ts` (new) | None | `avatarImage.test.ts` 3/3 ✓, `npm run quality` 49/49 ✓ | E2E smoke unchanged (no “Choose File” dependency) | Crop sheet over nested edit sheet needs manual check on device; Storage files not deleted on remove |
 | 2026-05-26 Network graph highlight | Network Graph | `networkPairSummary.ts` (new), `graphSnapshot.ts` (new) | None | `networkPairSummary.test.ts` 5/5 ✓, `npm run quality` pass | Manual: chalk spokes, share menu, header menu | Native share requires HTTPS/device; selection physics feel needs device pass |
+| 2026-05-26 Network share + docs | Network Graph, Connection requests | `graphSnapshot.ts`, `GraphShareButton.tsx`, `Network.tsx` | None | `npm run quality` pass | Manual: share without selection; export with selection restores | None |
 
 ---
 
