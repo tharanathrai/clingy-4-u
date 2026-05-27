@@ -215,10 +215,10 @@ export default function Welcome() {
         <section className="flex flex-1 flex-col">
           <h1 className="font-display text-4xl">Choose your avatar</h1>
           <p className="mt-2 text-sm text-text-2">
-            Start with an initial avatar or upload your own.
+            Tap your avatar to add a photo, or finish with your initial.
           </p>
 
-          <div className="mt-8">
+          <div className="mt-6 flex justify-center">
             <ProfileAvatarField
               displayName={displayName.trim() || 'You'}
               imageUrl={null}

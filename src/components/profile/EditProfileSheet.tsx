@@ -223,7 +223,7 @@ export function EditProfileSheet({
 
           <div>
             <span className="text-xs uppercase text-text-3">Avatar</span>
-            <div className="mt-3">
+            <div className="mt-2 flex justify-center">
               <ProfileAvatarField
                 displayName={profile.display_name}
                 imageUrl={avatarImageUrl}

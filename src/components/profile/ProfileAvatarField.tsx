@@ -15,13 +15,18 @@ interface ProfileAvatarFieldProps {
 }
 
 const sizeClasses: Record<ProfileAvatarFieldSize, string> = {
-  md: 'h-14 w-14 text-lg',
-  lg: 'h-24 w-24 text-3xl',
+  md: 'h-24 w-24 text-2xl',
+  lg: 'h-32 w-32 text-4xl',
 }
 
 const cameraBadgeClasses: Record<ProfileAvatarFieldSize, string> = {
-  md: 'bottom-0 right-0 h-6 w-6',
-  lg: 'bottom-0.5 right-0.5 h-8 w-8',
+  md: 'bottom-0 right-0 h-8 w-8',
+  lg: 'bottom-0.5 right-0.5 h-9 w-9',
+}
+
+const cameraIconSizes: Record<ProfileAvatarFieldSize, number> = {
+  md: 14,
+  lg: 16,
 }
 
 export function ProfileAvatarField({
@@ -100,12 +105,12 @@ export function ProfileAvatarField({
   const badgeClass = cameraBadgeClasses[size]
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center gap-2">
       <div className="relative">
         <button
           type="button"
           onClick={openFilePicker}
-          className={`relative overflow-hidden rounded-full border-2 border-white bg-surface-2 transition active:scale-[0.98] ${dimensionClass}`}
+          className={`relative overflow-hidden rounded-full border-2 border-white bg-surface-2 transition hover:scale-[1.03] active:scale-[0.98] ${dimensionClass}`}
           aria-label={previewUrl ? 'Change profile photo' : 'Add profile photo'}
         >
           {previewUrl ? (
@@ -124,23 +129,15 @@ export function ProfileAvatarField({
           className={`pointer-events-none absolute flex items-center justify-center rounded-full border-2 border-surface bg-accent text-white ${badgeClass}`}
           aria-hidden
         >
-          <Camera size={size === 'lg' ? 14 : 12} strokeWidth={1.75} />
+          <Camera size={cameraIconSizes[size]} strokeWidth={1.75} />
         </span>
       </div>
-
-      <button
-        type="button"
-        onClick={openFilePicker}
-        className="mt-3 inline-flex min-h-11 items-center justify-center px-2 text-sm text-text-2 underline-offset-2 transition hover:text-text hover:underline active:scale-[0.98]"
-      >
-        {previewUrl ? 'Change photo' : 'Add photo'}
-      </button>
 
       {showRemove ? (
         <button
           type="button"
           onClick={handleRemove}
-          className="mt-1 inline-flex min-h-11 items-center justify-center px-2 text-sm text-playful underline-offset-2 transition hover:underline active:scale-[0.98]"
+          className="inline-flex min-h-11 items-center justify-center px-2 text-sm text-playful underline-offset-2 transition hover:underline active:scale-[0.98]"
         >
           Remove photo
         </button>
