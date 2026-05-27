@@ -59,6 +59,7 @@ export function EditProfileSheet({
     setErrorMessage(null)
     setUsernameAvailable(null)
     setCheckingUsername(false)
+    setSaving(false)
   }, [isOpen, profile])
 
   useEffect(() => {
@@ -167,6 +168,7 @@ export function EditProfileSheet({
       onSaved(updatedProfile as User)
     } catch {
       setErrorMessage('Something went wrong — try again.')
+    } finally {
       setSaving(false)
     }
   }

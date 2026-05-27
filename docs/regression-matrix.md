@@ -26,6 +26,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-05-15 React Query migration | All 15 flows | All hooks (useQuery/useMutation), useAuth | None | None (pre-test-suite) | Manual | mid-file import in useBridgesByPair; Realtime channel reuse |
 | 2026-05-15 Bug fixes | Auth, Onboarding, Network, Notifications | useBridgesByPair, useNetworkGraph, useNotifications, useGumPieces, useFeed, usePost, useConfirmationSession | None | None | Manual | profileReadyCache onboarding loop |
 | 2026-05-22 Production Quality System | All flows (shared lib migration) | src/lib/realtime.ts (new), queryKeys.ts (new), invalidate.ts (new), useProfileReady.ts (new), all 8 realtime hooks migrated | None | `realtime.test.ts` 6/6 ✓, `categorizeTitle.test.ts` 11/11 ✓, `validateQrToken.test.ts` 10/10 ✓, `useProfileReady.test.ts` 5/5 ✓, `notifications.test.ts` 5/5 ✓ | Playwright smoke suite created (CI) | exhaustive-deps warnings on 5 useMemo hooks (non-breaking) |
+| 2026-05-26 Edit Profile save state fix | Profile (own), Settings | None | None | `npm run quality` pass | Manual: save → reopen → second save on `/profile/me` and `/settings` | None |
 
 ---
 
