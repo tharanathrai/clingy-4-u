@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
-import { pageShellScroll } from '../components/layout/pageShell.ts'
+import { pageShellJourneyScroll } from '../components/layout/pageShell.ts'
 import { extractQrToken } from '../lib/extractQrToken.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -297,7 +297,7 @@ export default function AddScan() {
   }
 
   return (
-    <main className={`${pageShellScroll} safe-content-bottom py-8`}>
+    <main className={pageShellJourneyScroll}>
       <BackHeader
         onBack={() => {
           if (window.history.length > 1) {
@@ -308,7 +308,7 @@ export default function AddScan() {
         }}
       />
 
-      <h1 className="app-page-title mt-4 text-center">scan code</h1>
+      <h1 className="app-page-title text-center">scan code</h1>
       <p className="mt-2 text-center text-sm text-text-2">
         Point your camera at their code, or upload a photo.
       </p>

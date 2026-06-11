@@ -197,7 +197,7 @@ export default function Add() {
   const remainingSeconds = Math.ceil(remainingMs / 1000)
 
   return (
-    <main className={`${pageShellPinnedFooter} pb-tab-clearance text-center`}>
+    <main className={`${pageShellPinnedFooter} pb-tab-clearance`}>
       <BackHeader
         onBack={() => {
           if (window.history.length > 1) {
@@ -208,50 +208,50 @@ export default function Add() {
         }}
       />
 
-      <div className="flex flex-1 flex-col items-center justify-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto text-center">
         <h1 className="app-page-title">add someone</h1>
         <p className="mt-3 max-w-xs text-sm text-text-2">
           Show this to someone you want to connect with. It refreshes every 60 seconds.
         </p>
 
-        <div className="relative mt-8 flex h-72 w-72 items-center justify-center rounded-full bg-surface">
+        <div className="relative mt-6 flex h-64 w-64 shrink-0 items-center justify-center rounded-full bg-surface">
           <div className="qr-countdown-ring" style={ringStyle} />
-          <div className="relative z-10 rounded-lg bg-white p-4">
+          <div className="relative z-10 rounded-lg bg-white p-3">
             {loading ? (
-              <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
+              <div className="flex h-48 w-48 items-center justify-center text-sm text-black/60">
                 Loading...
               </div>
             ) : token ? (
-              <QRCodeSVG value={qrValue} size={208} />
+              <QRCodeSVG value={qrValue} size={192} />
             ) : (
-              <div className="flex h-52 w-52 items-center justify-center text-sm text-black/60">
+              <div className="flex h-48 w-48 items-center justify-center text-sm text-black/60">
                 Failed to generate code.
               </div>
             )}
           </div>
         </div>
 
-        <p className="mt-5 text-sm text-text-2">{remainingSeconds}s</p>
+        <p className="mt-4 text-sm text-text-2">{remainingSeconds}s</p>
         {errorMessage ? <p className="mt-2 text-sm text-playful">{errorMessage}</p> : null}
+      </div>
 
-        <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-          <button
-            type="button"
-            className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-            onClick={() => {
-              clearCachedToken()
-              void fetchToken({ force: true, showLoading: false })
-            }}
-          >
-            Refresh now
-          </button>
-          <Link
-            to="/add/scan"
-            className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          >
-            Switch to scan
-          </Link>
-        </div>
+      <div className="mt-auto flex w-full shrink-0 flex-col gap-3 pt-4">
+        <button
+          type="button"
+          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+          onClick={() => {
+            clearCachedToken()
+            void fetchToken({ force: true, showLoading: false })
+          }}
+        >
+          Refresh now
+        </button>
+        <Link
+          to="/add/scan"
+          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+        >
+          Switch to scan
+        </Link>
       </div>
     </main>
   )

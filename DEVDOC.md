@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.5 (UI consistency audit)
-**Last updated:** 2026-06-11 — Cross-screen layout standards; shared BackHeader + pageShell tokens
+**Version:** 0.6 (Onboarding journey consistency)
+**Last updated:** 2026-06-11 — Journey shell tokens; pinned footer on `/add`; `pageShellJourneyScroll`
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -19,14 +19,15 @@ Canonical class strings live in `src/components/layout/pageShell.ts`:
 | Pattern | Token | Use when |
 |---|---|---|
 | Tab-bar scroll pages | `pageShellTab` | `/home`, `/network`, `/feed`, `/notifications`, `/profile/me`, `/profile/:username` — content scrolls above fixed tab bar |
-| Push scroll pages | `pageShellScroll` (+ `safe-content-bottom` if tab bar visible) | Settings, graveyard, piece detail, connection requests, add/scan |
-| Centered auth/empty | `pageShellCentered` | Loading spinners, connect sign-in, fetch error blocks |
-| Pinned footer actions | `pageShellPinnedFooter` (+ `pb-tab-clearance`) | `/welcome`, `/add` — primary CTA pinned above safe area |
+| Push scroll pages | `pageShellScroll` (+ `safe-content-bottom` if tab bar visible) | Settings, graveyard, piece detail, connection requests |
+| Journey push screens | `pageShellJourneyScroll` | `/add/scan`, `/connect` — tab-bar clearance + flex column |
+| Centered auth/empty | `pageShellCentered` | `/`, `/auth/callback` loading; connect loading |
+| Pinned footer actions | `pageShellPinnedFooter` (+ `pb-tab-clearance` on `/add`) | `/welcome`, `/add` — primary CTA pinned above safe area |
 | Tab content wrapper | `Layout` component | Home, Feed, Notifications — includes `safe-content-top` + `safe-content-bottom` |
 
 **Back navigation:** use `BackHeader` (`ArrowLeft` 18px / stroke 1.75, min 44×44 touch target, label `back`). Icon-only profile actions use `ProfileMeHeader` pattern (`min-h-11 min-w-11`).
 
-**Titles:** `app-page-title` in sentence case (`your pocket`, `add someone`, `connection requests`). User display names are the exception.
+**Titles:** `app-page-title` in sentence case (`your pocket`, `add someone`, `connection requests`). User display names are the exception. Onboarding wizard step headings intentionally use `font-display text-4xl` (same scale as `app-page-title`) for continuity within the 3-step flow.
 
 **Horizontal padding:** `px-5` (20px) on all screens unless edge-to-edge is spec'd (network graph canvas).
 
@@ -34,17 +35,19 @@ Canonical class strings live in `src/components/layout/pageShell.ts`:
 
 | Route | Shell | Notes |
 |---|---|---|
-| `/`, `/auth/callback`, `/welcome` | `safe-screen-height` / pinned footer | Spec 002 regression guard |
+| `/` | `pageShellCentered` | Hero `text-5xl`; inner content uses full `max-w-md` shell width |
+| `/auth/callback` | `pageShellCentered` | OAuth spinner |
+| `/welcome` | `pageShellPinnedFooter` | Wizard step dots; `mt-auto` pinned actions — spec 002 regression guard |
 | `/home`, `/feed`, `/notifications` | `Layout` | Tab roots |
 | `/network` | `safe-screen-height` | Full-bleed graph; header chrome only |
 | `/profile/me`, `/profile/:username` | `pageShellTab` | Tab bar clearance |
-| `/add` | `pageShellPinnedFooter` | QR centered; tab bar visible |
-| `/add/scan`, `/connect` | `pageShellScroll` | Journey alignment |
+| `/add` | `pageShellPinnedFooter` + `pb-tab-clearance` | Scrollable QR region; pinned Refresh / Switch to scan |
+| `/add/scan`, `/connect` | `pageShellJourneyScroll` | `BackHeader` + `app-page-title`; tab-bar clearance |
 | `/connections/requests`, `/settings`, `/home/graveyard` | `pageShellScroll` + back header | Push screens |
 | `/piece/new`, `/piece/:id`, `/piece/:id/confirm` | `pageShellScroll` / centered loading | Ceremony uses `safe-screen-height` + extra bottom pad |
 | AuthGuard / Suspense fallbacks | `safe-screen-height` centered | No `min-h-screen` |
 
-Spec: `specs/003-ui-consistency-audit`
+Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consistency`
 
 ---
 
@@ -59,14 +62,14 @@ Spec: `specs/003-ui-consistency-audit`
 
 ### Onboarding
 **Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `recoveryPath.test.ts` + `routeErrorBoundary.test.tsx` cover auth recovery; `avatarImage.test.ts` 3/3 ✓
-- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. Onboarding layout uses `safe-screen-height` with pinned footer actions (no scroll needed for Continue/Back/Finish on mobile at 375px/390px). OAuth back-navigation from Google Account picker lands on `/` or `/welcome` without error boundary. Spec: `specs/002-onboarding-robustness`.
+- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. Onboarding uses `pageShellPinnedFooter` with `mt-auto` pinned actions (no scroll needed for Continue/Back/Finish on mobile at 375px/390px). OAuth back-navigation from Google Account picker lands on `/` or `/welcome` without error boundary. Specs: `specs/002-onboarding-robustness`, `specs/004-onboarding-journey-consistency`.
 - Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`, `src/components/layout/RouteErrorBoundary.tsx`
 
 ---
 
 ### QR Add / First Contact
 **Status: Working**
-- What works: `generate-qr-token` edge function creates 60s rotating tokens; QR displayed via `qrcode.react`; in-app scanner via `html5-qrcode`; deep link `/connect?token=` flow for sharing; `validate-qr-token` edge function validates token; all 5 error cases (expired, own, already_connected, request_pending, generic/network) handled with correct messages and actions (dismiss, retry, view profile); `AddScan.tsx` and `Connect.tsx` both have full error handling.
+- What works: `generate-qr-token` edge function creates 60s rotating tokens; QR displayed via `qrcode.react`; in-app scanner via `html5-qrcode`; deep link `/connect?token=` flow for sharing; `validate-qr-token` edge function validates token; all 5 error cases (expired, own, already_connected, request_pending, generic/network) handled with correct messages and actions (dismiss, retry, view profile); `AddScan.tsx` and `Connect.tsx` both have full error handling. Journey layout: `/add` pinned footer (`pageShellPinnedFooter` + scrollable QR region); `/add/scan` and `/connect` use `pageShellJourneyScroll` with tab-bar clearance. Spec: `specs/004-onboarding-journey-consistency`.
 - Components / hooks: `src/pages/Add.tsx`, `src/pages/AddScan.tsx`, `src/pages/Connect.tsx`, `src/lib/validateQrToken.ts`
 
 ---

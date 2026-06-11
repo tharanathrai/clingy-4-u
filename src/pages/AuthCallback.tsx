@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { pageShellCentered } from '../components/layout/pageShell.ts'
 import { resolvePostAuthPath } from '../lib/recoveryPath.ts'
 import { supabase } from '../lib/supabase.ts'
 
@@ -71,7 +72,7 @@ export default function AuthCallback() {
   }, [navigate])
 
   return (
-    <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
+    <main className={pageShellCentered}>
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-text-3 border-t-accent" />
         <p className="text-sm text-text-2">Signing you in...</p>

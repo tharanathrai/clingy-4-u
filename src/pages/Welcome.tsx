@@ -5,6 +5,7 @@ import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx
 import { useAuth } from '../hooks/useAuth.ts'
 import { uploadAvatar } from '../hooks/useAvatarUpload.ts'
 import { markProfileReady } from '../hooks/useProfileReady.ts'
+import { pageShellCentered, pageShellPinnedFooter } from '../components/layout/pageShell.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
@@ -106,7 +107,7 @@ export default function Welcome() {
 
   if (loading) {
     return (
-      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
+      <main className={pageShellCentered}>
         <p className="text-sm text-text-2">Loading...</p>
       </main>
     )
@@ -117,7 +118,7 @@ export default function Welcome() {
   }
 
   return (
-    <main className="safe-screen-height mx-auto flex w-full max-w-md flex-col bg-bg px-5 pb-[var(--app-safe-bottom)] text-text safe-content-top">
+    <main className={pageShellPinnedFooter}>
       <header className="mb-6 shrink-0">
         <div className="flex items-center justify-center gap-2">
           {[1, 2, 3].map((dot) => (

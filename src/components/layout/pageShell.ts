@@ -10,3 +10,6 @@ export const pageShellTab = `${pageShellBase} safe-content-top safe-content-bott
 export const pageShellCentered = `${pageShellBase} flex flex-col items-center justify-center text-center`
 
 export const pageShellPinnedFooter = `${pageShellBase} flex flex-col pb-[var(--app-safe-bottom)] safe-content-top`
+
+/** Journey push screens with tab bar visible (add/scan, connect) */
+export const pageShellJourneyScroll = `${pageShellScroll} pb-tab-clearance flex flex-col`

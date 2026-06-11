@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
-import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
+import { pageShellCentered, pageShellJourneyScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -118,7 +118,7 @@ export default function Connect() {
 
   if (loading) {
     return (
-      <main className={`${pageShellCentered} px-5`}>
+      <main className={pageShellCentered}>
         <p className="text-sm text-text-2">Loading...</p>
       </main>
     )
@@ -126,9 +126,9 @@ export default function Connect() {
 
   if (!token) {
     return (
-      <main className={`${pageShellScroll} flex flex-col`}>
+      <main className={pageShellJourneyScroll}>
         <BackHeader to="/add" />
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto text-center">
           <h1 className="app-page-title">connect</h1>
           <p className="mt-3 text-sm text-text-2">This invite link is missing a token.</p>
           <Link
@@ -144,9 +144,9 @@ export default function Connect() {
 
   if (!userId) {
     return (
-      <main className={`${pageShellScroll} flex flex-col`}>
+      <main className={pageShellJourneyScroll}>
         <BackHeader to="/" />
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto text-center">
           <h1 className="app-page-title">connect</h1>
           <p className="mt-3 max-w-xs text-sm text-text-2">
             Sign in first so we can send your connection request.
@@ -164,9 +164,9 @@ export default function Connect() {
   }
 
   return (
-    <main className={`${pageShellScroll} flex flex-col`}>
+    <main className={pageShellJourneyScroll}>
       <BackHeader to="/home" />
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto text-center">
         <h1 className="app-page-title">connect</h1>
 
         {submitting ? <p className="mt-6 text-sm text-text-2">Sending request...</p> : null}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
+import { pageShellCentered } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfileReady } from '../hooks/useProfileReady.ts'
 
@@ -11,7 +12,7 @@ export default function Landing() {
 
   if (loading || (user && (profileLoading || profileReady === null))) {
     return (
-      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
+      <main className={pageShellCentered}>
         <p className="text-sm text-text-2">Loading...</p>
       </main>
     )
@@ -33,8 +34,8 @@ export default function Landing() {
   }
 
   return (
-    <main className="safe-screen-height flex items-center justify-center bg-bg px-5">
-      <section className="w-full max-w-sm text-center">
+    <main className={pageShellCentered}>
+      <section className="w-full text-center">
         <h1 className="font-display text-5xl text-text">clingy 4 u</h1>
         <p className="mt-4 font-body text-base text-text-2">
           Make plans together, then turn them into bridges.
