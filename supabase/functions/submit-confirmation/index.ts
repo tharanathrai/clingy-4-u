@@ -257,10 +257,10 @@ Deno.serve(async (request) => {
       }
     }
 
-    const draftPostId = await ensureDraftPost({
+    const draftPostId = await ensureDraftPosts({
       serviceClient,
       bridgeId: bridge.id,
-      authorId: userId,
+      callingUserId: userId,
       creatorId: piece.creator_id,
       recipientId: piece.recipient_id,
       category: piece.category,
@@ -298,32 +298,15 @@ function jsonResponse(status: number, body: unknown): Response {
   })
 }
 
-async function ensureDraftPost(params: {
+async function ensureDraftPosts(params: {
   serviceClient: ReturnType<typeof createClient>
   bridgeId: string
-  authorId: string
+  callingUserId: string
   creatorId: string
   recipientId: string
   category: string
   title: string
 }): Promise<string | null> {
-  const { data: existingDraft, error: existingDraftError } = await params.serviceClient
-    .from('posts')
-    .select('id')
-    .eq('bridge_id', params.bridgeId)
-    .eq('author_id', params.authorId)
-    .eq('is_public', false)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<{ id: string }>()
-
-  if (existingDraftError) {
-    return null
-  }
-  if (existingDraft?.id) {
-    return existingDraft.id
-  }
-
   const { data: users, error: usersError } = await params.serviceClient
     .from('users')
     .select('id, display_name')
@@ -346,12 +329,56 @@ async function ensureDraftPost(params: {
     category: params.category,
   })
 
+  const participantIds = [params.creatorId, params.recipientId]
+  const draftIds = new Map<string, string>()
+
+  for (const participantId of participantIds) {
+    const draftId = await ensureDraftPostForUser({
+      serviceClient: params.serviceClient,
+      bridgeId: params.bridgeId,
+      authorId: participantId,
+      body,
+    })
+
+    if (!draftId) {
+      return null
+    }
+
+    draftIds.set(participantId, draftId)
+  }
+
+  return draftIds.get(params.callingUserId) ?? null
+}
+
+async function ensureDraftPostForUser(params: {
+  serviceClient: ReturnType<typeof createClient>
+  bridgeId: string
+  authorId: string
+  body: string
+}): Promise<string | null> {
+  const { data: existingDraft, error: existingDraftError } = await params.serviceClient
+    .from('posts')
+    .select('id')
+    .eq('bridge_id', params.bridgeId)
+    .eq('author_id', params.authorId)
+    .eq('is_public', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>()
+
+  if (existingDraftError) {
+    return null
+  }
+  if (existingDraft?.id) {
+    return existingDraft.id
+  }
+
   const { data: createdPost, error: createPostError } = await params.serviceClient
     .from('posts')
     .insert({
       bridge_id: params.bridgeId,
       author_id: params.authorId,
-      body,
+      body: params.body,
       is_public: false,
     })
     .select('id')

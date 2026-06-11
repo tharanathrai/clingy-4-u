@@ -57,17 +57,35 @@ export function UnwrapCeremony({
   }, [reducedMotion])
 
   useEffect(() => {
-    if (!showPrompt || !draftPostId) {
+    if (!showPrompt) {
       return
     }
 
     let cancelled = false
     const loadDraft = async () => {
       setLoadingDraft(true)
+
+      if (draftPostId) {
+        const { data } = await supabase
+          .from('posts')
+          .select('body')
+          .eq('id', draftPostId)
+          .maybeSingle<{ body: string }>()
+
+        if (!cancelled) {
+          setPostBody(data?.body ?? bridge.activity_title)
+          setLoadingDraft(false)
+        }
+        return
+      }
+
       const { data } = await supabase
         .from('posts')
         .select('body')
-        .eq('id', draftPostId)
+        .eq('bridge_id', bridge.id)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle<{ body: string }>()
 
       if (!cancelled) {
@@ -80,14 +98,7 @@ export function UnwrapCeremony({
     return () => {
       cancelled = true
     }
-  }, [bridge.activity_title, draftPostId, showPrompt])
-
-  useEffect(() => {
-    if (!showPrompt || draftPostId) {
-      return
-    }
-    setPostBody(bridge.activity_title)
-  }, [bridge.activity_title, draftPostId, showPrompt])
+  }, [bridge.activity_title, bridge.id, draftPostId, showPrompt])
 
   const handlePostIt = async () => {
     if (submitting || postBody.trim().length === 0 || postBody.length > 500) {

@@ -167,6 +167,10 @@ export default function PieceConfirm() {
     const checkBridgeFallback = async () => {
       const bridgeRow = await loadBridgeForPiece(id)
       if (!cancelled && bridgeRow) {
+        const nextDraftPostId = userId
+          ? await loadDraftPostIdForBridge(bridgeRow.id, userId)
+          : null
+        setDraftPostId(nextDraftPostId)
         setBridge(bridgeRow)
         setFlowState('bridge_formed')
         setFallbackSession(null)
@@ -181,7 +185,7 @@ export default function PieceConfirm() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [activeSession, flowState, id])
+  }, [activeSession, flowState, id, userId])
 
   const handleStartOver = useCallback(async () => {
     if (!id) {
@@ -384,17 +388,25 @@ async function loadDraftPostIdForBridge(
   bridgeId: string,
   userId: string,
 ): Promise<string | null> {
-  const { data } = await supabase
-    .from('posts')
-    .select('id')
-    .eq('bridge_id', bridgeId)
-    .eq('author_id', userId)
-    .eq('is_public', false)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle<{ id: string }>()
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('bridge_id', bridgeId)
+      .eq('author_id', userId)
+      .eq('is_public', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string }>()
 
-  return data?.id ?? null
+    if (data?.id) {
+      return data.id
+    }
+
+    await sleep(250)
+  }
+
+  return null
 }
 
 function sleep(durationMs: number): Promise<void> {
