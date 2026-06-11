@@ -14,7 +14,11 @@ interface OTPDisplayProps {
   sessionId: string
   partnerName: string
   currentUserName: string
-  onBridgeFormed: (bridge: Bridge, draftPostId: string | null) => void
+  onBridgeFormed: (
+    bridge: Bridge,
+    draftPostId: string | null,
+    draftPostBody: string | null,
+  ) => void
   onSessionExpired: () => void
   onStartOver: () => Promise<void>
 }
@@ -103,6 +107,7 @@ export function OTPDisplay({
           bridge_formed?: boolean
           bridge?: Bridge
           draft_post_id?: string
+          draft_post_body?: string
         }
       | null
 
@@ -119,7 +124,11 @@ export function OTPDisplay({
     }
 
     if (payload?.bridge_formed && payload.bridge) {
-      onBridgeFormed(payload.bridge, payload.draft_post_id ?? null)
+      onBridgeFormed(
+        payload.bridge,
+        payload.draft_post_id ?? null,
+        payload.draft_post_body ?? null,
+      )
     } else {
       setLocalConfirmed(true)
     }

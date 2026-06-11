@@ -5,20 +5,24 @@ import type { Bridge } from '../../types/index.ts'
 
 interface UnwrapCeremonyProps {
   bridge: Bridge
+  activityTitle: string
   draftPostId: string | null
+  suggestedPostBody: string | null
   onComplete: (toast?: string) => void
 }
 
 export function UnwrapCeremony({
   bridge,
+  activityTitle,
   draftPostId,
+  suggestedPostBody,
   onComplete,
 }: UnwrapCeremonyProps) {
   const [phase, setPhase] = useState<'start' | 'gum' | 'line' | 'text' | 'done'>(
     'start',
   )
   const [showPrompt, setShowPrompt] = useState(false)
-  const [postBody, setPostBody] = useState('')
+  const [postBody, setPostBody] = useState(suggestedPostBody ?? activityTitle)
   const [loadingDraft, setLoadingDraft] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,12 +61,20 @@ export function UnwrapCeremony({
   }, [reducedMotion])
 
   useEffect(() => {
+    setPostBody(suggestedPostBody ?? activityTitle)
+  }, [activityTitle, suggestedPostBody])
+
+  useEffect(() => {
     if (!showPrompt) {
       return
     }
 
     let cancelled = false
-    const loadDraft = async () => {
+    const syncDraft = async () => {
+      if (suggestedPostBody) {
+        return
+      }
+
       setLoadingDraft(true)
 
       if (draftPostId) {
@@ -72,8 +84,10 @@ export function UnwrapCeremony({
           .eq('id', draftPostId)
           .maybeSingle<{ body: string }>()
 
+        if (!cancelled && data?.body) {
+          setPostBody(data.body)
+        }
         if (!cancelled) {
-          setPostBody(data?.body ?? bridge.activity_title)
           setLoadingDraft(false)
         }
         return
@@ -88,17 +102,19 @@ export function UnwrapCeremony({
         .limit(1)
         .maybeSingle<{ body: string }>()
 
+      if (!cancelled && data?.body) {
+        setPostBody(data.body)
+      }
       if (!cancelled) {
-        setPostBody(data?.body ?? bridge.activity_title)
         setLoadingDraft(false)
       }
     }
 
-    void loadDraft()
+    void syncDraft()
     return () => {
       cancelled = true
     }
-  }, [bridge.activity_title, bridge.id, draftPostId, showPrompt])
+  }, [bridge.id, draftPostId, showPrompt, suggestedPostBody])
 
   const handlePostIt = async () => {
     if (submitting || postBody.trim().length === 0 || postBody.length > 500) {
@@ -151,7 +167,7 @@ export function UnwrapCeremony({
   }
 
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 text-text">
+    <section className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 pb-72 text-text">
       <div className="unwrap-scene">
         <div className="unwrap-wrapper" aria-hidden>
           <div
@@ -178,12 +194,14 @@ export function UnwrapCeremony({
         <div className={`unwrap-radial ${accentClass} ${phase === 'text' ? 'unwrap-radial-pulse' : ''}`} />
       </div>
 
-      <h1 className={`mt-8 text-center font-display text-3xl ${phase === 'text' || phase === 'done' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-        {bridge.activity_title}
-      </h1>
-      <p className={`mt-2 text-center text-sm text-text-2 ${phase === 'text' || phase === 'done' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-        Bridge formed.
-      </p>
+      <div
+        className={`relative z-10 mt-8 text-center transition-opacity duration-300 ${
+          phase === 'text' || phase === 'done' ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <h1 className="font-display text-3xl text-text">{activityTitle}</h1>
+        <p className="mt-2 text-sm text-text-2">Bridge formed.</p>
+      </div>
 
       <div className="app-fixed-frame safe-bottom-24 z-40 px-5">
         <div

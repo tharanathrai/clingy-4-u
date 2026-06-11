@@ -257,7 +257,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    const draftPostId = await ensureDraftPosts({
+    const draftPost = await ensureDraftPosts({
       serviceClient,
       bridgeId: bridge.id,
       callingUserId: userId,
@@ -266,7 +266,7 @@ Deno.serve(async (request) => {
       category: piece.category,
       title: piece.title,
     })
-    if (!draftPostId) {
+    if (!draftPost) {
       return jsonResponse(500, { error: 'Failed to create draft post.' })
     }
 
@@ -282,7 +282,8 @@ Deno.serve(async (request) => {
       success: true,
       bridge_formed: true,
       bridge,
-      draft_post_id: draftPostId,
+      draft_post_id: draftPost.id,
+      draft_post_body: draftPost.body,
     })
   } catch (error) {
     return jsonResponse(500, {
@@ -306,7 +307,7 @@ async function ensureDraftPosts(params: {
   recipientId: string
   category: string
   title: string
-}): Promise<string | null> {
+}): Promise<{ id: string; body: string } | null> {
   const { data: users, error: usersError } = await params.serviceClient
     .from('users')
     .select('id, display_name')
@@ -347,7 +348,12 @@ async function ensureDraftPosts(params: {
     draftIds.set(participantId, draftId)
   }
 
-  return draftIds.get(params.callingUserId) ?? null
+  const draftId = draftIds.get(params.callingUserId)
+  if (!draftId) {
+    return null
+  }
+
+  return { id: draftId, body }
 }
 
 async function ensureDraftPostForUser(params: {

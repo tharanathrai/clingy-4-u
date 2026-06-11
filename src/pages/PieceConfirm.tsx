@@ -10,6 +10,7 @@ import {
   useConfirmationSession,
 } from '../hooks/useConfirmationSession.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { buildDraftPostBody } from '../lib/draftPostBody.ts'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 
@@ -34,6 +35,7 @@ export default function PieceConfirm() {
   const [fallbackSession, setFallbackSession] = useState<ConfirmationSession | null>(null)
   const [bridge, setBridge] = useState<Bridge | null>(null)
   const [draftPostId, setDraftPostId] = useState<string | null>(null)
+  const [suggestedPostBody, setSuggestedPostBody] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [creatorName, setCreatorName] = useState('Unknown user')
   const [recipientName, setRecipientName] = useState('Unknown user')
@@ -45,15 +47,26 @@ export default function PieceConfirm() {
 
     const bridgeRow = await loadBridgeForPiece(id)
     if (bridgeRow) {
-      const nextDraftPostId = await loadDraftPostIdForBridge(bridgeRow.id, userId)
-      setDraftPostId(nextDraftPostId)
+      const draftPost = await loadDraftPostForBridge(bridgeRow.id, userId)
+      setDraftPostId(draftPost?.id ?? null)
+      setSuggestedPostBody(
+        draftPost?.body ??
+          (piece
+            ? buildDraftPostBody({
+                creatorName,
+                recipientName,
+                title: piece.title,
+                category: piece.category,
+              })
+            : null),
+      )
       setBridge(bridgeRow)
       setFlowState('bridge_formed')
       return
     }
 
     setFlowState('expired')
-  }, [id, userId])
+  }, [creatorName, id, piece, recipientName, userId])
 
   const handleBridgeFormedFromSession = useCallback(() => {
     void handleSessionDeleted()
@@ -152,10 +165,10 @@ export default function PieceConfirm() {
   }, [sessionError])
 
   useEffect(() => {
-    if (liveSession) {
+    if (liveSession && flowState !== 'bridge_formed') {
       setFlowState('waiting')
     }
-  }, [liveSession])
+  }, [flowState, liveSession])
 
   useEffect(() => {
     if (!id || flowState !== 'waiting' || !activeSession) {
@@ -167,10 +180,21 @@ export default function PieceConfirm() {
     const checkBridgeFallback = async () => {
       const bridgeRow = await loadBridgeForPiece(id)
       if (!cancelled && bridgeRow) {
-        const nextDraftPostId = userId
-          ? await loadDraftPostIdForBridge(bridgeRow.id, userId)
+        const draftPost = userId
+          ? await loadDraftPostForBridge(bridgeRow.id, userId)
           : null
-        setDraftPostId(nextDraftPostId)
+        setDraftPostId(draftPost?.id ?? null)
+        setSuggestedPostBody(
+          draftPost?.body ??
+            (piece
+              ? buildDraftPostBody({
+                  creatorName,
+                  recipientName,
+                  title: piece.title,
+                  category: piece.category,
+                })
+              : null),
+        )
         setBridge(bridgeRow)
         setFlowState('bridge_formed')
         setFallbackSession(null)
@@ -185,7 +209,7 @@ export default function PieceConfirm() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [activeSession, flowState, id, userId])
+  }, [activeSession, creatorName, flowState, id, piece, recipientName, userId])
 
   const handleStartOver = useCallback(async () => {
     if (!id) {
@@ -218,7 +242,9 @@ export default function PieceConfirm() {
     return (
       <UnwrapCeremony
         bridge={bridge}
+        activityTitle={bridge.activity_title || piece.title}
         draftPostId={draftPostId}
+        suggestedPostBody={suggestedPostBody}
         onComplete={(toast) =>
           navigate('/home', {
             replace: true,
@@ -276,8 +302,19 @@ export default function PieceConfirm() {
             sessionId={activeSession.id}
             partnerName={partnerName}
             currentUserName={currentUserName}
-            onBridgeFormed={(nextBridge, nextDraftPostId) => {
+            onBridgeFormed={(nextBridge, nextDraftPostId, nextDraftPostBody) => {
               setDraftPostId(nextDraftPostId)
+              setSuggestedPostBody(
+                nextDraftPostBody ??
+                  (piece
+                    ? buildDraftPostBody({
+                        creatorName,
+                        recipientName,
+                        title: piece.title,
+                        category: piece.category,
+                      })
+                    : null),
+              )
               setBridge(nextBridge)
               setFlowState('bridge_formed')
             }}
@@ -384,23 +421,23 @@ async function loadBridgeForPiece(gumPieceId: string): Promise<Bridge | null> {
   return null
 }
 
-async function loadDraftPostIdForBridge(
+async function loadDraftPostForBridge(
   bridgeId: string,
   userId: string,
-): Promise<string | null> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+): Promise<{ id: string; body: string } | null> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     const { data } = await supabase
       .from('posts')
-      .select('id')
+      .select('id, body')
       .eq('bridge_id', bridgeId)
       .eq('author_id', userId)
       .eq('is_public', false)
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle<{ id: string }>()
+      .maybeSingle<{ id: string; body: string }>()
 
     if (data?.id) {
-      return data.id
+      return data
     }
 
     await sleep(250)
