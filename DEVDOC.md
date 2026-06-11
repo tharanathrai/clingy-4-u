@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.3 (Production Quality System)
-**Last updated:** 2026-06-11 — Onboarding viewport layout, OAuth back-nav hardening, error boundary recovery
+**Version:** 0.4 (MVP + post-ship specs)
+**Last updated:** 2026-06-11 — Docs sync with shipped implementation; profile graveyard icon; onboarding robustness
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -14,14 +14,14 @@
 
 ### Auth
 **Status: Verified (automated)** — E2E smoke test: unauthenticated access redirects to `/`
-- What works: Google OAuth via Supabase, session persistence, auth state via singleton `useAuth` (module-level store + listeners), OAuth callback routing to `/welcome` vs `/home`, stored return path from `sessionStorage` for deep link flows. `AuthCallback` wraps profile lookup in try/catch and re-runs on bfcache `pageshow`. `Landing` sends authenticated users without a profile directly to `/welcome` (skips `/home` bounce). Post-auth and error-recovery paths centralized in `src/lib/recoveryPath.ts`.
-- Components / hooks: `src/hooks/useAuth.ts`, `src/pages/Landing.tsx`, `src/pages/AuthCallback.tsx`, `src/lib/recoveryPath.ts`
+- What works: Google OAuth via Supabase, session persistence, auth state via singleton `useAuth` (module-level store + listeners), OAuth callback routing to `/welcome` vs `/home`, stored return path from `sessionStorage` for deep link flows. `AuthCallback` wraps profile lookup in try/catch and re-runs on bfcache `pageshow`. `Landing` sends authenticated users without a profile directly to `/welcome` (skips `/home` bounce). Post-auth and error-recovery paths centralized in `src/lib/recoveryPath.ts` (`resolveRecoveryPath`, `resolvePostAuthPath`). `RouteErrorBoundary` remounts routes on Try again and routes Go home by auth/profile state via `resolveRecoveryPath`.
+- Components / hooks: `src/hooks/useAuth.ts`, `src/pages/Landing.tsx`, `src/pages/AuthCallback.tsx`, `src/lib/recoveryPath.ts`, `src/components/layout/RouteErrorBoundary.tsx`
 
 ---
 
 ### Onboarding
 **Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `recoveryPath.test.ts` + `routeErrorBoundary.test.tsx` cover auth recovery; `avatarImage.test.ts` 3/3 ✓
-- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. Onboarding layout uses `safe-screen-height` with pinned footer actions (no scroll needed for Continue/Back/Finish on mobile). `RouteErrorBoundary` remounts routes on Try again and routes Go home by auth/profile state.
+- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. Onboarding layout uses `safe-screen-height` with pinned footer actions (no scroll needed for Continue/Back/Finish on mobile at 375px/390px). OAuth back-navigation from Google Account picker lands on `/` or `/welcome` without error boundary. Spec: `specs/002-onboarding-robustness`.
 - Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`, `src/components/layout/RouteErrorBoundary.tsx`
 
 ---
@@ -42,7 +42,7 @@
 
 ### Gum Piece Creation
 **Status: Verified (automated)** — `categorizeTitle` 11/11 unit tests ✓; E2E smoke: onboarded user lands on `/add`
-- What works: Recipient selector with 5/5 pair-slot badges; title input with 60-char limit; live category preview via client-side `categorizeTitle`; submit via `useMutation` → `create-gum-piece` edge function; slot limit errors shown as toasts; success invalidates gum pieces cache via `queryKeys.gumPieces`; navigation to `/home`; skeleton loading rows for connections list.
+- What works: Recipient selector with 5/5 pair-slot badges; title input with 60-char limit; live category preview via client-side `categorizeTitle`; optional manual override via `CategoryPicker`; submit via `useMutation` → `create-gum-piece` edge function (server re-categorizes or accepts valid override slug); random `shape` assigned server-side; slot limit errors shown as toasts; success invalidates gum pieces cache via `queryKeys.gumPieces`; navigation to `/home`; skeleton loading rows for connections list.
 - Components / hooks: `src/pages/PieceNew.tsx`, `src/lib/categorizeTitle.ts`, `src/components/gum/CategoryPicker.tsx`
 
 ---
@@ -56,7 +56,7 @@
 
 ### Invite Accept / Decline
 **Status: Verified (manual)** — last tested post React Query migration; realtime now via `subscribePostgresChannel`
-- What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions (accept/pass for recipient, cancel for creator, mark-as-done + turn-down for active); respond via `useMutation`; turn-down confirmation sheet; real-time subscription invalidates query via `subscribePostgresChannel`; expired invite shows "This invite has expired." on accept; skeleton loading screen.
+- What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions — recipient: accept/pass on placeholder; creator: cancel placeholder; either party: mark-as-done + turn-down on active; respond via `useMutation` → `respond-gum-piece`; notification types differ for creator cancel (`plan_turned_down`) vs recipient pass (`invite_rejected`) on placeholders; turn-down confirmation sheet; real-time subscription invalidates query via `subscribePostgresChannel`; expired invite shows "This invite has expired." on accept; skeleton loading screen.
 - Components / hooks: `src/pages/PieceDetail.tsx`
 
 ---
@@ -83,8 +83,8 @@
 
 ### Profile (Own + Others)
 **Status: Verified (automated)** — `avatarImage.test.ts` 3/3 ✓; avatar crop/upload shared with onboarding; edit save state fix verified 2026-05-26
-- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard icon button in header (top-left), edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Duplicate "settings →" link removed.
-- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
+- What works: Own profile with avatar, name, bio, gumball, category breakdown; graveyard icon button in header top-left (`ProfileMeHeader`, Ghost icon → `/home/graveyard`); settings icon top-right; edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Bottom graveyard text link removed (spec `001-profile-graveyard-icon`).
+- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/Profile.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
 
 ---
 
@@ -133,7 +133,7 @@ Every `postgres_changes` subscription uses `subscribePostgresChannel()` from `sr
 - `useConfirmationSession`: INSERT/UPDATE call `setQueryData` directly; DELETE fires `onBridgeFormed` callback + clears cache
 
 ### 4. `verify_jwt = false` in `supabase/config.toml`
-All 12 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)`. Intentional for error message flexibility.
+All 13 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)` (or service-role bearer for cron/email). Intentional for error message flexibility.
 
 ### 5. Category logic duplicated client + server
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
@@ -142,9 +142,21 @@ All 12 edge functions manually validate the JWT by calling `supabase.auth.getUse
 Network graph export uses `captureGraphSnapshot()` in `src/lib/graphSnapshot.ts` (2× canvas draw, no `html2canvas`). Share/save does not require a selected node; `prepareGraphSnapshot` on `Network.tsx` clears selection before capture and restores afterward so exports show chalk spokes, not gummy bridge lines.
 
 ### 7. `submit-confirmation` auto-creates draft posts
-On bridge formation, a `posts` row with `is_public = false` is created. The `draft_post_id` drives the post opt-in prompt in `UnwrapCeremony`.
+On bridge formation, a `posts` row with `is_public = false` is created. The `draft_post_id` drives the post opt-in prompt in `UnwrapCeremony`. Publishing uses `create-post` edge function.
 
-### 8. `invalidateNetworkGraphCache` requires `queryClient` parameter
+### 8. Auth recovery centralized in `recoveryPath.ts`
+`RouteErrorBoundary` and post-OAuth routing use `resolveRecoveryPath` / `resolvePostAuthPath` so Go home lands on `/`, `/welcome`, or `/home` based on auth + profile state.
+
+### 9. Email via Resend, not SendGrid
+All transactional email goes through `send-email` edge function → Resend API. Secrets: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. Used by invite, turn-down, and expiry flows.
+
+### 10. Categories are code-defined, not a DB table
+Canonical list in `supabase/functions/_shared/categorize.ts`; client mirror in `src/lib/categorizeTitle.ts` and labels in `src/lib/constants.ts`.
+
+### 11. `gum_pieces.shape` stored but not rendered per-shape yet
+Server assigns random shape slug at creation; UI uses CSS morph blobs until SVG assets ship (v2).
+
+### 12. `invalidateNetworkGraphCache` requires `queryClient` parameter
 After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` requires both arguments. All callers (`ConnectionRequests.tsx`, `Notifications.tsx`, `ConnectionRequestSheet`) updated.
 
 ---
@@ -178,15 +190,19 @@ After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` 
 
 ## Known issues (post-session)
 
-1. **`plan_expiring_soon` notifications on expired pieces** — if a user opens a `plan_expiring_soon` notification after the piece has expired, they're routed to `/piece/:id` which shows the expired piece. The UX is correct ("This one didn't happen. That's okay.") but the notification isn't dismissed automatically. Minor: would require an extra check on notification tap.
+1. **`plan_expiring_soon` not generated by cron** — notification type exists in schema, UI copy, and routing; `run-expiry` does not yet emit 30-day warnings or emails. Deferred to v2.
 
-2. **Capacitor version skew** — `@capacitor/android`, `@capacitor/core`, `@capacitor/ios` are version 8.3.4 but `@capacitor/cli` is 7.6.5. `npx cap sync` will warn. Not blocking for scaffold-only goal.
+2. **`plan_expiring_soon` notifications on expired pieces** — if a user opens a `plan_expiring_soon` notification after the piece has expired, they're routed to `/piece/:id` which shows the expired piece. The UX is correct ("This one didn't happen. That's okay.") but the notification isn't dismissed automatically. Minor: would require an extra check on notification tap.
 
-3. **`useFeed` real-time is invalidation-based, not patch-based** — Any reaction, comment, or post insert triggers a full feed refetch via `invalidateQueries`. Granular `setQueryData` patches would eliminate flicker but require reconstructing the entire `FeedPost[]` shape from partial payloads. Acceptable tradeoff for now.
+3. **Capacitor version skew** — `@capacitor/android`, `@capacitor/core`, `@capacitor/ios` are version 8.3.4 but `@capacitor/cli` is 7.6.5. `npx cap sync` will warn. Not blocking for scaffold-only goal.
 
-4. **Network error state triggers graph reset** — The "Retry" button in the Network error overlay sets `graphState.loading: true`, which causes the `NetworkGraph` component to re-render in loading state. The graph data is already in the React Query cache and will rehydrate immediately from `useNetworkGraph`. The visual reset is brief but noticeable. Cosmetic only.
+4. **`useFeed` real-time is invalidation-based, not patch-based** — Any reaction, comment, or post insert triggers a full feed refetch via `invalidateQueries`. Granular `setQueryData` patches would eliminate flicker but require reconstructing the entire `FeedPost[]` shape from partial payloads. Acceptable tradeoff for now.
 
-5. **Profile cache key includes `viewerId`** — `useProfile` now uses the full `[identifier, byUserId ? 'id' : 'username', viewerId]` query key. This means the same profile fetched from two different views (by-id vs by-username) will be two separate cache entries. Acceptable since the data is identical and `staleTime: Infinity` prevents double-fetching.
+5. **Network error state triggers graph reset** — The "Retry" button in the Network error overlay sets `graphState.loading: true`, which causes the `NetworkGraph` component to re-render in loading state. The graph data is already in the React Query cache and will rehydrate immediately from `useNetworkGraph`. The visual reset is brief but noticeable. Cosmetic only.
+
+6. **Profile cache key includes `viewerId`** — `useProfile` now uses the full `[identifier, byUserId ? 'id' : 'username', viewerId]` query key. This means the same profile fetched from two different views (by-id vs by-username) will be two separate cache entries. Acceptable since the data is identical and `staleTime: Infinity` prevents double-fetching.
+
+7. **Per-shape gum SVG assets not wired** — `gum_pieces.shape` is populated but `GumPieceCard` / piece detail use CSS blobs only.
 
 ---
 

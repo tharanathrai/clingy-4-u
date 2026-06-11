@@ -1,5 +1,7 @@
 # UX Follow-Ups (from live testing)
 
+> Product truth lives in `PRD.md`, `DESIGN.md`, and `DEVDOC.md` (last synced 2026-06-11).
+
 ## Network Graph Viewport + Export
 
 1. Share image quality is poor for social posting.

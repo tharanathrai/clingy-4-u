@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# clingy 4 u (Sticky Bridges)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Mobile-first PWA for making real-life plans with people you care about. Every plan is a piece of gum; every completed plan forms a permanent bridge in your network graph.
 
-Currently, two official plugins are available:
+**Live:** https://clingy-4-u.vercel.app/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Product docs
 
-## React Compiler
+| Document | Purpose |
+|---|---|
+| [PRD.md](./PRD.md) | Product requirements, data model, flows, edge functions |
+| [DESIGN.md](./DESIGN.md) | Design system, tokens, copy, component specs |
+| [DEVDOC.md](./DEVDOC.md) | Implementation status per flow, architecture decisions, known issues |
+| [BACKLOG.md](./BACKLOG.md) | UX follow-ups from live testing |
+| [AGENTS.md](./AGENTS.md) | Agent workflow entry point |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+- React 19 + Vite + TypeScript + Tailwind CSS v4
+- TanStack React Query + Supabase (Auth, Postgres, Realtime, Edge Functions, Storage)
+- `react-force-graph-2d` for the network graph
+- Vitest + Playwright for tests
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Development
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev          # local dev server
+npm run quality      # typecheck + lint + test + build
+npm run test:e2e     # Playwright smoke tests
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create `.env.local`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+Supabase edge functions require secrets (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, service role key) configured in the Supabase dashboard — not in the client.
+
+## Spec-driven workflow
+
+Numbered specs live in `specs/`. Agent instructions: `.specify/memory/constitution.md` and [RALPH_PROMPT.md](./RALPH_PROMPT.md).
+
+Quality bar before shipping any change: `npm run quality` passes, four UI states handled (loading, error, empty, happy path), `DEVDOC.md` updated.

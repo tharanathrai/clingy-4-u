@@ -1,7 +1,7 @@
 # Sticky Bridges — Design System
-**Version:** 0.1  
-**Status:** Living document — updated alongside PRD  
-**Last updated:** Pre-sprint 0
+**Version:** 0.2  
+**Status:** Living document — updated alongside PRD and DEVDOC  
+**Last updated:** 2026-06-11 (MVP shipped)
 
 ---
 
@@ -25,7 +25,7 @@ These apply to every screen and override aesthetic preferences when in conflict.
 
 **Empty states must invite, not inform.** An empty pocket doesn't say "you have no plans." It says "who do you want to make a memory with?" Every empty state has a single CTA and warm copy. No cold system language.
 
-**Onboarding ends at the add screen.** After setting up their profile, the user's first destination is the QR add screen — not the empty pocket. The app is useless alone and the design should never let someone forget that.
+**Onboarding ends at the add screen.** After setting up their profile, the user's first destination is the QR add screen — not the empty pocket. The app is useless alone and the design should never let someone forget that. Onboarding uses `safe-screen-height` with pinned footer actions so Continue / Back / Finish stay above the fold on mobile (375px–390px viewports).
 
 **The pocket must feel worth opening.** Even one gum piece should make the screen feel alive. The blob morphs, the color chip glows slightly, the expiry date is humanized ("11 months left" not "2025-03-14"). A single piece should feel like a promise, not a task.
 
@@ -141,7 +141,9 @@ Mobile-first. Design for 390px wide (iPhone 14). All spacing in 4px increments.
 
 **Page padding:** 20px horizontal on all screens.
 **Safe area:** always account for bottom safe area on mobile — add `padding-bottom: env(safe-area-inset-bottom)` to bottom-tab-bar and any fixed bottom elements.
-**Max content width:** 480px centered. On wider screens content stays centered, background extends full width.
+**App device frame:** Content lives inside `.app-device-screen` — max width 430px, centered on a black outer frame. On wider screens the phone-width column stays centered; background extends full width.
+
+**Max content width:** 480px centered within the device frame for inner sections.
 
 ---
 
@@ -236,36 +238,21 @@ The "new gum" CTA is the only blob-shaped button — morphing border-radius anim
 
 ## 8. Gum Shape Assets
 
-5 SVG shapes, designed in Figma. Each has:
-- A base shape (the gum itself)
-- A highlight layer (white ellipse at 30-40% opacity, top-left — implies gloss)
-- A shadow layer (dark at 20% opacity, bottom — implies depth)
-- A `--gum-color` CSS variable slot for dynamic category color application
+Five shape slugs are randomized at creation and stored on `gum_pieces.shape`:
 
-**Shape-to-category mapping** (randomized at piece creation — same pair can get different shapes for different plans):
-
-| Shape | Feel |
+| DB slug | Feel |
 |---|---|
-| Wrigley strip | Long, flat, energetic |
-| Gumball | Round, bouncy, social |
-| Chiclet | Clean, precise, compact |
-| Chewy block | Dense, substantial, tactile |
-| Organic blob | Soft, irregular, personal |
+| `gum-strip` | Long, flat, energetic |
+| `gum-ball` | Round, bouncy, social |
+| `gum-chiclet` | Clean, precise, compact |
+| `gum-block` | Dense, substantial, tactile |
+| `gum-blob` | Soft, irregular, personal |
 
 All five shapes are used across all categories. The color communicates the category — the shape is a surprise.
 
-**Wrapper treatment:**
-Each shape has a wrapped state (foil/wrapper visible) and an unwrapped state (gum exposed). The wrapper is a lighter, slightly desaturated version of the category color with a diagonal line texture implying foil. Switching between states is animated.
+**Current implementation (MVP):** Pocket and detail views render category-colored CSS morph blobs (`gum-morph-base` + staggered duration classes), not shape-specific SVG assets yet. Per-shape SVG assets with gloss/shadow layers and wrapped/unwrapped states are deferred to v2 (see PRD §17).
 
-**Implementation:**
-```tsx
-<GumPiece 
-  shape="wrigley-strip"    // randomized at creation, stored in DB
-  color="#CF8EE8"           // derived from category
-  state="wrapped"           // wrapped | unwrapped
-  size={48}                 // default pocket size
-/>
-```
+**Target asset spec (v2):** Each shape gets base + highlight + shadow layers and a `--gum-color` slot. Wrapper peel animation plays in the unwrap ceremony.
 
 ---
 
@@ -281,6 +268,8 @@ The more bridges in a category, the larger its patch. A user who's only ever don
 Sits centered on the profile page. Size: 160px × 160px. Slow morph animation on the outer clip path (6s loop).
 
 Below it: `"chewed gum with N people"` in DM Sans 400, `--color-text-secondary`. Nothing else numerical.
+
+**Own profile header:** Graveyard access is a top-left icon button (Ghost icon), balanced against the settings icon on the top-right. No bottom-of-page graveyard text link.
 
 ---
 
@@ -436,38 +425,36 @@ Derived from top 2 categories. Generated server-side on profile load.
 
 ## 16. Tailwind Configuration
 
-Add to `tailwind.config.js`:
+**Tailwind CSS v4** — tokens in `tailwind.config.js`; entry via `@config "../tailwind.config.js"` and `@import "tailwindcss"` in `src/index.css`.
+
+Design tokens (colors, fonts, radii, shadows) match the config below. CSS custom properties for safe-area and browser chrome live in `:root` (`--app-safe-top`, `--app-safe-bottom`, `--browser-top-inset`, `--browser-bottom-inset`).
 
 ```js
-module.exports = {
+// tailwind.config.js (ESM export)
+export default {
   theme: {
     extend: {
       colors: {
-        bg:         '#12101A',
-        surface:    '#1E1B2E',
-        'surface-2':'#272438',
-        text:       '#F2EFF8',
-        'text-2':   '#9B93B8',
-        'text-3':   '#5C5478',
-        intimate:   '#CF8EE8',
-        active:     '#7DD47A',
-        playful:    '#F07868',
-        explore:    '#6DB8F0',
-        recharge:   '#82C9A0',
-        savor:      '#F0A84A',
-        support:    '#E89AA8',
-        accent:     '#CF8EE8',
+        bg: '#12101A',
+        surface: '#1E1B2E',
+        'surface-2': '#272438',
+        text: '#F2EFF8',
+        'text-2': '#9B93B8',
+        'text-3': '#5C5478',
+        intimate: '#CF8EE8',
+        active: '#7DD47A',
+        playful: '#F07868',
+        explore: '#6DB8F0',
+        recharge: '#82C9A0',
+        savor: '#F0A84A',
+        support: '#E89AA8',
+        accent: '#CF8EE8',
       },
       fontFamily: {
         display: ['"Bagel Fat One"', 'cursive'],
-        body:    ['"DM Sans"', 'sans-serif'],
+        body: ['"DM Sans"', 'sans-serif'],
       },
-      borderRadius: {
-        sm:  '8px',
-        md:  '14px',
-        lg:  '20px',
-        xl:  '28px',
-      },
+      borderRadius: { sm: '8px', md: '14px', lg: '20px', xl: '28px' },
       boxShadow: {
         card: '0 4px 24px rgba(0,0,0,0.3)',
         glow: '0 0 40px rgba(207,142,232,0.15)',
@@ -481,16 +468,17 @@ module.exports = {
 
 ## 17. What to Build vs What to Asset
 
-| Element | Approach |
-|---|---|
-| Gum piece shapes | SVG assets (Figma → export → `/src/assets/gum/`) |
-| Gumball blob | Built in code (SVG with JS-driven patches) |
-| Network graph | Built in code (react-force-graph-2d + Three.js bridges) |
-| Category chips / tags | Built in code (Tailwind) |
-| Empty state illustrations | SVG assets (simple, designed in Figma) |
-| App icon | SVG asset (single gumball blob, `--color-intimate`) |
-| Grain texture | CSS (SVG noise data URI) |
-| All animations | CSS keyframes + Tailwind |
+| Element | Approach | Status |
+|---|---|---|
+| Gum piece shapes (MVP) | CSS morph blobs + category color | ✅ Shipped |
+| Gum piece shapes (v2) | SVG assets (Figma → `/src/assets/gum/`) | Deferred |
+| Gumball blob | Built in code (`Gumball.tsx` — SVG patches) | ✅ Shipped |
+| Network graph | `react-force-graph-2d` canvas + `graphSnapshot.ts` export | ✅ Shipped |
+| Category chips / tags | Tailwind (`CategoryChip.tsx`) | ✅ Shipped |
+| Empty state copy | Inline per §13 (no illustration assets yet) | ✅ Shipped |
+| App icon | PNG (`public/icon-192.png`, `icon-512.png`) | ✅ Shipped |
+| Grain texture | CSS (`.grain-overlay` in `index.html`) | ✅ Shipped |
+| Animations | CSS keyframes + Tailwind | ✅ Shipped |
 
 ---
 
