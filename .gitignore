@@ -1,5 +1,10 @@
 # Logs
 logs
+
+# Ralph Wiggum auto-generated prompts
+PROMPT_build.md
+PROMPT_plan.md
+.cursor/ralph/
 *.log
 npm-debug.log*
 yarn-debug.log*
