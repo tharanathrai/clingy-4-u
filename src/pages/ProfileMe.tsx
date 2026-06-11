@@ -5,6 +5,7 @@ import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { ProfileMeHeader, ProfileMeHeaderSkeleton } from '../components/profile/ProfileMeHeader.tsx'
+import { pageShellTab } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -58,7 +59,7 @@ export default function ProfileMe() {
 
   if (loading || profileLoading) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+      <main className={pageShellTab}>
         <ProfileMeHeaderSkeleton />
         <section className="mt-2 flex flex-col items-center text-center">
           <div className="skeleton h-20 w-20 rounded-full" />
@@ -81,9 +82,9 @@ export default function ProfileMe() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
+      <main className={`${pageShellTab} flex flex-col`}>
         <ProfileMeHeader />
-        <h1 className="font-display text-4xl">My profile</h1>
+        <h1 className="app-page-title mt-4">my profile</h1>
         <p className="mt-4 text-sm text-text-2">
           {error ?? 'Profile not found. Complete onboarding first.'}
         </p>
@@ -98,7 +99,7 @@ export default function ProfileMe() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+    <main className={pageShellTab}>
       <ProfileMeHeader />
 
       <section className="mt-2 flex flex-col items-center text-center">

@@ -1,7 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 
@@ -25,7 +26,7 @@ export default function Settings() {
 
   if (authLoading || profileLoading) {
     return (
-      <main className="safe-screen-height mx-auto w-full max-w-md bg-bg px-5 py-8 text-text">
+      <main className={pageShellScroll}>
         <div className="skeleton mb-6 h-7 w-24 rounded" />
         <section className="rounded-lg bg-surface p-4">
           <div className="flex items-center gap-3 border-b border-white/10 pb-4">
@@ -68,11 +69,8 @@ export default function Settings() {
   }
 
   return (
-    <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto w-full max-w-md overflow-y-auto bg-bg px-5 pb-8 pt-6 text-text">
-      <Link to="/profile/me" className="inline-flex min-h-11 items-center gap-2 text-sm text-text-2">
-        <ArrowLeft size={18} strokeWidth={1.75} />
-        back
-      </Link>
+    <main className={`${pageShellScroll} safe-content-bottom pb-8 pt-6`}>
+      <BackHeader to="/profile/me" />
       <h1 className="app-page-title mt-4">settings</h1>
 
       <section className="mt-6 rounded-lg bg-surface p-5">

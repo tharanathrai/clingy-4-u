@@ -1,8 +1,9 @@
-import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import type { CategorySlug } from '../lib/constants.ts'
@@ -300,22 +301,17 @@ export default function PieceNew() {
     })
   }
 
+  const backTo =
+    locationState?.selectUserId != null
+      ? ({
+          pathname: backTarget,
+          state: { selectUserId: locationState.selectUserId },
+        } as const)
+      : backTarget
+
   return (
-    <main className="mx-auto min-h-full w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
-      <div className="mb-6">
-        <Link
-          to={backTarget}
-          state={
-            locationState?.selectUserId
-              ? { selectUserId: locationState.selectUserId }
-              : undefined
-          }
-          className="inline-flex items-center gap-2 text-sm text-text-2"
-        >
-          <ArrowLeft size={18} strokeWidth={1.75} />
-          back
-        </Link>
-      </div>
+    <main className={`${pageShellScroll} safe-content-bottom pt-6`}>
+      <BackHeader to={backTo} className="mb-4" />
 
       <h1 className="app-page-title">new gum</h1>
 

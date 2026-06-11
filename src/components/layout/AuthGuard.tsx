@@ -15,7 +15,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Checking your session...</p>
       </main>
     )
@@ -27,7 +27,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (profileLoading || profileReady === null) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading your account...</p>
       </main>
     )

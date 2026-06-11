@@ -1,9 +1,10 @@
-import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -216,10 +217,8 @@ export default function PieceDetail() {
 
   if (authLoading || isLoading) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
-        <div className="mb-6">
-          <div className="skeleton h-5 w-16 rounded" />
-        </div>
+      <main className={pageShellScroll}>
+        <div className="skeleton mb-2 h-11 w-16 rounded" />
         <div className="mx-auto skeleton h-24 w-24 rounded-full" />
         <div className="mx-auto mt-4 skeleton h-8 w-48 rounded" />
         <div className="mx-auto mt-3 skeleton h-5 w-24 rounded-full" />
@@ -234,7 +233,7 @@ export default function PieceDetail() {
   if (error || !piece || !userId) {
     if (error) {
       return (
-        <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 text-center text-text">
+        <main className={`${pageShellCentered} px-5`}>
           <p className="text-sm text-text-2">Couldn&apos;t load this plan.</p>
           <button
             type="button"
@@ -265,17 +264,8 @@ export default function PieceDetail() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
-      <div className="mb-6">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="inline-flex items-center gap-2 text-sm text-text-2"
-        >
-          <ArrowLeft size={18} strokeWidth={1.75} />
-          back
-        </button>
-      </div>
+    <main className={pageShellScroll}>
+      <BackHeader onBack={handleBack} className="mb-2" />
 
       <div className={`mx-auto h-24 w-24 gum-morph-base gum-morph-37 ${fillClass}`} />
       <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>

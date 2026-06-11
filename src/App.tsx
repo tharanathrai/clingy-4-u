@@ -81,7 +81,7 @@ function App() {
         <RouteErrorBoundary>
         <Suspense
           fallback={
-            <div className="flex min-h-screen items-center justify-center bg-bg">
+            <div className="safe-screen-height flex items-center justify-center bg-bg">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
             </div>
           }

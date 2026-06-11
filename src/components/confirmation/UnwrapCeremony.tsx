@@ -167,7 +167,7 @@ export function UnwrapCeremony({
   }
 
   return (
-    <section className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 pb-72 text-text">
+    <section className="safe-screen-height mx-auto flex w-full max-w-md flex-col items-center justify-center bg-bg px-5 pb-72 text-text">
       <div className="unwrap-scene">
         <div className="unwrap-wrapper" aria-hidden>
           <div

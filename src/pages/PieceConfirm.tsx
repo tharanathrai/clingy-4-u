@@ -1,7 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { OTPDisplay } from '../components/confirmation/OTPDisplay.tsx'
 import { UnwrapCeremony } from '../components/confirmation/UnwrapCeremony.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -224,7 +225,7 @@ export default function PieceConfirm() {
 
   if (authLoading || flowState === 'loading' || sessionLoading) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center bg-bg px-5 text-text">
+      <main className={`${pageShellCentered} px-5`}>
         <div className="skeleton h-24 w-24 rounded-full" />
         <div className="skeleton mt-6 h-8 w-48 rounded" />
         <div className="skeleton mt-3 h-4 w-32 rounded-full" />
@@ -256,14 +257,9 @@ export default function PieceConfirm() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-8 pt-6 text-text">
+    <main className={pageShellScroll}>
       {activeSession ? null : (
-        <div className="mb-6">
-          <Link to={`/piece/${id}`} className="inline-flex items-center gap-2 text-sm text-text-2">
-            <ArrowLeft size={18} strokeWidth={1.75} />
-            back
-          </Link>
-        </div>
+        <BackHeader to={`/piece/${id}`} className="mb-2" />
       )}
 
       <h1 className="mt-2 text-center font-display text-3xl text-text">

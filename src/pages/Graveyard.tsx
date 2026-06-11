@@ -1,8 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -98,12 +98,9 @@ export default function Graveyard() {
   )
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 py-8 text-text">
-      <Link to="/profile/me" className="inline-flex items-center gap-2 text-sm text-text-2">
-        <ArrowLeft size={18} strokeWidth={1.75} />
-        back
-      </Link>
-      <h1 className="app-page-title mt-6">graveyard</h1>
+    <main className={pageShellScroll}>
+      <BackHeader to="/profile/me" />
+      <h1 className="app-page-title mt-4">graveyard</h1>
       <p className="mt-3 text-sm text-text-2">Plans that didn&apos;t happen.</p>
 
       {loading ? (

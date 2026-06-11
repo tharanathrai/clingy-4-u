@@ -1,7 +1,8 @@
-import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 
@@ -196,24 +197,19 @@ export default function Add() {
   const remainingSeconds = Math.ceil(remainingMs / 1000)
 
   return (
-    <main className="safe-screen-height mx-auto flex w-full max-w-md flex-col overflow-hidden bg-bg px-5 pb-28 pt-6 text-center text-text">
-      <button
-        type="button"
-        className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-2"
-        onClick={() => {
+    <main className={`${pageShellPinnedFooter} pb-tab-clearance text-center`}>
+      <BackHeader
+        onBack={() => {
           if (window.history.length > 1) {
             navigate(-1)
             return
           }
           navigate('/home')
         }}
-      >
-        <ArrowLeft size={18} strokeWidth={1.75} />
-        Back
-      </button>
+      />
 
       <div className="flex flex-1 flex-col items-center justify-center">
-        <h1 className="app-page-title">Add someone</h1>
+        <h1 className="app-page-title">add someone</h1>
         <p className="mt-3 max-w-xs text-sm text-text-2">
           Show this to someone you want to connect with. It refreshes every 60 seconds.
         </p>

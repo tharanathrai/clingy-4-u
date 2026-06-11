@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { SharedBridgesSection } from '../components/profile/SharedBridgesSection.tsx'
+import { pageShellCentered, pageShellTab } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -31,7 +32,7 @@ export default function ProfileUser() {
 
   if (authLoading || loading) {
     return (
-      <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+      <main className={pageShellTab}>
         <section className="flex flex-col items-center">
           <div className="skeleton h-20 w-20 rounded-full" />
           <div className="skeleton mt-4 h-7 w-44 rounded-full" />
@@ -50,8 +51,8 @@ export default function ProfileUser() {
 
   if (!profile) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg px-5 py-8 text-text">
-        <h1 className="font-display text-4xl">Profile</h1>
+      <main className={`${pageShellCentered} px-5 py-8`}>
+        <h1 className="app-page-title">profile</h1>
         {error ? (
           <>
             <p className="mt-4 text-sm text-text-2">Couldn&apos;t load this profile.</p>
@@ -83,7 +84,7 @@ export default function ProfileUser() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md bg-bg px-5 pb-28 pt-8 text-text">
+    <main className={pageShellTab}>
       <section className="flex flex-col items-center text-center">
         {profile.avatar_url ? (
           <img

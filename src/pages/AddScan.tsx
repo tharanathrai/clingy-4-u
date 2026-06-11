@@ -1,8 +1,10 @@
-import { ArrowLeft, Camera, ImageUp, X } from 'lucide-react'
+import { Camera, ImageUp, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { extractQrToken } from '../lib/extractQrToken.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -295,23 +297,18 @@ export default function AddScan() {
   }
 
   return (
-    <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
-      <button
-        type="button"
-        className="inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-2"
-        onClick={() => {
+    <main className={`${pageShellScroll} safe-content-bottom py-8`}>
+      <BackHeader
+        onBack={() => {
           if (window.history.length > 1) {
             navigate(-1)
             return
           }
           navigate('/add')
         }}
-      >
-        <ArrowLeft size={18} strokeWidth={1.75} />
-        Back
-      </button>
+      />
 
-      <h1 className="mt-4 text-center font-display text-4xl">Scan code</h1>
+      <h1 className="app-page-title mt-4 text-center">scan code</h1>
       <p className="mt-2 text-center text-sm text-text-2">
         Point your camera at their code, or upload a photo.
       </p>

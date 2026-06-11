@@ -1,12 +1,50 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.4 (MVP + post-ship specs)
-**Last updated:** 2026-06-11 — Docs sync with shipped implementation; profile graveyard icon; onboarding robustness
+**Version:** 0.5 (UI consistency audit)
+**Last updated:** 2026-06-11 — Cross-screen layout standards; shared BackHeader + pageShell tokens
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
 - `Verified (manual)` — tested manually in the last 7 days; entry in `docs/regression-matrix.md`
 - `Broken` — known regression, must fix before ship
 - `Not built` — spec exists but no code
+
+---
+
+## Layout standards
+
+All screens render inside `.app-device-screen` (fixed height). **Never use `min-h-screen` on page roots** — it overflows the device frame and causes double-scroll.
+
+Canonical class strings live in `src/components/layout/pageShell.ts`:
+
+| Pattern | Token | Use when |
+|---|---|---|
+| Tab-bar scroll pages | `pageShellTab` | `/home`, `/network`, `/feed`, `/notifications`, `/profile/me`, `/profile/:username` — content scrolls above fixed tab bar |
+| Push scroll pages | `pageShellScroll` (+ `safe-content-bottom` if tab bar visible) | Settings, graveyard, piece detail, connection requests, add/scan |
+| Centered auth/empty | `pageShellCentered` | Loading spinners, connect sign-in, fetch error blocks |
+| Pinned footer actions | `pageShellPinnedFooter` (+ `pb-tab-clearance`) | `/welcome`, `/add` — primary CTA pinned above safe area |
+| Tab content wrapper | `Layout` component | Home, Feed, Notifications — includes `safe-content-top` + `safe-content-bottom` |
+
+**Back navigation:** use `BackHeader` (`ArrowLeft` 18px / stroke 1.75, min 44×44 touch target, label `back`). Icon-only profile actions use `ProfileMeHeader` pattern (`min-h-11 min-w-11`).
+
+**Titles:** `app-page-title` in sentence case (`your pocket`, `add someone`, `connection requests`). User display names are the exception.
+
+**Horizontal padding:** `px-5` (20px) on all screens unless edge-to-edge is spec'd (network graph canvas).
+
+### Screen inventory (post audit)
+
+| Route | Shell | Notes |
+|---|---|---|
+| `/`, `/auth/callback`, `/welcome` | `safe-screen-height` / pinned footer | Spec 002 regression guard |
+| `/home`, `/feed`, `/notifications` | `Layout` | Tab roots |
+| `/network` | `safe-screen-height` | Full-bleed graph; header chrome only |
+| `/profile/me`, `/profile/:username` | `pageShellTab` | Tab bar clearance |
+| `/add` | `pageShellPinnedFooter` | QR centered; tab bar visible |
+| `/add/scan`, `/connect` | `pageShellScroll` | Journey alignment |
+| `/connections/requests`, `/settings`, `/home/graveyard` | `pageShellScroll` + back header | Push screens |
+| `/piece/new`, `/piece/:id`, `/piece/:id/confirm` | `pageShellScroll` / centered loading | Ceremony uses `safe-screen-height` + extra bottom pad |
+| AuthGuard / Suspense fallbacks | `safe-screen-height` centered | No `min-h-screen` |
+
+Spec: `specs/003-ui-consistency-audit`
 
 ---
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { invalidateConnectionFlow } from '../lib/invalidate.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
@@ -128,7 +129,7 @@ export default function ConnectionRequests() {
 
   if (loading || fetching) {
     return (
-      <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
+      <main className={`${pageShellScroll} safe-content-bottom py-8`}>
         <div className="skeleton mb-6 h-8 w-48 rounded" />
         <ul className="space-y-3">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -156,16 +157,9 @@ export default function ConnectionRequests() {
   }
 
   return (
-    <main className="safe-screen-height safe-content-bottom safe-content-top mx-auto flex w-full max-w-md flex-col overflow-y-auto bg-bg px-5 py-8 text-text">
-      <button
-        type="button"
-        className="mb-4 inline-flex min-h-11 items-center gap-2 self-start text-sm text-text-2"
-        onClick={handleBack}
-      >
-        <ArrowLeft size={18} strokeWidth={1.75} />
-        Back
-      </button>
-      <h1 className="app-page-title">Connection requests</h1>
+    <main className={`${pageShellScroll} safe-content-bottom py-8`}>
+      <BackHeader onBack={handleBack} className="mb-4" />
+      <h1 className="app-page-title">connection requests</h1>
 
       {errorMessage && !fetching && requests.length === 0 ? (
         <div className="mt-8 rounded-lg bg-surface p-6 text-center">

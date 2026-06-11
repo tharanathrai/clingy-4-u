@@ -137,7 +137,7 @@ export function OTPDisplay({
   }
 
   return (
-    <section className="relative flex min-h-screen flex-col rounded-lg bg-surface px-5 py-7 text-text shadow-card">
+    <section className="relative flex flex-col rounded-lg bg-surface px-5 py-7 text-text shadow-card">
       <div className="otp-hero-glow" aria-hidden />
       <div className="relative z-10">
         <p className="text-center text-sm text-text-2">
