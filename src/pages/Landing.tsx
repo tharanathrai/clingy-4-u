@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { useProfileReady } from '../hooks/useProfileReady.ts'
 
 export default function Landing() {
   const { user, loading, signInWithGoogle } = useAuth()
+  const { profileReady, isLoading: profileLoading } = useProfileReady(user?.id ?? null)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  if (loading) {
+  if (loading || (user && (profileLoading || profileReady === null))) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-bg px-5 text-text">
+      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
         <p className="text-sm text-text-2">Loading...</p>
       </main>
     )
   }
 
   if (user) {
-    return <Navigate to="/home" replace />
+    return <Navigate to={profileReady ? '/home' : '/welcome'} replace />
   }
 
   const handleGoogleSignIn = async () => {
@@ -31,7 +33,7 @@ export default function Landing() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-5">
+    <main className="safe-screen-height flex items-center justify-center bg-bg px-5">
       <section className="w-full max-w-sm text-center">
         <h1 className="font-display text-5xl text-text">clingy 4 u</h1>
         <p className="mt-4 font-body text-base text-text-2">

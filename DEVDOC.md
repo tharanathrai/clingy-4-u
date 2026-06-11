@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
 **Version:** 0.3 (Production Quality System)
-**Last updated:** 2026-05-26 — Network graph chalk spokes, share menu, header menu, export without selection
+**Last updated:** 2026-06-11 — Onboarding viewport layout, OAuth back-nav hardening, error boundary recovery
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -14,15 +14,15 @@
 
 ### Auth
 **Status: Verified (automated)** — E2E smoke test: unauthenticated access redirects to `/`
-- What works: Google OAuth via Supabase, session persistence, auth state via singleton `useAuth` (module-level store + listeners), OAuth callback routing to `/welcome` vs `/home`, stored return path from `sessionStorage` for deep link flows.
-- Components / hooks: `src/hooks/useAuth.ts`, `src/pages/Landing.tsx`, `src/pages/AuthCallback.tsx`
+- What works: Google OAuth via Supabase, session persistence, auth state via singleton `useAuth` (module-level store + listeners), OAuth callback routing to `/welcome` vs `/home`, stored return path from `sessionStorage` for deep link flows. `AuthCallback` wraps profile lookup in try/catch and re-runs on bfcache `pageshow`. `Landing` sends authenticated users without a profile directly to `/welcome` (skips `/home` bounce). Post-auth and error-recovery paths centralized in `src/lib/recoveryPath.ts`.
+- Components / hooks: `src/hooks/useAuth.ts`, `src/pages/Landing.tsx`, `src/pages/AuthCallback.tsx`, `src/lib/recoveryPath.ts`
 
 ---
 
 ### Onboarding
-**Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `markProfileReady` cache invalidation tested; `avatarImage.test.ts` 3/3 ✓
-- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. `profileReadyCache` Map replaced with `useProfileReady` React Query hook — onboarding loop is permanently fixed.
-- Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
+**Status: Verified (automated)** — E2E smoke: unonboarded user stays on `/welcome`; `useProfileReady` unit tests 5/5 ✓; `recoveryPath.test.ts` + `routeErrorBoundary.test.tsx` cover auth recovery; `avatarImage.test.ts` 3/3 ✓
+- What works: 3-step wizard (display name → username → avatar), real-time username availability check, circular avatar picker with zoom/crop (`react-easy-crop`) and 512px JPEG export, optional skip (initials only), upload to Supabase Storage `avatars` bucket via `uploadAvatar`, profile row creation in `public.users`, redirect to `/add` after completion. Onboarding layout uses `safe-screen-height` with pinned footer actions (no scroll needed for Continue/Back/Finish on mobile). `RouteErrorBoundary` remounts routes on Try again and routes Go home by auth/profile state.
+- Components / hooks: `src/pages/Welcome.tsx`, `src/hooks/useProfileReady.ts`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`, `src/components/layout/RouteErrorBoundary.tsx`
 
 ---
 

@@ -1,5 +1,8 @@
 import { Component, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth.ts'
+import { useProfileReady } from '../../hooks/useProfileReady.ts'
+import { resolveRecoveryPath } from '../../lib/recoveryPath.ts'
 
 interface Props {
   children: ReactNode
@@ -7,6 +10,62 @@ interface Props {
 
 interface State {
   error: Error | null
+  resetKey: number
+}
+
+interface RouteErrorFallbackProps {
+  onTryAgain: () => void
+  onGoHome: () => void
+}
+
+function RouteErrorFallback({ onTryAgain, onGoHome }: RouteErrorFallbackProps) {
+  return (
+    <main className="safe-screen-height flex flex-col items-center justify-center gap-6 bg-bg px-5 text-text">
+      <h1 className="font-display text-4xl">Something broke.</h1>
+      <p className="text-sm text-text-2">
+        It's not you — this page ran into a problem. Tap below to recover.
+      </p>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          className="rounded-full bg-surface-2 px-6 py-3 text-sm text-text-2"
+          onClick={onTryAgain}
+        >
+          Try again
+        </button>
+        <button
+          type="button"
+          className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+          onClick={onGoHome}
+        >
+          Go home
+        </button>
+      </div>
+    </main>
+  )
+}
+
+function RouteErrorFallbackWithNavigation({
+  onTryAgain,
+}: {
+  onTryAgain: () => void
+}) {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+  const { profileReady, isLoading: profileLoading } = useProfileReady(user?.id ?? null)
+
+  const handleGoHome = () => {
+    onTryAgain()
+    const destination = resolveRecoveryPath({
+      hasUser: Boolean(user),
+      profileReady,
+      authLoading,
+      profileLoading,
+    })
+    navigate(destination, { replace: true })
+  }
+
+  return <RouteErrorFallback onTryAgain={onTryAgain} onGoHome={handleGoHome} />
 }
 
 /**
@@ -17,46 +76,31 @@ interface State {
 export class RouteErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
-    this.state = { error: null }
+    this.state = { error: null, resetKey: 0 }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error }
   }
 
   override componentDidCatch(error: Error, info: { componentStack: string }) {
-    // Log internally without exposing to user; swap for Sentry/Datadog later
     console.error('[RouteErrorBoundary]', error, info.componentStack)
+  }
+
+  handleTryAgain = () => {
+    this.setState((state) => ({
+      error: null,
+      resetKey: state.resetKey + 1,
+    }))
   }
 
   override render() {
     if (this.state.error) {
-      return (
-        <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-bg px-5 text-text">
-          <h1 className="font-display text-4xl">Something broke.</h1>
-          <p className="text-sm text-text-2">
-            It's not you — this page ran into a problem. Tap below to recover.
-          </p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className="rounded-full bg-surface-2 px-6 py-3 text-sm text-text-2"
-              onClick={() => this.setState({ error: null })}
-            >
-              Try again
-            </button>
-            <Link
-              to="/home"
-              className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
-              onClick={() => this.setState({ error: null })}
-            >
-              Go home
-            </Link>
-          </div>
-        </main>
-      )
+      return <RouteErrorFallbackWithNavigation onTryAgain={this.handleTryAgain} />
     }
 
-    return this.props.children
+    return <div key={this.state.resetKey}>{this.props.children}</div>
   }
 }
+
+export { RouteErrorFallback }
