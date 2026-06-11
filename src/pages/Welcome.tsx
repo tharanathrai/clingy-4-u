@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx'
@@ -6,20 +6,6 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { uploadAvatar } from '../hooks/useAvatarUpload.ts'
 import { markProfileReady } from '../hooks/useProfileReady.ts'
 import { supabase } from '../lib/supabase.ts'
-
-interface OnboardingStepShellProps {
-  children: ReactNode
-  actions: ReactNode
-}
-
-function OnboardingStepShell({ children, actions }: OnboardingStepShellProps) {
-  return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
-      <div className="shrink-0 pt-4">{actions}</div>
-    </section>
-  )
-}
 
 export default function Welcome() {
   const navigate = useNavigate()
@@ -132,7 +118,7 @@ export default function Welcome() {
 
   return (
     <main className="safe-screen-height mx-auto flex w-full max-w-md flex-col bg-bg px-5 pb-[var(--app-safe-bottom)] text-text safe-content-top">
-      <header className="mb-4 shrink-0">
+      <header className="mb-6 shrink-0">
         <div className="flex items-center justify-center gap-2">
           {[1, 2, 3].map((dot) => (
             <span
@@ -147,21 +133,10 @@ export default function Welcome() {
       </header>
 
       {step === 1 ? (
-        <OnboardingStepShell
-          actions={
-            <button
-              type="button"
-              className="w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!isDisplayNameValid}
-              onClick={() => setStep(2)}
-            >
-              Continue
-            </button>
-          }
-        >
+        <section className="flex min-h-0 flex-1 flex-col">
           <h1 className="font-display text-4xl">Add your name</h1>
           <p className="mt-2 text-sm text-text-2">This is how people will see you.</p>
-          <label className="mt-6 text-sm text-text-2" htmlFor="display-name">
+          <label className="mt-8 text-sm text-text-2" htmlFor="display-name">
             Display name
           </label>
           <input
@@ -169,40 +144,29 @@ export default function Welcome() {
             value={displayName}
             maxLength={50}
             onChange={(event) => setDisplayName(event.target.value)}
-            className="mt-2 rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
             placeholder="Your name"
           />
           <p className="mt-2 text-xs text-text-3">{displayName.length}/50</p>
-        </OnboardingStepShell>
+
+          <button
+            type="button"
+            className="mt-auto rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={!isDisplayNameValid}
+            onClick={() => setStep(2)}
+          >
+            Continue
+          </button>
+        </section>
       ) : null}
 
       {step === 2 ? (
-        <OnboardingStepShell
-          actions={
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-                onClick={() => setStep(1)}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!isUsernamePatternValid || usernameAvailable !== true}
-                onClick={() => setStep(3)}
-              >
-                Continue
-              </button>
-            </div>
-          }
-        >
+        <section className="flex min-h-0 flex-1 flex-col">
           <h1 className="font-display text-4xl">Pick a username</h1>
           <p className="mt-2 text-sm text-text-2">
             Lowercase letters, numbers, and underscores only.
           </p>
-          <label className="mt-6 text-sm text-text-2" htmlFor="username">
+          <label className="mt-8 text-sm text-text-2" htmlFor="username">
             Username
           </label>
           <input
@@ -210,7 +174,7 @@ export default function Welcome() {
             value={username}
             maxLength={30}
             onChange={(event) => setUsername(event.target.value.toLowerCase())}
-            className="mt-2 rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
             placeholder="username"
           />
           <p className="mt-2 text-xs text-text-3">{sanitizedUsername.length}/30</p>
@@ -226,38 +190,35 @@ export default function Welcome() {
           {usernameAvailable === false ? (
             <p className="mt-2 text-sm text-playful">That username is taken.</p>
           ) : null}
-        </OnboardingStepShell>
+
+          <div className="mt-auto flex gap-3 pt-4">
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+              onClick={() => setStep(1)}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!isUsernamePatternValid || usernameAvailable !== true}
+              onClick={() => setStep(3)}
+            >
+              Continue
+            </button>
+          </div>
+        </section>
       ) : null}
 
       {step === 3 ? (
-        <OnboardingStepShell
-          actions={
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-                onClick={() => setStep(2)}
-                disabled={submitting}
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => void handleComplete()}
-                disabled={submitting || !canComplete}
-              >
-                {submitting ? 'Saving...' : 'Finish'}
-              </button>
-            </div>
-          }
-        >
+        <section className="flex min-h-0 flex-1 flex-col">
           <h1 className="font-display text-4xl">Choose your avatar</h1>
           <p className="mt-2 text-sm text-text-2">
             Tap your avatar to add a photo, or finish with your initial.
           </p>
 
-          <div className="mt-4 flex justify-center">
+          <div className="mt-6 flex justify-center">
             <ProfileAvatarField
               displayName={displayName.trim() || 'You'}
               imageUrl={null}
@@ -271,7 +232,26 @@ export default function Welcome() {
           </div>
 
           {errorMessage ? <p className="mt-3 text-sm text-playful">{errorMessage}</p> : null}
-        </OnboardingStepShell>
+
+          <div className="mt-auto flex gap-3 pt-4">
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+              onClick={() => setStep(2)}
+              disabled={submitting}
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => void handleComplete()}
+              disabled={submitting || !canComplete}
+            >
+              {submitting ? 'Saving...' : 'Finish'}
+            </button>
+          </div>
+        </section>
       ) : null}
     </main>
   )
