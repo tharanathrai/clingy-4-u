@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface GumPiece {
@@ -70,7 +72,7 @@ export function useGumPieces(): UseGumPiecesResult {
   const queryClient = useQueryClient()
   const qk = queryKeys.gumPieces(userId)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: qk,
     queryFn: () => fetchGumPieces(userId!),
     enabled: !authLoading && userId !== null,
@@ -83,7 +85,7 @@ export function useGumPieces(): UseGumPiecesResult {
       {
         event: '*',
         table: 'gum_pieces',
-        callback: () => { void queryClient.invalidateQueries({ queryKey: qk }) },
+        callback: () => { debouncedInvalidateQueries(queryClient, qk) },
       },
     ])
   // qk is derived from userId — including it would rebuild the array every render
@@ -92,7 +94,7 @@ export function useGumPieces(): UseGumPiecesResult {
 
   return {
     pieces: data ?? [],
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
       await queryClient.invalidateQueries({ queryKey: qk })

@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase.ts'
 import type { Bridge, Connection, User } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface NetworkGraphNode {
@@ -107,7 +109,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   const queryClient = useQueryClient()
   const qk = queryKeys.networkGraph(userId)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: qk,
     queryFn: () => fetchNetworkGraph(userId!),
     enabled: !authLoading && userId !== null,
@@ -116,7 +118,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
 
   useEffect(() => {
     if (!userId) return
-    const invalidate = () => { void queryClient.invalidateQueries({ queryKey: qk }) }
+    const invalidate = () => { debouncedInvalidateQueries(queryClient, qk) }
     return subscribePostgresChannel(`network-graph-rt-${userId}`, [
       { event: '*', table: 'connections', callback: invalidate },
       { event: '*', table: 'bridges', callback: invalidate },
@@ -176,7 +178,7 @@ export function useNetworkGraph(): UseNetworkGraphResult {
     nodes,
     edges,
     usersById,
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: () => {
       void queryClient.invalidateQueries({ queryKey: qk })

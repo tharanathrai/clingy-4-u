@@ -16,7 +16,7 @@ const networkUserCache = new Map<string, User>()
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { usersById } = useNetworkGraph()
+  const { usersById, refetch: refetchGraph } = useNetworkGraph()
   const pendingRequestCount = usePendingRequestCount()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -130,7 +130,10 @@ export default function Network() {
             <p className="text-sm text-playful">Couldn&apos;t load your network.</p>
             <button
               type="button"
-              onClick={() => setGraphState((s) => ({ ...s, error: null, loading: true }))}
+              onClick={() => {
+                setGraphState((s) => ({ ...s, error: null }))
+                refetchGraph()
+              }}
               className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
             >
               Retry

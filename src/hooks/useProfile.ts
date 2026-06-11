@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, User } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
@@ -164,11 +166,11 @@ export function useProfile({
   const byUserId = Boolean(normalizedUserId || (!normalizedUsername && viewerId))
 
   const queryKey = useMemo(
-    () => ['profile', identifier, byUserId ? 'id' : 'username', viewerId],
+    () => queryKeys.profile(identifier, byUserId, viewerId),
     [byUserId, identifier, viewerId],
   )
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey,
     queryFn: () => fetchProfile(identifier, byUserId, viewerId),
     enabled: !authLoading && Boolean(identifier),
@@ -182,7 +184,7 @@ export function useProfile({
     categoryBreakdown: data?.categoryBreakdown ?? createEmptyCategoryBreakdown(),
     sharedBridges: data?.sharedBridges ?? [],
     isConnected: data?.isConnected ?? false,
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, viewerId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: () => {
       void queryClient.invalidateQueries({ queryKey })

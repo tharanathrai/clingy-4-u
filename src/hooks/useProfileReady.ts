@@ -1,10 +1,7 @@
 /**
  * Checks whether the current user has completed onboarding (i.e. has a row in
  * public.users). Uses React Query so the result is cached, deduplicated, and
- * can be imperatively invalidated after onboarding completes.
- *
- * staleTime: 0 ensures we re-check on the /welcome route so a just-completed
- * onboarding is picked up without a manual page reload.
+ * can be imperatively updated after onboarding completes via markProfileReady.
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -27,19 +24,17 @@ export function useProfileReady(userId: string | null): {
   profileReady: boolean | null
   isLoading: boolean
 } {
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: queryKeys.profileReady(userId),
     queryFn: () => checkProfileReady(userId!),
     enabled: userId !== null,
-    // Always re-check; auth redirects depend on fresh data
-    staleTime: 0,
-    // Don't retry — a 404 is definitively "not ready", not a transient error
+    staleTime: Infinity,
     retry: false,
   })
 
   return {
     profileReady: data ?? null,
-    isLoading,
+    isLoading: userId !== null && isPending,
   }
 }
 

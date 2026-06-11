@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 
 interface UseBridgesByPairParams {
   otherUserId: string
@@ -35,7 +36,7 @@ export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBr
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: queryKeys.bridgesPair(userId, otherUserId),
     queryFn: () => fetchBridgesByPair(userId!, otherUserId),
     enabled: !authLoading && userId !== null && Boolean(otherUserId),
@@ -44,7 +45,7 @@ export function useBridgesByPair({ otherUserId }: UseBridgesByPairParams): UseBr
 
   return {
     bridges: data ?? [],
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
   }
 }

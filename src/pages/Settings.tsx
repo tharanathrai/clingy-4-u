@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
+import { invalidateProfileFlow } from '../lib/invalidate.ts'
 
 export default function Settings() {
   const { user, loading: authLoading, signOut } = useAuth()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const { profile, loading: profileLoading, refetch } = useProfile({ userId: user?.id })
+  const { profile, loading: profileLoading } = useProfile({ userId: user?.id })
   const [isEditing, setIsEditing] = useState(false)
   const [inviteEmailNotif, setInviteEmailNotif] = useState(true)
   const [expiryEmailNotif, setExpiryEmailNotif] = useState(true)
@@ -140,7 +143,9 @@ export default function Settings() {
           onClose={() => setIsEditing(false)}
           onSaved={() => {
             setIsEditing(false)
-            refetch()
+            if (user?.id) {
+              invalidateProfileFlow(user.id, queryClient)
+            }
           }}
         />
       ) : null}

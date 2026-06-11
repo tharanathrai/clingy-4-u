@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export type NotificationType =
@@ -65,12 +66,14 @@ export function useNotifications(): UseNotificationsResult {
   const queryClient = useQueryClient()
   const qk = queryKeys.notifications(userId)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: qk,
     queryFn: () => fetchNotifications(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: 30 * 1000,
   })
+
+  const insertQueueRef = useRef(Promise.resolve())
 
   // Real-time: INSERT — enrich and prepend; UPDATE — patch in place
   useEffect(() => {
@@ -83,13 +86,18 @@ export function useNotifications(): UseNotificationsResult {
         callback: (payload) => {
           const inserted = payload.new as Notification
           if (inserted.type === 'post_reaction') return
-          void (async () => {
-            const [enriched] = await enrichNotifications(userId, [inserted])
-            queryClient.setQueryData<Notification[]>(
-              qk,
-              (current) => [enriched ?? inserted, ...(current ?? [])],
-            )
-          })()
+          insertQueueRef.current = insertQueueRef.current
+            .then(async () => {
+              const [enriched] = await enrichNotifications(userId, [inserted])
+              queryClient.setQueryData<Notification[]>(qk, (current) => {
+                const list = current ?? []
+                if (list.some((notification) => notification.id === inserted.id)) {
+                  return list
+                }
+                return [enriched ?? inserted, ...list]
+              })
+            })
+            .catch(() => {})
         },
       },
       {
@@ -101,16 +109,18 @@ export function useNotifications(): UseNotificationsResult {
           queryClient.setQueryData<Notification[]>(
             qk,
             (current) =>
-              (current ?? []).map((notification) =>
-                notification.id === updated.id
-                  ? {
-                      ...updated,
-                      actor_name: notification.actor_name,
-                      actor_avatar_url: notification.actor_avatar_url,
-                      target_user_id: notification.target_user_id,
-                    }
-                  : notification,
-              ),
+              (current ?? []).map((notification) => {
+                if (notification.id !== updated.id) {
+                  return notification
+                }
+                return {
+                  ...updated,
+                  read: notification.read || updated.read,
+                  actor_name: notification.actor_name,
+                  actor_avatar_url: notification.actor_avatar_url,
+                  target_user_id: notification.target_user_id,
+                }
+              }),
           )
         },
       },
@@ -204,7 +214,7 @@ export function useNotifications(): UseNotificationsResult {
     markAsRead: (id) => markAsReadMutation.mutateAsync(id),
     markAllAsRead: () => markAllAsReadMutation.mutateAsync(),
     dismissNotification: (id) => dismissMutation.mutateAsync(id),
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
   }
 }

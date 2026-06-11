@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import type { CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
+import { invalidateGumPieces } from '../lib/invalidate.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
 
 interface ActiveConnection {
@@ -240,7 +241,7 @@ export default function PieceNew() {
       return { recipientName }
     },
     onSuccess: ({ recipientName }) => {
-      void queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
+      invalidateGumPieces(userId, queryClient)
       navigate('/home', {
         replace: true,
         state: { toast: `Plan sent to ${recipientName ?? 'them'}!` },

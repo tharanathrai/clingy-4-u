@@ -9,6 +9,7 @@ import { useFeed, type FeedPost } from '../hooks/useFeed.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { useAuth } from '../hooks/useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Feed() {
@@ -96,8 +97,8 @@ export default function Feed() {
       if (fnError) throw fnError
     },
     onMutate: async (postId) => {
-      await queryClient.cancelQueries({ queryKey: ['feed', userId] })
-      const previous = queryClient.getQueryData<FeedPost[]>(['feed', userId])
+      await queryClient.cancelQueries({ queryKey: queryKeys.feed(userId) })
+      const previous = queryClient.getQueryData<FeedPost[]>(queryKeys.feed(userId))
       const applyToggle = (list: FeedPost[]) =>
         list.map((post) => {
           if (post.id !== postId) return post
@@ -108,7 +109,7 @@ export default function Feed() {
             reactionCount: Math.max(0, post.reactionCount + (nextHasReacted ? 1 : -1)),
           }
         })
-      queryClient.setQueryData<FeedPost[]>(['feed', userId], (current) =>
+      queryClient.setQueryData<FeedPost[]>(queryKeys.feed(userId), (current) =>
         current ? applyToggle(current) : current,
       )
       setLocalPosts((current) => applyToggle(current))
@@ -116,7 +117,7 @@ export default function Feed() {
     },
     onError: (_err, _postId, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(['feed', userId], context.previous)
+        queryClient.setQueryData(queryKeys.feed(userId), context.previous)
         setLocalPosts(context.previous)
       }
     },

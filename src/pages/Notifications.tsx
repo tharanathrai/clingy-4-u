@@ -9,7 +9,7 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
-import { invalidateConnectionFlow } from '../lib/invalidate.ts'
+import { invalidateConnectionFlow, invalidateNotifications } from '../lib/invalidate.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
@@ -135,7 +135,7 @@ export default function Notifications() {
             <p className="text-sm text-playful">{error}</p>
             <button
               type="button"
-              onClick={() => void queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] })}
+              onClick={() => { invalidateNotifications(user?.id, queryClient) }}
               className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
             >
               Retry

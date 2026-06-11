@@ -4,6 +4,7 @@ One-line summaries appended after each completed spec.
 
 | Date | Spec | Summary |
 |------|------|---------|
+| 2026-06-11 | 005-seamless-data-refresh | Stale-while-revalidate loading, debounced invalidation, centralized queryKeys/invalidate, auth stability |
 | 2026-06-11 | 004-onboarding-journey-consistency | Journey screens use pageShell tokens; /add true pinned footer; pageShellJourneyScroll for scan/connect |
 | 2026-06-11 | 003-ui-consistency-audit | Unified page shells (BackHeader, pageShell tokens), removed min-h-screen drift, sentence-case titles, DEVDOC layout standards |
 | 2026-06-11 | 002-onboarding-robustness | Fixed onboarding viewport layout, OAuth back-nav recovery, and error boundary Go home/Try again |

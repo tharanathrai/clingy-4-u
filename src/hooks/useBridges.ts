@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export interface Bridge {
@@ -50,8 +52,8 @@ export function useBridges({ otherUserId }: UseBridgesParams = {}): UseBridgesRe
   const userId = user?.id ?? null
   const queryClient = useQueryClient()
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['bridges', userId, otherUserId ?? null],
+  const { data, isPending, error } = useQuery({
+    queryKey: queryKeys.bridges(userId, otherUserId ?? null),
     queryFn: () => fetchBridges(userId!, otherUserId),
     enabled: !authLoading && userId !== null,
     staleTime: Infinity,
@@ -59,10 +61,10 @@ export function useBridges({ otherUserId }: UseBridgesParams = {}): UseBridgesRe
 
   return {
     bridges: data ?? [],
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['bridges', userId] })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.bridges(userId) })
     },
   }
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { AuthChangeEvent, User } from '@supabase/supabase-js'
+import { queryClient } from '../lib/queryClient.ts'
 import { supabase } from '../lib/supabase.ts'
 
 interface UseAuthResult {
@@ -38,6 +39,38 @@ const setAuthState = (next: { user: User | null; loading: boolean }) => {
   notifyAuthListeners()
 }
 
+const clearUserQueryCache = () => {
+  queryClient.clear()
+}
+
+const isSameUserSession = (nextUser: User | null): boolean => {
+  return Boolean(nextUser && authStore.user?.id === nextUser.id)
+}
+
+const handleAuthChange = (event: AuthChangeEvent, session: { user: User } | null) => {
+  if (event === 'SIGNED_OUT' || !session?.user) {
+    authStore.initialized = true
+    clearUserQueryCache()
+    setAuthState({ user: null, loading: false })
+    return
+  }
+
+  const nextUser = session.user
+
+  if (isSameUserSession(nextUser) && authStore.initialized) {
+    authStore.user = nextUser
+    notifyAuthListeners()
+    return
+  }
+
+  if (event === 'SIGNED_IN' && authStore.user && authStore.user.id !== nextUser.id) {
+    clearUserQueryCache()
+  }
+
+  authStore.initialized = true
+  setAuthState({ user: nextUser, loading: false })
+}
+
 const ensureAuthSubscription = () => {
   if (authStore.unsubscribe) {
     return
@@ -59,14 +92,8 @@ const ensureAuthSubscription = () => {
 
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session?.access_token) {
-      authStore.initialized = true
-      setAuthState({ user: null, loading: false })
-      return
-    }
-
-    void syncUser()
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    handleAuthChange(event, session)
   })
 
   authStore.unsubscribe = () => {
@@ -119,6 +146,8 @@ export function useAuth(): UseAuthResult {
     if (error) {
       throw error
     }
+
+    clearUserQueryCache()
   }, [])
 
   return {

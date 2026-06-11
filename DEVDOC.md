@@ -200,6 +200,26 @@ Server assigns random shape slug at creation; UI uses CSS morph blobs until SVG 
 ### 12. `invalidateNetworkGraphCache` requires `queryClient` parameter
 After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` requires both arguments. All callers (`ConnectionRequests.tsx`, `Notifications.tsx`, `ConnectionRequestSheet`) updated.
 
+### 13. Refresh & Cache Policy (spec 005)
+
+Every data surface is classified as **cache-first**, **patch-on-realtime**, or **invalidate-on-mutation** (debounced where noted).
+
+| Surface | Pattern | Notes |
+|---------|---------|-------|
+| `useAuth` | Singleton store | No loading flash on `TOKEN_REFRESHED`; cache cleared on sign-out / user switch |
+| `useProfileReady` | Cache-first + `markProfileReady` | `staleTime: Infinity`; AuthGuard uses cached value during background refetch |
+| `useGumPieces`, `useNetworkGraph`, `useProfile`, `useBridges*` | Cache-first + debounced invalidate | `loading` = initial pending only (`isInitialQueryLoading`) |
+| `useFeed`, `usePost`, `useGumPieces` (realtime) | Debounced invalidate (300ms) | Acceptable interim vs full `setQueryData` patches; coalesces burst postgres events |
+| `useNotifications` | Patch-on-realtime | INSERT queue serializes enrichment; UPDATE preserves optimistic read state |
+| `useConfirmationSession` | Patch-on-realtime | `staleTime: Infinity`; `onBridgeFormed` fires once on DELETE only |
+| `usePendingRequestCount`, `Home` connections count | Debounced invalidate | Keys in `queryKeys.ts`; connections count in `invalidateConnectionFlow` |
+| Mutations (feed reaction, notifications) | Optimistic + patch | Realtime invalidation debounced so optimistic updates are not rolled back |
+| Cross-flow invalidation | `src/lib/invalidate.ts` | `invalidateConnectionFlow`, `invalidateGumPieceFlow`, `invalidateProfileFlow` |
+
+**Loading semantics:** Hooks expose `loading: true` only when `isPending` with no cached data. Auth loading blocks hooks only when `userId` is still unknown. Tab roots render cached content immediately on revisit.
+
+**Deviation from `.cursor/rules`:** Feed/gum/network/post use debounced `invalidateQueries` instead of full `setQueryData` patches — documented here; notifications and confirmation session use direct patches per rules.
+
 ---
 
 ## WEEK7 checklist verification
@@ -237,9 +257,9 @@ After React Query migration, `invalidateNetworkGraphCache(userId, queryClient)` 
 
 3. **Capacitor version skew** — `@capacitor/android`, `@capacitor/core`, `@capacitor/ios` are version 8.3.4 but `@capacitor/cli` is 7.6.5. `npx cap sync` will warn. Not blocking for scaffold-only goal.
 
-4. **`useFeed` real-time is invalidation-based, not patch-based** — Any reaction, comment, or post insert triggers a full feed refetch via `invalidateQueries`. Granular `setQueryData` patches would eliminate flicker but require reconstructing the entire `FeedPost[]` shape from partial payloads. Acceptable tradeoff for now.
+4. **`useFeed` real-time uses debounced invalidation** — Reactions/comments/posts coalesce into one refetch per 300ms window via `debouncedInvalidateQueries`. Full `setQueryData` patches deferred; no skeleton flash on warm cache (spec 005).
 
-5. **Network error state triggers graph reset** — The "Retry" button in the Network error overlay sets `graphState.loading: true`, which causes the `NetworkGraph` component to re-render in loading state. The graph data is already in the React Query cache and will rehydrate immediately from `useNetworkGraph`. The visual reset is brief but noticeable. Cosmetic only.
+5. **Network error retry no longer wipes graph** — Retry calls `refetch()` without forcing `graphState.loading: true`; cached nodes stay visible during background refresh (spec 005).
 
 6. **Profile cache key includes `viewerId`** — `useProfile` now uses the full `[identifier, byUserId ? 'id' : 'username', viewerId]` query key. This means the same profile fetched from two different views (by-id vs by-username) will be two separate cache entries. Acceptable since the data is identical and `staleTime: Infinity` prevents double-fetching.
 

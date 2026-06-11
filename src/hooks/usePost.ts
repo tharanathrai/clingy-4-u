@@ -4,6 +4,8 @@ import type { Bridge, Comment, Post, Reaction, User } from '../types/index.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 export interface PostWithDetails extends Post {
@@ -130,7 +132,7 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
   const queryClient = useQueryClient()
   const qk = queryKeys.post(postId, userId)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: qk,
     queryFn: () => fetchPost(postId, userId!),
     enabled: !authLoading && userId !== null && Boolean(postId),
@@ -139,7 +141,7 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
 
   useEffect(() => {
     if (!userId || !postId) return
-    const invalidate = () => { void queryClient.invalidateQueries({ queryKey: qk }) }
+    const invalidate = () => { debouncedInvalidateQueries(queryClient, qk) }
     return subscribePostgresChannel(`post-rt-${postId}-${userId}`, [
       { event: '*', table: 'posts', filter: `id=eq.${postId}`, callback: invalidate },
       { event: '*', table: 'reactions', filter: `post_id=eq.${postId}`, callback: invalidate },
@@ -153,7 +155,7 @@ export function usePost({ postId }: { postId: string }): UsePostResult {
     reactionCount: data?.reactionCount ?? 0,
     hasReacted: data?.hasReacted ?? false,
     comments: data?.comments ?? [],
-    loading: authLoading || isLoading,
+    loading: isInitialQueryLoading(authLoading, userId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: async () => {
       await queryClient.invalidateQueries({ queryKey: qk })

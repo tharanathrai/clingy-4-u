@@ -15,6 +15,9 @@ export const queryKeys = {
   pendingRequestCount: (userId: string | null) =>
     ['pending-request-count', userId] as const,
 
+  connectionsCount: (userId: string | null) =>
+    ['connections-count', userId] as const,
+
   bridgesPair: (userId: string | null, otherUserId: string) =>
     ['bridges-pair', userId, otherUserId] as const,
 

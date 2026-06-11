@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
@@ -9,10 +9,12 @@ import { pageShellTab } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { invalidateProfileFlow } from '../lib/invalidate.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function ProfileMe() {
   const { user, loading } = useAuth()
+  const queryClient = useQueryClient()
   const {
     profile,
     connectionCount,
@@ -176,7 +178,9 @@ export default function ProfileMe() {
         onSaved={() => {
           setIsEditing(false)
           setToast('Profile updated.')
-          refetch()
+          if (user?.id) {
+            invalidateProfileFlow(user.id, queryClient)
+          }
         }}
       />
     </main>

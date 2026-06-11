@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 async function fetchPendingRequestCount(userId: string): Promise<number> {
@@ -34,7 +35,7 @@ export function usePendingRequestCount(): number {
       {
         event: '*',
         table: 'connections',
-        callback: () => { void queryClient.invalidateQueries({ queryKey: qk }) },
+        callback: () => { debouncedInvalidateQueries(queryClient, qk) },
       },
     ])
   // eslint-disable-next-line react-hooks/exhaustive-deps

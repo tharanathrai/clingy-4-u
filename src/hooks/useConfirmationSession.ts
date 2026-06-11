@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
@@ -51,37 +51,33 @@ export function useConfirmationSession({
 }: UseConfirmationSessionParams): UseConfirmationSessionResult {
   const queryClient = useQueryClient()
   const hadSessionRef = useRef(false)
+  const bridgeFormedFiredRef = useRef(false)
   const onBridgeFormedRef = useRef(onBridgeFormed)
 
   useEffect(() => {
     onBridgeFormedRef.current = onBridgeFormed
   }, [onBridgeFormed])
 
+  useEffect(() => {
+    hadSessionRef.current = false
+    bridgeFormedFiredRef.current = false
+  }, [gumPieceId])
+
   const qk = queryKeys.confirmationSession(gumPieceId)
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: qk,
     queryFn: () => fetchConfirmationSession(gumPieceId!),
     enabled: Boolean(gumPieceId),
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   })
 
-  // Track session presence to detect bridge formation (session deleted)
-  const handleSessionData = useCallback(
-    (session: ConfirmationSession | null) => {
-      if (session) {
-        hadSessionRef.current = true
-      } else if (hadSessionRef.current) {
-        onBridgeFormedRef.current?.()
-      }
-    },
-    [],
-  )
-
   useEffect(() => {
-    handleSessionData(data ?? null)
-  }, [data, handleSessionData])
+    if (data) {
+      hadSessionRef.current = true
+    }
+  }, [data])
 
   useEffect(() => {
     if (!gumPieceId) return
@@ -112,8 +108,13 @@ export function useConfirmationSession({
         table: 'confirmation_sessions',
         filter,
         callback: () => {
-          queryClient.setQueryData<ConfirmationSession | null>(qk, null)
+          if (!hadSessionRef.current || bridgeFormedFiredRef.current) {
+            queryClient.setQueryData<ConfirmationSession | null>(qk, null)
+            return
+          }
+          bridgeFormedFiredRef.current = true
           hadSessionRef.current = false
+          queryClient.setQueryData<ConfirmationSession | null>(qk, null)
           onBridgeFormedRef.current?.()
         },
       },
@@ -123,7 +124,7 @@ export function useConfirmationSession({
 
   return {
     session: data ?? null,
-    loading: isLoading,
+    loading: isPending,
     error: error instanceof Error ? error.message : null,
   }
 }

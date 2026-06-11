@@ -9,6 +9,9 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
+import { invalidateGumPieceFlow } from '../lib/invalidate.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 
 interface PieceDetailRow {
@@ -75,12 +78,13 @@ export default function PieceDetail() {
 
   const queryKey = queryKeys.pieceDetail(id, userId)
 
-  const { data: pieceData, isLoading, error } = useQuery({
+  const { data: pieceData, isPending, error } = useQuery({
     queryKey,
     queryFn: () => fetchPieceDetail(id!, userId!),
     enabled: !authLoading && Boolean(id) && userId !== null,
-    staleTime: 0,
+    staleTime: 30 * 1000,
   })
+  const loading = isInitialQueryLoading(authLoading, userId, isPending)
 
   useEffect(() => {
     if (!id || !userId) return
@@ -89,7 +93,7 @@ export default function PieceDetail() {
         event: '*',
         table: 'gum_pieces',
         filter: `id=eq.${id}`,
-        callback: () => { void queryClient.invalidateQueries({ queryKey }) },
+        callback: () => { debouncedInvalidateQueries(queryClient, queryKey) },
       },
     ])
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,12 +163,10 @@ export default function PieceDetail() {
         )
       }
     },
-    onSuccess: (_, action) => {
+    onSuccess: () => {
       setShowTurnDownConfirm(false)
-      void queryClient.invalidateQueries({ queryKey })
-      void queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
-      if (action === 'accept') {
-        void queryClient.invalidateQueries({ queryKey: ['gum-pieces', userId] })
+      if (userId && id) {
+        invalidateGumPieceFlow(userId, queryClient, id)
       }
     },
     onError: (err) => {
@@ -215,7 +217,7 @@ export default function PieceDetail() {
 
   if (!id) return <Navigate to="/home" replace />
 
-  if (authLoading || isLoading) {
+  if (loading) {
     return (
       <main className={pageShellScroll}>
         <div className="skeleton mb-2 h-11 w-16 rounded" />
@@ -237,7 +239,7 @@ export default function PieceDetail() {
           <p className="text-sm text-text-2">Couldn&apos;t load this plan.</p>
           <button
             type="button"
-            onClick={() => void queryClient.invalidateQueries({ queryKey })}
+            onClick={() => { debouncedInvalidateQueries(queryClient, queryKey) }}
             className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
           >
             Retry

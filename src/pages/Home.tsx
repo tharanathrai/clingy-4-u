@@ -7,6 +7,8 @@ import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
+import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { supabase } from '../lib/supabase.ts'
 
 async function fetchConnectionsCount(userId: string): Promise<number> {
@@ -27,12 +29,13 @@ export default function Home() {
   const [toast, setToast] = useState<string | null>(null)
   const pocketFull = pieces.length >= 25
 
-  const { data: connectionsCount = 0, isLoading: loadingConnections } = useQuery({
-    queryKey: ['connections-count', userId],
+  const { data: connectionsCount = 0, isPending: connectionsPending } = useQuery({
+    queryKey: queryKeys.connectionsCount(userId),
     queryFn: () => fetchConnectionsCount(userId!),
     enabled: !authLoading && userId !== null,
     staleTime: Infinity,
   })
+  const loadingConnections = isInitialQueryLoading(authLoading, userId, connectionsPending)
 
   useEffect(() => {
     if (!toast) {
