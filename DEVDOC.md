@@ -83,8 +83,8 @@
 
 ### Profile (Own + Others)
 **Status: Verified (automated)** — `avatarImage.test.ts` 3/3 ✓; avatar crop/upload shared with onboarding; edit save state fix verified 2026-05-26
-- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard link, edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Duplicate "settings →" link removed.
-- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
+- What works: Own profile with avatar, name, bio, gumball, category breakdown, graveyard icon button in header (top-left), edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Duplicate "settings →" link removed.
+- Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
 
 ---
 
