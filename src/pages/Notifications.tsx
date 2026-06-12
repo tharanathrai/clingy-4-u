@@ -12,6 +12,11 @@ import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { invalidateConnectionFlow, invalidateNotifications } from '../lib/invalidate.ts'
+import {
+  resolveStaleGumPieceTap,
+  routesToGumPiece,
+  shouldCheckGumPieceStatus,
+} from '../lib/notificationRouting.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
@@ -53,16 +58,17 @@ export default function Notifications() {
     const tappedNotification = notifications.find((notification) => notification.id === id)
     await markAsRead(id)
 
-    if (type === 'invite_received') {
+    if (shouldCheckGumPieceStatus(type)) {
       const { data: pieceRow } = await supabase
         .from('gum_pieces')
         .select('status')
         .eq('id', referenceId)
         .maybeSingle<{ status: string }>()
 
-      if (pieceRow?.status === 'expired') {
+      const staleTap = resolveStaleGumPieceTap(type, pieceRow?.status)
+      if (staleTap.dismiss) {
         await dismissNotification(id)
-        setToast('This invite has expired.')
+        setToast(staleTap.toast)
         return
       }
     }
@@ -74,13 +80,7 @@ export default function Notifications() {
       })
       return
     }
-    if (
-      type === 'invite_received' ||
-      type === 'invite_accepted' ||
-      type === 'invite_rejected' ||
-      type === 'plan_turned_down' ||
-      type === 'plan_expiring_soon'
-    ) {
+    if (routesToGumPiece(type)) {
       void navigate(`/piece/${referenceId}`)
       return
     }

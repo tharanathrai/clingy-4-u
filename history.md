@@ -4,6 +4,7 @@ One-line summaries appended after each completed spec.
 
 | Date | Spec | Summary |
 |------|------|---------|
+| 2026-06-12 | 012-notification-routing-hardening | Stale `plan_expiring_soon` tap dismisses notification + toast; `notificationRouting` helper + 6 unit tests |
 | 2026-06-12 | 011-regression-matrix-refresh | Manual matrix items 1–14 documented; 0 fail; stale DEVDOC labels refreshed; 97 unit + 18 E2E pass |
 | 2026-06-12 | 010-profile-back-e2e | Playwright E2E for feed/network/cold-open profile back navigation; own-profile regression test |
 | 2026-06-12 | 009-plan-expiring-soon-cron | `run-expiry` emits idempotent `plan_expiring_soon` notifications + optional email within 30-day window |

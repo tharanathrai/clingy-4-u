@@ -14,9 +14,10 @@
 | Spec `009` | COMPLETE — `plan_expiring_soon` cron in `run-expiry` |
 | Spec `010` | COMPLETE — Playwright profile back E2E |
 | Spec `011` | COMPLETE — regression matrix refresh (items 1–14 documented) |
-| Specs `012+` | **Unlock further Ralph work** — pick lowest incomplete number first |
+| Spec `012` | COMPLETE — stale `plan_expiring_soon` tap dismiss + toast |
+| Specs `013+` | **P2 polish** — promote before Ralph picks up |
 
-**Recommended Ralph order:** `012` → (P2 as promoted)
+**Recommended Ralph order:** P2 specs `013`+ when promoted
 
 ---
 
@@ -109,17 +110,17 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 
 ---
 
-### 012 — `notification-routing-hardening`
+### 012 — `notification-routing-hardening` ✅ COMPLETE
 
 **Priority:** P1-4  
-**Audit:** 🔶 Known issue #2
+**Audit:** ✅ Resolved (spec `012`, 2026-06-12)
 
-**Scope:** When user taps `plan_expiring_soon` notification and the gum piece is already `expired`, auto-dismiss the notification or show inline "already expired" without leaving stale unread row. Piece detail UX ("This one didn't happen") remains correct.
+**Scope:** When user taps `plan_expiring_soon` notification and the gum piece is already `expired`, auto-dismiss the notification or show inline "already expired" without leaving stale unread row.
 
-**Acceptance (draft):**
-- Tap on stale `plan_expiring_soon` marks notification read/dismissed
-- No console errors; routing still works for valid expiring pieces
-- Test coverage for tap handler branch
+**Shipped:**
+- `src/lib/notificationRouting.ts` — `resolveStaleGumPieceTap` for `invite_received` + `plan_expiring_soon`
+- `src/tests/notificationRouting.test.ts` — 6 unit tests
+- Stale tap dismisses row + toast; active pieces still route to `/piece/:id`
 
 ---
 
@@ -169,7 +170,7 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 | Network Graph | 🟡 | `networkPairSummary` 5/5; export manual | `013` for export quality |
 | Profile (own + others) | 🔧 | `profileUser.test.tsx`; no Playwright back | `010` |
 | Feed | 🟡 | Stale manual | `011` items 14 |
-| Notifications | 🟡 | `notifications.test.ts` 5/5; routing manual | `011` item 13; `012` for stale expiry |
+| Notifications | 🟡 | `notifications.test.ts` 5/5; `notificationRouting.test.ts` 6/6 | `011` item 13 routing manual |
 | Settings | 🟡 | Stale manual | `011` item 6 |
 | Graveyard | 🟡 | Stale manual | `011` item 8 |
 
@@ -180,7 +181,7 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 | Gap | Audit | Spec |
 |-----|-------|------|
 | `plan_expiring_soon` not generated | 🔶 | `009` |
-| Stale `plan_expiring_soon` on expired piece | 🔶 | `012` |
+| Stale `plan_expiring_soon` on expired piece | ✅ | `012` |
 | Capacitor version skew | 🔶 | `014` |
 | Avatar Storage orphans on remove | 🔶 | `015` |
 | Per-shape gum SVG | ⬜ | v2 |

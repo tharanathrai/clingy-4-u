@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.9 (Regression matrix refresh)
-**Last updated:** 2026-06-12 — spec `011` manual matrix items 1–14 documented in `docs/regression-matrix.md`; stale manual labels refreshed
+**Version:** 0.10 (Notification routing hardening)
+**Last updated:** 2026-06-12 — spec `012` stale `plan_expiring_soon` tap dismisses notification with inline toast
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -141,9 +141,9 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Notifications
-**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `expiringSoon.test.ts` 8/8; routing partial — matrix item 13; stale expiry tap → spec `012`)
-- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
-- Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/components/notifications/NotificationItem.tsx`
+**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `notificationRouting.test.ts` 6/6; `expiringSoon.test.ts` 8/8; routing partial — matrix item 13)
+- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; stale `invite_received` / `plan_expiring_soon` on expired pieces auto-dismiss with toast; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
+- Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/lib/notificationRouting.ts`, `src/components/notifications/NotificationItem.tsx`
 
 ---
 
@@ -179,11 +179,11 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Network Graph | 🟡 | P2 spec `013` export quality |
 | Profile | ✅ | — |
 | Feed | 🟡 | Manual item 14 |
-| Notifications | 🟡 | P1 spec `012`; routing partial (item 13) |
+| Notifications | 🟡 | Routing partial (item 13); stale expiry tap fixed in `012` |
 | Settings | 🟡 | Avatar upload partial (item 6) |
 | Graveyard | 🟡 | Expiry cron partial (item 8) |
 
-**P0 ship blockers:** none. **P1 Ralph queue:** `012` (spec `011` complete — see `docs/regression-matrix.md` manual table).
+**P0 ship blockers:** none. **P1 Ralph queue:** complete (`009`–`012`). Next: P2 specs `013`+ when promoted.
 
 ---
 
@@ -281,17 +281,15 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 
 ## Known issues (post-session)
 
-1. **`plan_expiring_soon` notifications on expired pieces** — if a user opens a `plan_expiring_soon` notification after the piece has expired, they're routed to `/piece/:id` which shows the expired piece. The UX is correct ("This one didn't happen. That's okay.") but the notification isn't dismissed automatically. Minor: would require an extra check on notification tap.
+1. **Capacitor version skew** — `@capacitor/android`, `@capacitor/core`, `@capacitor/ios` are version 8.3.4 but `@capacitor/cli` is 7.6.5. `npx cap sync` will warn. Not blocking for scaffold-only goal.
 
-2. **Capacitor version skew** — `@capacitor/android`, `@capacitor/core`, `@capacitor/ios` are version 8.3.4 but `@capacitor/cli` is 7.6.5. `npx cap sync` will warn. Not blocking for scaffold-only goal.
+2. **`useFeed` real-time uses debounced invalidation** — Reactions/comments/posts coalesce into one refetch per 300ms window via `debouncedInvalidateQueries`. Full `setQueryData` patches deferred; no skeleton flash on warm cache (spec 005).
 
-3. **`useFeed` real-time uses debounced invalidation** — Reactions/comments/posts coalesce into one refetch per 300ms window via `debouncedInvalidateQueries`. Full `setQueryData` patches deferred; no skeleton flash on warm cache (spec 005).
+3. **Network error retry no longer wipes graph** — Retry calls `refetch()` without forcing `graphState.loading: true`; cached nodes stay visible during background refresh (spec 005).
 
-4. **Network error retry no longer wipes graph** — Retry calls `refetch()` without forcing `graphState.loading: true`; cached nodes stay visible during background refresh (spec 005).
+4. **Profile cache key includes `viewerId`** — `useProfile` now uses the full `[identifier, byUserId ? 'id' : 'username', viewerId]` query key. This means the same profile fetched from two different views (by-id vs by-username) will be two separate cache entries. Acceptable since the data is identical and `staleTime: Infinity` prevents double-fetching.
 
-5. **Profile cache key includes `viewerId`** — `useProfile` now uses the full `[identifier, byUserId ? 'id' : 'username', viewerId]` query key. This means the same profile fetched from two different views (by-id vs by-username) will be two separate cache entries. Acceptable since the data is identical and `staleTime: Infinity` prevents double-fetching.
-
-6. **Per-shape gum SVG assets not wired** — `gum_pieces.shape` is populated but `GumPieceCard` / piece detail use CSS blobs only.
+5. **Per-shape gum SVG assets not wired** — `gum_pieces.shape` is populated but `GumPieceCard` / piece detail use CSS blobs only.
 
 ---
 
