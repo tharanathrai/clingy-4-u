@@ -1,5 +1,7 @@
+import { CheckCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout.tsx'
+import { iconButtonClassName } from '../lib/iconButton.ts'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
@@ -109,15 +111,16 @@ export default function Notifications() {
   return (
     <Layout>
       <main>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="app-page-title">notifications</h1>
           {unreadCount > 0 ? (
             <button
               type="button"
-              className="text-sm text-text-2"
+              className={iconButtonClassName}
+              aria-label="Mark all as read"
               onClick={() => void markAllAsRead()}
             >
-              Mark all as read
+              <CheckCheck size={18} strokeWidth={1.75} />
             </button>
           ) : null}
         </div>

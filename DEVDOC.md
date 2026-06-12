@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.6 (Onboarding journey consistency)
-**Last updated:** 2026-06-11 — Journey shell tokens; pinned footer on `/add`; `pageShellJourneyScroll`
+**Version:** 0.7 (Notifications icon & pointer cursors)
+**Last updated:** 2026-06-11 — Mark-all-read icon on `/notifications`; shared `iconButtonClassName`; fine-pointer hover cursors in `index.css`
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -25,7 +25,9 @@ Canonical class strings live in `src/components/layout/pageShell.ts`:
 | Pinned footer actions | `pageShellPinnedFooter` (+ `pb-tab-clearance` on `/add`) | `/welcome`, `/add` — primary CTA pinned above safe area |
 | Tab content wrapper | `Layout` component | Home, Feed, Notifications — includes `safe-content-top` + `safe-content-bottom` |
 
-**Back navigation:** use `BackHeader` (`ArrowLeft` 18px / stroke 1.75, min 44×44 touch target, label `back`). Icon-only profile actions use `ProfileMeHeader` pattern (`min-h-11 min-w-11`).
+**Back navigation:** use `BackHeader` (`ArrowLeft` 18px / stroke 1.75, min 44×44 touch target, label `back`). Icon-only header actions use shared `iconButtonClassName` from `src/lib/iconButton.ts` (`min-h-11 min-w-11`, Lucide icons at 18px / stroke 1.75) — profile graveyard/settings, notifications mark-all-read, network chrome, sheet close controls.
+
+**Pointer cursors (desktop / responsive emulation):** `@media (hover: hover) and (pointer: fine)` in `index.css` sets `cursor: pointer` on buttons, links, and `[role="button"]`; `cursor: not-allowed` on disabled controls; `cursor: text` on text inputs/textareas. Touch-only devices unaffected.
 
 **Titles:** `app-page-title` in sentence case (`your pocket`, `add someone`, `connection requests`). User display names are the exception. Onboarding wizard step headings intentionally use `font-display text-4xl` (same scale as `app-page-title`) for continuity within the 3-step flow.
 
@@ -47,7 +49,7 @@ Canonical class strings live in `src/components/layout/pageShell.ts`:
 | `/piece/new`, `/piece/:id`, `/piece/:id/confirm` | `pageShellScroll` / centered loading | Ceremony uses `safe-screen-height` + extra bottom pad |
 | AuthGuard / Suspense fallbacks | `safe-screen-height` centered | No `min-h-screen` |
 
-Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consistency`
+Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consistency`, `specs/006-notifications-icon-cursor`
 
 ---
 

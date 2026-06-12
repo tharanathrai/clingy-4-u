@@ -35,6 +35,29 @@ body {
   font-family: "DM Sans", sans-serif;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled),
+  a[href],
+  [role="button"]:not([aria-disabled="true"]),
+  label[for],
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not(
+      [type="radio"]
+    ):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    cursor: text;
+  }
+}
+
 .app-device-frame {
   min-height: 100dvh;
   height: 100dvh;
