@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.7 (Notifications icon & pointer cursors)
-**Last updated:** 2026-06-11 — Mark-all-read icon on `/notifications`; shared `iconButtonClassName`; fine-pointer hover cursors in `index.css`
+**Version:** 0.8 (Post-MVP flow audit)
+**Last updated:** 2026-06-11 — `IMPLEMENTATION_PLAN.md` for specs `009+`; flow audit symbols; manual test matrix mapped
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -71,14 +71,14 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### QR Add / First Contact
-**Status: Working**
+**Status: Working** — audit 🟡 (partial E2E; QR error cases unit-tested; live 60s expiry manual — see `IMPLEMENTATION_PLAN.md` spec `011`)
 - What works: `generate-qr-token` edge function creates 60s rotating tokens; QR displayed via `qrcode.react`; in-app scanner via `html5-qrcode`; deep link `/connect?token=` flow for sharing; `validate-qr-token` edge function validates token; all 5 error cases (expired, own, already_connected, request_pending, generic/network) handled with correct messages and actions (dismiss, retry, view profile); `AddScan.tsx` and `Connect.tsx` both have full error handling. Journey layout: `/add` pinned footer (`pageShellPinnedFooter` + scrollable QR region); `/add/scan` and `/connect` use `pageShellJourneyScroll` with tab-bar clearance. Spec: `specs/004-onboarding-journey-consistency`.
 - Components / hooks: `src/pages/Add.tsx`, `src/pages/AddScan.tsx`, `src/pages/Connect.tsx`, `src/lib/validateQrToken.ts`
 
 ---
 
 ### Connection Requests
-**Status: Verified (manual)** — last tested post React Query migration
+**Status: Verified (manual)** — audit 🟡 (stale matrix May 2026; E2E: accept from notifications only)
 - What works: Pending connection list with skeleton loading; accept/reject via `respond-connection` edge function; `ConnectionRequestSheet` used from notifications; `invalidateConnectionFlow` called on accept to update React Query cache for network graph + pending counter; toast feedback; real-time on connections table via `usePendingRequestCount` hook.
 - Components / hooks: `src/pages/ConnectionRequests.tsx`, `src/components/connections/ConnectionRequestSheet.tsx`, `src/hooks/usePendingRequestCount.ts`, `src/lib/invalidate.ts`
 
@@ -92,41 +92,41 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Pocket View
-**Status: Working**
+**Status: Working** — audit 🟡 (no dedicated automated test; slot limits manual)
 - What works: Full list of placeholder + active gum pieces sorted (placeholder first, then by `expires_at`); skeleton loading (3 cards); error state with retry; two empty states per DESIGN.md spec (no connections vs has connections); slot counter ("X / 25") visible in header; "Pocket full" tooltip on FAB; slot counter gating; new-gum FAB; real-time invalidation via Supabase channel → React Query invalidateQueries; pagination.
 - Components / hooks: `src/pages/Home.tsx`, `src/hooks/useGumPieces.ts`, `src/components/gum/GumPieceCard.tsx`
 
 ---
 
 ### Invite Accept / Decline
-**Status: Verified (manual)** — last tested post React Query migration; realtime now via `subscribePostgresChannel`
+**Status: Verified (manual)** — audit 🟡 (stale manual; core loop item 1 pending in plan)
 - What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions — recipient: accept/pass on placeholder; creator: cancel placeholder; either party: mark-as-done + turn-down on active; respond via `useMutation` → `respond-gum-piece`; notification types differ for creator cancel (`plan_turned_down`) vs recipient pass (`invite_rejected`) on placeholders; turn-down confirmation sheet; real-time subscription invalidates query via `subscribePostgresChannel`; expired invite shows "This invite has expired." on accept; skeleton loading screen.
 - Components / hooks: `src/pages/PieceDetail.tsx`
 
 ---
 
 ### Confirmation Ceremony
-**Status: Verified (manual)** — last tested post React Query migration; realtime via `subscribePostgresChannel`
+**Status: Verified (manual)** — audit 🟡 (OTP two-device sync manual item 2 pending)
 - What works: `start-confirmation` creates OTP session; `submit-confirmation` validates and forms bridge on both confirms; real-time subscription via `useConfirmationSession` with direct React Query `setQueryData` updates via `subscribePostgresChannel`; OTP displayed with countdown timer; both-user confirm state tracked visually; expiry handling with "Try again" retry; bridge-formed detection via DELETE event; `UnwrapCeremony` animation with reduced-motion support; skeleton loading screen.
 - Components / hooks: `src/pages/PieceConfirm.tsx`, `src/hooks/useConfirmationSession.ts`, `src/components/confirmation/OTPDisplay.tsx`, `src/components/confirmation/UnwrapCeremony.tsx`
 
 ---
 
 ### Bridge Formation
-**Status: Verified (manual)** — server-side only; no client code to test directly
+**Status: Verified (manual)** — audit 🟡 (server-side only; covered by ceremony E2E manual)
 - Purely server-side in `submit-confirmation`. Bridge row inserted, notifications sent for both users, graveyard skipped for confirmed pieces, `draft_post_id` returned for post opt-in.
 
 ---
 
 ### Network Graph
-**Status: Verified (automated)** — `networkPairSummary.test.ts`; quality gate; manual: chalk mesh, selection physics, share menu
+**Status: Verified (automated)** — audit 🟡 (`networkPairSummary.test.ts` ✓; export quality / device share manual — spec `013` P2)
 - What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap; recenter button (round 44×44); share menu whenever graph has connections—no node selection required; export briefly clears selection so PNG includes full chalk mesh; header Add/Requests menu with request badge; `ConnectionRequests` uses standard Back button; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
 - Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
 
 ### Profile (Own + Others)
-**Status: Verified (automated)** — `avatarImage.test.ts` 3/3 ✓; avatar crop/upload shared with onboarding; edit save state fix verified 2026-05-26
+**Status: Verified (automated)** — audit 🔧 (`profileUser.test.tsx` back header ✓; Playwright back-nav pending — spec `010`)
 - What works: Own profile with avatar, name, bio, gumball, category breakdown; graveyard icon button in header top-left (`ProfileMeHeader`, Ghost icon → `/home/graveyard`); settings icon top-right; edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; `BackHeader` on `/profile/:username` (loading, error, not-found, and happy path) with history back, optional `returnTo`/`selectUserId` from network, or `/home` fallback; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Bottom graveyard text link removed (spec `001-profile-graveyard-icon`).
 - Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/pages/Profile.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
 - Tests: `src/tests/profileUser.test.tsx` (back header + navigation), `src/tests/profileMe.test.tsx`, `src/tests/profileMeHeader.test.tsx`, `src/tests/avatarImage.test.ts`
@@ -134,30 +134,56 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Feed
-**Status: Verified (manual)** — last tested post React Query migration; realtime via `subscribePostgresChannel`
+**Status: Verified (manual)** — audit 🟡 (stale manual; comment real-time item 14 pending)
 - What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
 - Components / hooks: `src/pages/Feed.tsx`, `src/hooks/useFeed.ts`, `src/hooks/usePost.ts`, `src/components/feed/FeedPostCard.tsx`, `src/components/feed/PostDetailSheet.tsx`
 
 ---
 
 ### Notifications
-**Status: Verified (automated)** — E2E smoke: `/notifications` loads without subscribe() errors; `notifications.test.ts` 5/5 ✓
+**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; full routing matrix item 13 manual; `plan_expiring_soon` backend spec `009`)
 - What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
 - Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/components/notifications/NotificationItem.tsx`
 
 ---
 
 ### Settings
-**Status: Verified (manual)** — last tested post skeleton loading addition
+**Status: Verified (manual)** — audit 🟡 (stale manual)
 - What works: Account section (avatar, name, email, edit profile, sign out); notification toggles (localStorage only per spec); about section with version; skeleton loading screen.
 - Components / hooks: `src/pages/Settings.tsx`
 
 ---
 
 ### Graveyard
-**Status: Verified (manual)** — last tested post skeleton loading addition
+**Status: Verified (manual)** — audit 🟡 (stale manual; expiry cron item 8 pending)
 - What works: List of expired-after-1-year gum pieces; desaturated styling; humanized dates; empty state with correct DESIGN.md copy; pagination; skeleton loading (3 card skeletons).
 - Components / hooks: `src/pages/Graveyard.tsx`
+
+---
+
+## Post-MVP audit (spec 008)
+
+Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ automated | 🟡 stale manual | 🔶 partial | ⬜ v2 deferred | 🔧 fixed in 007, verify via 010.
+
+| Flow | Audit | Next action |
+|------|-------|-------------|
+| Auth | ✅ | — |
+| Onboarding | ✅ | — |
+| QR Add / First Contact | 🟡 | Manual item 10; unit tests for error mapping |
+| Connection Requests | 🟡 | Manual item 12 |
+| Gum Piece Creation | ✅ | — |
+| Pocket View | 🟡 | Manual items 1, 9 |
+| Invite Accept / Decline | 🟡 | Manual item 1 |
+| Confirmation Ceremony | 🟡 | Manual items 2, 11 |
+| Bridge Formation | 🟡 | Manual item 1 |
+| Network Graph | 🟡 | P2 spec `013` export quality |
+| Profile | 🔧 | P1 spec `010` Playwright back-nav |
+| Feed | 🟡 | Manual item 14 |
+| Notifications | 🟡 | P1 specs `009`, `012`; manual item 13 |
+| Settings | 🟡 | Manual item 6 |
+| Graveyard | 🟡 | Manual item 8 |
+
+**P0 ship blockers:** none. **P1 Ralph queue:** `009` → `010` → `011` → `012`.
 
 ---
 
@@ -255,7 +281,7 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 
 ## Known issues (post-session)
 
-1. **`plan_expiring_soon` not generated by cron** — notification type exists in schema, UI copy, and routing; `run-expiry` does not yet emit 30-day warnings or emails. Deferred to v2.
+1. **`plan_expiring_soon` not generated by cron** — notification type exists in schema, UI copy, and routing; `run-expiry` does not yet emit 30-day warnings or emails. **Queued P1:** spec `009-plan-expiring-soon-cron` (see `IMPLEMENTATION_PLAN.md`).
 
 2. **`plan_expiring_soon` notifications on expired pieces** — if a user opens a `plan_expiring_soon` notification after the piece has expired, they're routed to `/piece/:id` which shows the expired piece. The UX is correct ("This one didn't happen. That's okay.") but the notification isn't dismissed automatically. Minor: would require an extra check on notification tap.
 

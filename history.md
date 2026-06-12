@@ -4,6 +4,7 @@ One-line summaries appended after each completed spec.
 
 | Date | Spec | Summary |
 |------|------|---------|
+| 2026-06-11 | 008-pending-flows-completion-plan | Post-MVP flow audit; `IMPLEMENTATION_PLAN.md`; P1 queue specs 009–012 |
 | 2026-06-11 | 007-profile-back-navigation | `BackHeader` on other-user `/profile/:username`; history/`returnTo` back; network passes restore state |
 | 2026-06-11 | 006-notifications-icon-cursor | Mark-all-read icon button on `/notifications`; shared `iconButtonClassName`; fine-pointer hover cursors app-wide |
 | 2026-06-11 | 005-seamless-data-refresh | Stale-while-revalidate loading, debounced invalidation, centralized queryKeys/invalidate, auth stability |

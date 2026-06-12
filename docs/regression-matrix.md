@@ -31,6 +31,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-05-26 Network graph highlight | Network Graph | `networkPairSummary.ts` (new), `graphSnapshot.ts` (new) | None | `networkPairSummary.test.ts` 5/5 ✓, `npm run quality` pass | Manual: chalk spokes, share menu, header menu | Native share requires HTTPS/device; selection physics feel needs device pass |
 | 2026-05-26 Network share + docs | Network Graph, Connection requests | `graphSnapshot.ts`, `GraphShareButton.tsx`, `Network.tsx` | None | `npm run quality` pass | Manual: share without selection; export with selection restores | None |
 | 2026-06-11 Docs sync with MVP | All flows (documentation only) | None | None | N/A | N/A | None |
+| 2026-06-11 Post-MVP audit (spec 008) | All flows (audit only) | None | None | N/A | N/A | Manual items 1–14 pending — see `IMPLEMENTATION_PLAN.md` spec `011` |
 
 ---
 

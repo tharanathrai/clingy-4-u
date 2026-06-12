@@ -411,6 +411,7 @@ All functions: `verify_jwt = false` in config; JWT validated manually via `auth.
 | Email (Resend) | ✅ Shipped (invite, turn-down, expiry) |
 | PWA manifest + Capacitor scaffold | ✅ Shipped |
 | Production quality system | ✅ Shipped (`npm run quality`, skeletons, empty states, E2E smoke) |
+| Post-MVP audit + completion plan | ✅ Documented — see [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) (spec `008`); P1 queue: `009`–`012` |
 
 ---
 
