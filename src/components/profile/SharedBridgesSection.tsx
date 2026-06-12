@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { profileNewGumReturnState } from '../../lib/navigationContext.ts'
 import { BridgeListItem } from './BridgeListItem.tsx'
 import type { Bridge, User } from '../../types/index.ts'
 
@@ -33,7 +34,9 @@ export function SharedBridgesSection({
             type="button"
             className="mt-4 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
             onClick={() => {
-              navigate('/piece/new', { state: { recipientId: otherUser.id } })
+              navigate('/piece/new', {
+                state: profileNewGumReturnState(otherUser.username, otherUser.id),
+              })
             }}
           >
             New gum

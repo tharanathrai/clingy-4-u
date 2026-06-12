@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth.ts'
 import { useProfile } from '../../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import type { Bridge, User } from '../../types/index.ts'
+import { networkProfileReturnState } from '../../lib/navigationContext.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
 
 export type BridgeDetailVariant = 'network' | 'profile'
@@ -119,6 +120,7 @@ export function BridgeDetailSheet({
         {otherUser?.username ? (
           <Link
             to={`/profile/${otherUser.username}`}
+            state={networkProfileReturnState(otherUser.id)}
             className="inline-flex min-h-11 items-center justify-center rounded-full bg-surface-2 px-4 py-3 text-sm font-medium text-text-2 transition active:scale-95"
           >
             View profile

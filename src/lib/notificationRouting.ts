@@ -17,23 +17,28 @@ const GUM_PIECE_ROUTE_TYPES: NotificationType[] = [
   'invite_rejected',
   'plan_turned_down',
   'plan_expiring_soon',
+  'plan_expired',
 ]
 
-const STALE_GUM_PIECE_CHECK_TYPES: NotificationType[] = ['invite_received', 'plan_expiring_soon']
+const TERMINAL_GUM_PIECE_STATUSES = new Set(['confirmed', 'turned_down', 'expired'])
 
 export function routesToGumPiece(type: string): type is NotificationType {
   return (GUM_PIECE_ROUTE_TYPES as string[]).includes(type)
 }
 
 export function shouldCheckGumPieceStatus(type: string): type is NotificationType {
-  return (STALE_GUM_PIECE_CHECK_TYPES as string[]).includes(type)
+  return routesToGumPiece(type)
+}
+
+function isTerminalGumPieceStatus(status: string | null | undefined): boolean {
+  return status != null && TERMINAL_GUM_PIECE_STATUSES.has(status)
 }
 
 export function resolveStaleGumPieceTap(
   type: NotificationType,
   pieceStatus: string | null | undefined,
 ): GumPieceTapResult {
-  if (pieceStatus !== 'expired') {
+  if (!isTerminalGumPieceStatus(pieceStatus)) {
     return { dismiss: false }
   }
 
@@ -41,8 +46,28 @@ export function resolveStaleGumPieceTap(
     return { dismiss: true, toast: 'This invite has expired.' }
   }
 
-  if (type === 'plan_expiring_soon') {
+  if (type === 'plan_expiring_soon' || type === 'plan_expired') {
     return { dismiss: true, toast: 'This plan has already expired.' }
+  }
+
+  if (type === 'invite_accepted') {
+    if (pieceStatus === 'confirmed') {
+      return { dismiss: true, toast: 'This plan is already confirmed.' }
+    }
+    if (pieceStatus === 'turned_down') {
+      return { dismiss: true, toast: 'This plan was turned down.' }
+    }
+    return { dismiss: true, toast: 'This plan has expired.' }
+  }
+
+  if (type === 'plan_turned_down' || type === 'invite_rejected') {
+    if (pieceStatus === 'confirmed') {
+      return { dismiss: true, toast: 'This plan is already confirmed.' }
+    }
+    if (pieceStatus === 'turned_down') {
+      return { dismiss: true, toast: 'This plan was turned down.' }
+    }
+    return { dismiss: true, toast: 'This plan has expired.' }
   }
 
   return { dismiss: false }

@@ -33,6 +33,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-06-11 Docs sync with MVP | All flows (documentation only) | None | None | N/A | N/A | None |
 | 2026-06-11 Post-MVP audit (spec 008) | All flows (audit only) | None | None | N/A | N/A | Manual items 1–14 pending — see `IMPLEMENTATION_PLAN.md` spec `011` |
 | 2026-06-12 Regression matrix refresh (spec 011) | All 15 flows (audit + label refresh) | None | None (read-only review) | 97/97 ✓ (`expiringSoon.test.ts` 8/8, `validateQrToken.test.ts` 10/10, `profile-back` unit 6/6) | Playwright 18/18 ✓ | No failures; 6 items pending-live, 3 pending-device, 5 partial — see table below |
+| 2026-06-12 Contextual state audit (spec 014) | Profile, Network, Feed, Notifications | `navigationContext.ts`, `notificationRouting.ts` | None | `navigationContext.test.ts` 4/4, `sharedBridgesSection.test.tsx` 1/1, `notificationRouting.test.ts` 12/12, `bridgeDetailSheet.test.tsx` extended | Playwright 19/19 ✓ (`profile-back` C-02) | C-04 `restorePostId` overlay restore deferred |
 
 ---
 

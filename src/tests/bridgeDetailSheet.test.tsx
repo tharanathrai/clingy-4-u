@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
+import { networkProfileReturnState } from '../lib/navigationContext.ts'
 import type { Bridge, User } from '../types/index.ts'
 
 const mockUseAuth = vi.fn()
@@ -96,6 +97,13 @@ describe('BridgeDetailSheet', () => {
       'href',
       '/profile/jordan',
     )
+  })
+
+  it('View profile uses network return state (C-01)', () => {
+    expect(networkProfileReturnState(otherUser.id)).toEqual({
+      returnTo: '/network',
+      selectUserId: otherUser.id,
+    })
   })
 
   it('hides Make plan and View profile on profile variant', () => {

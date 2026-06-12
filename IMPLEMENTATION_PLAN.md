@@ -15,9 +15,11 @@
 | Spec `010` | COMPLETE — Playwright profile back E2E |
 | Spec `011` | COMPLETE — regression matrix refresh (items 1–14 documented) |
 | Spec `012` | COMPLETE — stale `plan_expiring_soon` tap dismiss + toast |
-| Specs `013+` | **P2 polish** — promote before Ralph picks up |
+| Spec `013` | COMPLETE — profile shared-bridge sheet read-only + viewer avatar |
+| Spec `014` | COMPLETE — contextual state audit; C-01–C-04 fixes + navigation matrix |
+| Specs `015+` | **P2 polish** — promote before Ralph picks up |
 
-**Recommended Ralph order:** P2 specs `013`+ when promoted
+**Recommended Ralph order:** P2 specs `015`+ when promoted
 
 ---
 
@@ -126,11 +128,23 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 
 ## P2 — Polish (post-MVP)
 
-| Spec | Scope | Audit | Defer rationale if skipped |
-|------|-------|-------|---------------------------|
-| `013-graph-export-social-preset` | Larger node scale, framing, safe margins for social posting | ⬜ BACKLOG #1 | 2× export shipped; quality acceptable for MVP |
-| `014-capacitor-version-align` | Align `@capacitor/cli` 7.x → 8.x with core | 🔶 Known issue #3 | Scaffold-only; `cap sync` warns but non-blocking |
-| `015-avatar-storage-cleanup` | Delete Storage object when user removes avatar | 🔶 Regression matrix note | Orphan files low risk; URL null works |
+| Spec | Scope | Audit | Status |
+|------|-------|-------|--------|
+| `013-profile-bridge-detail-fix` | Profile shared-bridge sheet read-only; viewer avatar | 🔧 | ✅ COMPLETE |
+| `014-contextual-state-audit` | Navigation context matrix; C-01–C-04 hardening | 🔧 | ✅ COMPLETE |
+| `015-capacitor-version-align` | Align `@capacitor/cli` 7.x → 8.x with core | 🔶 Known issue #3 | Deferred |
+| `016-avatar-storage-cleanup` | Delete Storage object when user removes avatar | 🔶 Regression matrix note | Deferred |
+| `017-graph-export-social-preset` | Larger node scale, framing, safe margins for social posting | ⬜ BACKLOG #1 | Deferred |
+
+### Spec 014 — P1 follow-ups (shipped in spec 014)
+
+| ID | Fix | Status |
+|----|-----|--------|
+| C-01 | Bridge detail **View profile** passes `returnTo` + `selectUserId` | ✅ |
+| C-02 | Profile **New gum** passes `returnTo: /profile/:username` | ✅ |
+| C-03 | Stale gum-piece notification taps on terminal statuses | ✅ |
+| C-04 | Post detail profile taps pass `returnTo: '/feed'` (`restorePostId` deferred) | ✅ |
+| C-05–C-09 | P2 items — disposition in `DEVDOC.md` §Navigation context | ✅ |
 
 ---
 
@@ -182,10 +196,11 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 |-----|-------|------|
 | `plan_expiring_soon` not generated | 🔶 | `009` |
 | Stale `plan_expiring_soon` on expired piece | ✅ | `012` |
-| Capacitor version skew | 🔶 | `014` |
-| Avatar Storage orphans on remove | 🔶 | `015` |
+| Contextual navigation bugs (C-01–C-04) | ✅ | `014` |
+| Capacitor version skew | 🔶 | `015` |
+| Avatar Storage orphans on remove | 🔶 | `016` |
 | Per-shape gum SVG | ⬜ | v2 |
-| Graph export social preset | ⬜ | `013` |
+| Graph export social preset | ⬜ | `017` |
 | Report / block | ⬜ | v2 |
 | Rate limiting | ⬜ | v2 |
 

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { type CommentWithUser, usePost } from '../../hooks/usePost.ts'
+import { feedProfileReturnState } from '../../lib/navigationContext.ts'
 import { supabase } from '../../lib/supabase.ts'
 import { CommentItem } from './CommentItem.tsx'
 import { FeedPostCard } from './FeedPostCard.tsx'
@@ -264,7 +265,10 @@ export function PostDetailSheet({
                 onComment={() => undefined}
                 onOtherParticipantPress={
                   post.otherParticipant?.username
-                    ? () => navigate(`/profile/${post.otherParticipant?.username}`)
+                    ? () =>
+                        navigate(`/profile/${post.otherParticipant?.username}`, {
+                          state: feedProfileReturnState(postId),
+                        })
                     : undefined
                 }
                 hideActions
@@ -279,7 +283,10 @@ export function PostDetailSheet({
                     comment={comment}
                     onUserPress={
                       comment.user.username && comment.user.username !== 'me'
-                        ? () => navigate(`/profile/${comment.user.username}`)
+                        ? () =>
+                            navigate(`/profile/${comment.user.username}`, {
+                              state: feedProfileReturnState(postId),
+                            })
                         : undefined
                     }
                   />

@@ -12,11 +12,7 @@ import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { invalidateConnectionFlow, invalidateNotifications } from '../lib/invalidate.ts'
-import {
-  resolveStaleGumPieceTap,
-  routesToGumPiece,
-  shouldCheckGumPieceStatus,
-} from '../lib/notificationRouting.ts'
+import { resolveStaleGumPieceTap, routesToGumPiece } from '../lib/notificationRouting.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Notifications() {
@@ -58,7 +54,14 @@ export default function Notifications() {
     const tappedNotification = notifications.find((notification) => notification.id === id)
     await markAsRead(id)
 
-    if (shouldCheckGumPieceStatus(type)) {
+    if (type === 'connection_request') {
+      setActiveConnectionRequest({
+        connectionId: referenceId,
+        notificationId: id,
+      })
+      return
+    }
+    if (routesToGumPiece(type)) {
       const { data: pieceRow } = await supabase
         .from('gum_pieces')
         .select('status')
@@ -71,16 +74,7 @@ export default function Notifications() {
         setToast(staleTap.toast)
         return
       }
-    }
 
-    if (type === 'connection_request') {
-      setActiveConnectionRequest({
-        connectionId: referenceId,
-        notificationId: id,
-      })
-      return
-    }
-    if (routesToGumPiece(type)) {
       void navigate(`/piece/${referenceId}`)
       return
     }

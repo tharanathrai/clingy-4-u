@@ -10,6 +10,7 @@
 
 import { test, expect } from '@playwright/test'
 import {
+  E2E_SUPABASE_URL,
   injectMockSession,
   mockConnectedFriendScenario,
   MOCK_FRIEND,
@@ -71,6 +72,35 @@ test('cold open other-user profile falls back to home on back', async ({ page })
   await expect(page.getByRole('button', { name: 'back' })).toBeVisible()
   await page.getByRole('button', { name: 'back' }).click()
   await expect(page).toHaveURL('/home')
+})
+
+test('profile new gum back returns to profile when returnTo is set (C-02)', async ({ page }) => {
+  await setupConnectedUser(page)
+
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/bridges*`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  })
+
+  await page.goto(`/profile/${MOCK_FRIEND.username}`)
+  await page.waitForLoadState('networkidle')
+
+  await page.getByRole('button', { name: 'New gum' }).click()
+  await expect(page).toHaveURL('/piece/new')
+  await expect(page.getByText('Sam Friend')).toBeVisible()
+
+  const backLink = page.getByRole('link', { name: 'back' })
+  await expect(backLink).toHaveAttribute('href', `/profile/${MOCK_FRIEND.username}`)
+  await backLink.click()
+  await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
 })
 
 test('own profile at /profile/me does not show back header', async ({ page }) => {

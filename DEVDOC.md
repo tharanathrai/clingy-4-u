@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.10 (Notification routing hardening)
-**Last updated:** 2026-06-12 — spec `012` stale `plan_expiring_soon` tap dismisses notification with inline toast
+**Version:** 0.11 (Contextual state & navigation audit)
+**Last updated:** 2026-06-12 — spec `014` navigation-context hardening (C-01–C-04)
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -51,6 +51,43 @@ Canonical class strings live in `src/components/layout/pageShell.ts`:
 | AuthGuard / Suspense fallbacks | `safe-screen-height` centered | No `min-h-screen` |
 
 Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consistency`, `specs/006-notifications-icon-cursor`
+
+---
+
+## Navigation context
+
+Shared sheets and cross-route CTAs must match the user's entry point. Helpers live in `src/lib/navigationContext.ts` (`AppLocationState`, `networkProfileReturnState`, `feedProfileReturnState`, `profileNewGumReturnState`, `navigateToProfile`).
+
+### Entry-point × shared-component matrix
+
+| Component | Network graph | Profile shared bridges | Feed / post detail | Piece detail | Notifications |
+|-----------|---------------|------------------------|--------------------|----------------|---------------|
+| `BridgeDetailSheet` | CTAs: Make plan, View profile; viewer avatar | Read-only; no CTAs (`variant="profile"`) | N/A | N/A | N/A |
+| `NodeProfileSheet` | CTAs: Make plan, View profile | N/A (use full profile page) | N/A | N/A | N/A |
+| `PostDetailSheet` | N/A | N/A | Overlay + history entry | N/A | N/A |
+| Profile `/profile/:username` | `returnTo` + `selectUserId` from network | Tab root / push from feed | History or `returnTo` | History from partner link | Indirect |
+
+### When to use `returnTo` / `selectUserId` / sheet `variant`
+
+- **`returnTo` + `selectUserId`:** User may land on a push screen (profile, piece/new) from an overlay context that history alone cannot restore — network graph node selection, bridge detail **View profile** (C-01), profile **New gum** (C-02), post-detail author/commenter taps (C-04 minimum).
+- **`variant` on shared sheets:** When the same component renders from routes with different affordances (e.g. `BridgeDetailSheet` `network` vs `profile` per spec `013`).
+- **`restorePostId`:** Optional feed overlay restore on profile back (C-04 stretch) — **deferred**; `returnTo: '/feed'` is shipped.
+
+### When history-only back is acceptable
+
+`navigate(-1)` / `BackHeader` history back is fine when the browser stack reliably contains the prior screen (feed card author tap without open post detail, piece detail partner link, journey screens with shallow depth). Do not replace working history back with `returnTo` unless overlay or graph state would be lost.
+
+### P2 audit disposition (spec 014)
+
+| ID | Status | Rationale |
+|----|--------|-----------|
+| C-05 | deferred | `location.state` lost on refresh — document-only unless product requires URL params |
+| C-06 | deferred | `networkUserCache` staleness — lower priority than navigation bugs |
+| C-07 | fixed | `navigationContext.ts` helpers reduce copy-paste drift (partial centralization) |
+| C-08 | deferred | `BridgeListItem` sheet not history-integrated — acceptable for profile read-only sheet |
+| C-09 | deferred | Connect/AddScan profile links — history usually sufficient from journey push |
+
+Spec: `specs/014-contextual-state-audit`
 
 ---
 
@@ -129,20 +166,20 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 **Status: Verified (automated)** — audit ✅ (`profileUser.test.tsx` + `e2e/profile-back.spec.ts` back-nav ✓)
 - What works: Own profile with avatar, name, bio, gumball, category breakdown; graveyard icon button in header top-left (`ProfileMeHeader`, Ghost icon → `/home/graveyard`); settings icon top-right; edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; shared-bridge tap opens `BridgeDetailSheet` (`variant="profile"`) with both participant avatars and no redundant **Make plan** / **View profile** CTAs; `BackHeader` on `/profile/:username` (loading, error, not-found, and happy path) with history back, optional `returnTo`/`selectUserId` from network, or `/home` fallback; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Bottom graveyard text link removed (spec `001-profile-graveyard-icon`).
 - Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/pages/Profile.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/BridgeListItem.tsx`, `src/components/profile/SharedBridgesSection.tsx`, `src/components/network/BridgeDetailSheet.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
-- Tests: `src/tests/profileUser.test.tsx` (back header + navigation), `src/tests/bridgeDetailSheet.test.tsx` (profile vs network variant + viewer avatar), `e2e/profile-back.spec.ts` (feed/network/cold-open back paths + own-profile regression), `src/tests/profileMe.test.tsx`, `src/tests/profileMeHeader.test.tsx`, `src/tests/avatarImage.test.ts`
+- Tests: `src/tests/profileUser.test.tsx` (back header + navigation), `src/tests/bridgeDetailSheet.test.tsx` (profile vs network variant + viewer avatar), `src/tests/sharedBridgesSection.test.tsx` (C-02 new-gum `returnTo`), `e2e/profile-back.spec.ts` (feed/network/cold-open back + C-02 profile new-gum back), `src/tests/profileMe.test.tsx`, `src/tests/profileMeHeader.test.tsx`, `src/tests/avatarImage.test.ts`
 
 ---
 
 ### Feed
 **Status: Working** — audit 🟡 (comment real-time partial — matrix item 14)
-- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
+- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; post-detail profile taps pass `returnTo: '/feed'` (C-04); real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
 - Components / hooks: `src/pages/Feed.tsx`, `src/hooks/useFeed.ts`, `src/hooks/usePost.ts`, `src/components/feed/FeedPostCard.tsx`, `src/components/feed/PostDetailSheet.tsx`
 
 ---
 
 ### Notifications
-**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `notificationRouting.test.ts` 6/6; `expiringSoon.test.ts` 8/8; routing partial — matrix item 13)
-- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; stale `invite_received` / `plan_expiring_soon` on expired pieces auto-dismiss with toast; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
+**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `notificationRouting.test.ts` 12/12; `expiringSoon.test.ts` 8/8; routing partial — matrix item 13)
+- What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; stale gum-piece taps on terminal statuses (`confirmed`, `turned_down`, `expired`) auto-dismiss with toast for all `/piece/:id` route types including `invite_accepted`, `plan_turned_down`, `plan_expired` (C-03); `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
 - Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/lib/notificationRouting.ts`, `src/components/notifications/NotificationItem.tsx`
 
 ---
@@ -179,11 +216,11 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Network Graph | 🟡 | P2 spec `013` export quality |
 | Profile | ✅ | — |
 | Feed | 🟡 | Manual item 14 |
-| Notifications | 🟡 | Routing partial (item 13); stale expiry tap fixed in `012` |
+| Notifications | 🟡 | Routing partial (item 13); stale terminal piece taps fixed in `012` + `014` |
 | Settings | 🟡 | Avatar upload partial (item 6) |
 | Graveyard | 🟡 | Expiry cron partial (item 8) |
 
-**P0 ship blockers:** none. **P1 Ralph queue:** complete (`009`–`012`). Next: P2 specs `013`+ when promoted.
+**P0 ship blockers:** none. **P1 Ralph queue:** complete (`009`–`012`). **P2:** `013` profile bridge detail ✅, `014` navigation context audit ✅. Next: promote remaining P2 specs when ready.
 
 ---
 
