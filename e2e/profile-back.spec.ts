@@ -13,7 +13,9 @@ import {
   E2E_SUPABASE_URL,
   injectMockSession,
   mockConnectedFriendScenario,
+  MOCK_FEED_POST,
   MOCK_FRIEND,
+  MOCK_USER,
   restoreNetworkNodeSelection,
 } from './mocks.ts'
 
@@ -101,6 +103,93 @@ test('profile new gum back returns to profile when returnTo is set (C-02)', asyn
   await expect(backLink).toHaveAttribute('href', `/profile/${MOCK_FRIEND.username}`)
   await backLink.click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
+})
+
+test('post detail commenter profile back restores post detail sheet (F-03)', async ({
+  page,
+}) => {
+  await setupConnectedUser(page)
+
+  const mockComment = {
+    id: 'mock-comment-id',
+    post_id: 'mock-post-id',
+    user_id: MOCK_FRIEND.id,
+    body: 'Nice walk!',
+    created_at: new Date().toISOString(),
+  }
+
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/comments*`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+
+    const url = route.request().url()
+    if (url.includes('post_id=eq.mock-post-id')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([mockComment]),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  })
+
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/posts*`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+
+    const url = route.request().url()
+    const single = url.includes('application/vnd.pgrst.object') ||
+      route.request().headers().accept?.includes('application/vnd.pgrst.object+json')
+
+    if (url.includes('id=eq.mock-post-id')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(single ? MOCK_FEED_POST : [MOCK_FEED_POST]),
+      })
+      return
+    }
+
+    if (url.includes(`author_id=eq.${MOCK_USER.id}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([MOCK_FEED_POST]),
+    })
+  })
+
+  await page.goto('/feed')
+  await page.waitForLoadState('networkidle')
+
+  await page.getByText('Great coffee walk today!').click()
+  await expect(page.getByLabel('Close post details').first()).toBeVisible()
+  await expect(page.getByText('Nice walk!')).toBeVisible()
+
+  await page.getByRole('button', { name: MOCK_FRIEND.display_name }).last().click()
+  await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
+
+  await page.getByRole('button', { name: 'back' }).click()
+  await expect(page).toHaveURL('/feed')
+  await expect(page.getByLabel('Close post details').first()).toBeVisible()
+  await expect(page.getByText('Nice walk!')).toBeVisible()
 })
 
 test('own profile at /profile/me does not show back header', async ({ page }) => {

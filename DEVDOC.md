@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
 **Version:** 0.11 (Contextual state & navigation audit)
-**Last updated:** 2026-06-12 — spec `014` navigation-context hardening (C-01–C-04)
+**Last updated:** 2026-06-12 — spec `015` feed profile navigation (C-04 stretch, F-01–F-05)
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -56,7 +56,7 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 
 ## Navigation context
 
-Shared sheets and cross-route CTAs must match the user's entry point. Helpers live in `src/lib/navigationContext.ts` (`AppLocationState`, `networkProfileReturnState`, `feedProfileReturnState`, `profileNewGumReturnState`, `navigateToProfile`).
+Shared sheets and cross-route CTAs must match the user's entry point. Helpers live in `src/lib/navigationContext.ts` (`AppLocationState`, `networkProfileReturnState`, `feedProfileReturnState`, `profileNewGumReturnState`, `profileBackReturnState`, `canNavigateToProfile`, `navigateToProfile`).
 
 ### Entry-point × shared-component matrix
 
@@ -64,14 +64,15 @@ Shared sheets and cross-route CTAs must match the user's entry point. Helpers li
 |-----------|---------------|------------------------|--------------------|----------------|---------------|
 | `BridgeDetailSheet` | CTAs: Make plan, View profile; viewer avatar | Read-only; no CTAs (`variant="profile"`) | N/A | N/A | N/A |
 | `NodeProfileSheet` | CTAs: Make plan, View profile | N/A (use full profile page) | N/A | N/A | N/A |
-| `PostDetailSheet` | N/A | N/A | Overlay + history entry | N/A | N/A |
-| Profile `/profile/:username` | `returnTo` + `selectUserId` from network | Tab root / push from feed | History or `returnTo` | History from partner link | Indirect |
+| `PostDetailSheet` | N/A | N/A | Overlay + history entry; profile taps pass `restorePostId` | N/A | N/A |
+| Profile `/profile/:username` | `returnTo` + `selectUserId` from network | Tab root / push from feed | `returnTo` + `restorePostId` round-trip to feed | History from partner link | Indirect |
 
 ### When to use `returnTo` / `selectUserId` / sheet `variant`
 
 - **`returnTo` + `selectUserId`:** User may land on a push screen (profile, piece/new) from an overlay context that history alone cannot restore — network graph node selection, bridge detail **View profile** (C-01), profile **New gum** (C-02), post-detail author/commenter taps (C-04 minimum).
 - **`variant` on shared sheets:** When the same component renders from routes with different affordances (e.g. `BridgeDetailSheet` `network` vs `profile` per spec `013`).
-- **`restorePostId`:** Optional feed overlay restore on profile back (C-04 stretch) — **deferred**; `returnTo: '/feed'` is shipped.
+- **`restorePostId`:** Feed overlay restore on profile back (C-04 stretch) — **shipped** in spec `015`: `PostDetailSheet` sets it; `ProfileUser` forwards via `profileBackReturnState`; `Feed` reopens sheet on mount.
+- **`canNavigateToProfile`:** Omit feed author/comment taps when target is the signed-in viewer (F-01).
 
 ### When history-only back is acceptable
 
@@ -88,6 +89,18 @@ Shared sheets and cross-route CTAs must match the user's entry point. Helpers li
 | C-09 | deferred | Connect/AddScan profile links — history usually sufficient from journey push |
 
 Spec: `specs/014-contextual-state-audit`
+
+### Feed navigation audit disposition (spec 015)
+
+| ID | Status | Notes |
+|----|--------|-------|
+| F-01 | fixed | Own-profile author taps disabled on feed list + post detail |
+| F-02 | fixed | Post detail `onAuthorPress` wired for other users |
+| F-03 | fixed | `restorePostId` round-trip restores post detail overlay |
+| F-04 | fixed | Feed list uses `navigateToProfile` with `returnTo: '/feed'` |
+| F-05 | fixed | Addressed by F-03 remount restore (no separate change) |
+
+Spec: `specs/015-feed-profile-navigation`
 
 ---
 
@@ -172,8 +185,9 @@ Spec: `specs/014-contextual-state-audit`
 
 ### Feed
 **Status: Working** — audit 🟡 (comment real-time partial — matrix item 14)
-- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; post-detail profile taps pass `returnTo: '/feed'` (C-04); real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
+- What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; post-detail profile taps pass `returnTo: '/feed'` + `restorePostId` (C-04 / spec `015`); profile back reopens post detail sheet; own-profile author taps are non-navigable (F-01); real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
 - Components / hooks: `src/pages/Feed.tsx`, `src/hooks/useFeed.ts`, `src/hooks/usePost.ts`, `src/components/feed/FeedPostCard.tsx`, `src/components/feed/PostDetailSheet.tsx`
+- Tests: `src/tests/feedProfileNavigation.test.tsx` (F-01 own-profile gate, F-03 restore), `e2e/profile-back.spec.ts` (post detail → profile → back restores sheet)
 
 ---
 

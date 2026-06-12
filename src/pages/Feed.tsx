@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
@@ -11,12 +11,19 @@ import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { supabase } from '../lib/supabase.ts'
+import {
+  type AppLocationState,
+  canNavigateToProfile,
+  navigateToProfile,
+} from '../lib/navigationContext.ts'
 
 export default function Feed() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const { posts, loading, error, refetch } = useFeed()
   const navigate = useNavigate()
+  const location = useLocation()
+  const restorePostIdFromState = (location.state as AppLocationState | null)?.restorePostId
   const queryClient = useQueryClient()
   const [localPosts, setLocalPosts] = useState(posts)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
@@ -30,6 +37,16 @@ export default function Feed() {
     loadMore,
   } = usePaginatedItems(localPosts, 6, 'pagination:/feed')
   useScrollRestore('scroll:/feed', `${loading ? 'loading' : 'ready'}:${visiblePosts.length}`)
+
+  useEffect(() => {
+    if (!restorePostIdFromState) {
+      return
+    }
+
+    setFocusComposerOnOpen(false)
+    setSelectedPostId(restorePostIdFromState)
+    navigate('.', { replace: true, state: {} })
+  }, [restorePostIdFromState, navigate])
 
   useEffect(() => {
     setLocalPosts(posts)
@@ -180,7 +197,15 @@ export default function Feed() {
                   onReact={() => void handleReact(post.id)}
                   onOpenDetail={() => openPostDetail(post.id)}
                   onComment={() => openPostDetail(post.id, { focusComposer: true })}
-                  onAuthorPress={() => navigate(`/profile/${post.author.username}`)}
+                  onAuthorPress={
+                    canNavigateToProfile(userId, post.author.id)
+                      ? () =>
+                          navigateToProfile(navigate, {
+                            username: post.author.username,
+                            returnTo: '/feed',
+                          })
+                      : undefined
+                  }
                 />
               </li>
             ))}

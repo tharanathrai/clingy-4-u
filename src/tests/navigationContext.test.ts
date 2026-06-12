@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canNavigateToProfile,
   feedProfileReturnState,
   networkProfileReturnState,
+  profileBackReturnState,
   profileNewGumReturnState,
 } from '../lib/navigationContext.ts'
 
@@ -21,6 +23,35 @@ describe('navigationContext', () => {
         recipientId: 'user-2',
         returnTo: '/profile/jordan',
       })
+    })
+  })
+
+  describe('canNavigateToProfile (F-01)', () => {
+    it('returns false when target is the viewer', () => {
+      expect(canNavigateToProfile('user-1', 'user-1')).toBe(false)
+    })
+
+    it('returns true when target is another user', () => {
+      expect(canNavigateToProfile('user-1', 'user-2')).toBe(true)
+    })
+  })
+
+  describe('profileBackReturnState (F-03)', () => {
+    it('forwards selectUserId and restorePostId to return route', () => {
+      expect(
+        profileBackReturnState({
+          returnTo: '/feed',
+          selectUserId: 'user-2',
+          restorePostId: 'post-1',
+        }),
+      ).toEqual({
+        selectUserId: 'user-2',
+        restorePostId: 'post-1',
+      })
+    })
+
+    it('returns empty object when no restore keys present', () => {
+      expect(profileBackReturnState({ returnTo: '/feed' })).toEqual({})
     })
   })
 

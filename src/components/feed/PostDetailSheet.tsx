@@ -3,7 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { type CommentWithUser, usePost } from '../../hooks/usePost.ts'
-import { feedProfileReturnState } from '../../lib/navigationContext.ts'
+import {
+  canNavigateToProfile,
+  navigateToProfile,
+} from '../../lib/navigationContext.ts'
 import { supabase } from '../../lib/supabase.ts'
 import { CommentItem } from './CommentItem.tsx'
 import { FeedPostCard } from './FeedPostCard.tsx'
@@ -111,6 +114,14 @@ export function PostDetailSheet({
 
   if (!postId) {
     return null
+  }
+
+  const navigateToFeedProfile = (username: string) => {
+    navigateToProfile(navigate, {
+      username,
+      returnTo: '/feed',
+      restorePostId: postId,
+    })
   }
 
   const handleToggleReaction = async () => {
@@ -263,12 +274,14 @@ export function PostDetailSheet({
                 onReact={() => void handleToggleReaction()}
                 onOpenDetail={() => undefined}
                 onComment={() => undefined}
+                onAuthorPress={
+                  user && canNavigateToProfile(user.id, post.author.id)
+                    ? () => navigateToFeedProfile(post.author.username)
+                    : undefined
+                }
                 onOtherParticipantPress={
                   post.otherParticipant?.username
-                    ? () =>
-                        navigate(`/profile/${post.otherParticipant?.username}`, {
-                          state: feedProfileReturnState(postId),
-                        })
+                    ? () => navigateToFeedProfile(post.otherParticipant!.username!)
                     : undefined
                 }
                 hideActions
@@ -282,11 +295,11 @@ export function PostDetailSheet({
                     key={comment.id}
                     comment={comment}
                     onUserPress={
-                      comment.user.username && comment.user.username !== 'me'
-                        ? () =>
-                            navigate(`/profile/${comment.user.username}`, {
-                              state: feedProfileReturnState(postId),
-                            })
+                      user &&
+                      comment.user.username &&
+                      comment.user.username !== 'me' &&
+                      canNavigateToProfile(user.id, comment.user.id)
+                        ? () => navigateToFeedProfile(comment.user.username)
                         : undefined
                     }
                   />

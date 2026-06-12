@@ -8,11 +8,10 @@ import { pageShellTab } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
-
-interface ProfileLocationState {
-  returnTo?: string
-  selectUserId?: string
-}
+import {
+  type AppLocationState,
+  profileBackReturnState,
+} from '../lib/navigationContext.ts'
 
 export default function ProfileUser() {
   const { username } = useParams<{ username: string }>()
@@ -39,13 +38,9 @@ export default function ProfileUser() {
   }, [categoryBreakdown])
 
   const handleBack = () => {
-    const state = location.state as ProfileLocationState | null
+    const state = location.state as AppLocationState | null
     if (state?.returnTo) {
-      if (state.selectUserId != null) {
-        navigate(state.returnTo, { state: { selectUserId: state.selectUserId } })
-        return
-      }
-      navigate(state.returnTo)
+      navigate(state.returnTo, { state: profileBackReturnState(state) })
       return
     }
     if (window.history.length > 1) {

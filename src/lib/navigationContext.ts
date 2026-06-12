@@ -33,6 +33,24 @@ export function profileNewGumReturnState(
   }
 }
 
+export function canNavigateToProfile(
+  viewerId: string | null | undefined,
+  targetUserId: string,
+): boolean {
+  if (!viewerId) {
+    return true
+  }
+  return viewerId !== targetUserId
+}
+
+/** State to pass when navigating back via `returnTo` from a profile screen. */
+export function profileBackReturnState(state: AppLocationState): AppLocationState {
+  return {
+    ...(state.selectUserId != null ? { selectUserId: state.selectUserId } : {}),
+    ...(state.restorePostId ? { restorePostId: state.restorePostId } : {}),
+  }
+}
+
 export function navigateToProfile(
   navigate: NavigateFunction,
   options: {

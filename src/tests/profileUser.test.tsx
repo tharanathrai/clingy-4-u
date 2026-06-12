@@ -121,6 +121,28 @@ describe('ProfileUser back navigation', () => {
     expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
 
+  it('navigates to returnTo with restorePostId when provided in location state', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/profile/jordan',
+            state: { returnTo: '/feed', restorePostId: 'post-1' },
+          },
+        ]}
+      >
+        <ProfileUser />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'back' }))
+
+    expect(mockNavigate).toHaveBeenCalledWith('/feed', {
+      state: { restorePostId: 'post-1' },
+    })
+  })
+
   it('navigates to returnTo with selectUserId when provided in location state', async () => {
     const user = userEvent.setup()
     render(
