@@ -32,6 +32,32 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-05-26 Network share + docs | Network Graph, Connection requests | `graphSnapshot.ts`, `GraphShareButton.tsx`, `Network.tsx` | None | `npm run quality` pass | Manual: share without selection; export with selection restores | None |
 | 2026-06-11 Docs sync with MVP | All flows (documentation only) | None | None | N/A | N/A | None |
 | 2026-06-11 Post-MVP audit (spec 008) | All flows (audit only) | None | None | N/A | N/A | Manual items 1–14 pending — see `IMPLEMENTATION_PLAN.md` spec `011` |
+| 2026-06-12 Regression matrix refresh (spec 011) | All 15 flows (audit + label refresh) | None | None (read-only review) | 97/97 ✓ (`expiringSoon.test.ts` 8/8, `validateQrToken.test.ts` 10/10, `profile-back` unit 6/6) | Playwright 18/18 ✓ | No failures; 6 items pending-live, 3 pending-device, 5 partial — see table below |
+
+---
+
+## Manual test matrix (spec 011 — 2026-06-12)
+
+Statuses: **pass-automated** | **pass-code-review** | **partial** | **pending-device** | **pending-live** | **fail**
+
+| # | Scenario | Status | Evidence |
+|---|----------|--------|----------|
+| 1 | Full core loop E2E (two users) | pending-live | No two-user live harness; smoke + mocked paths only |
+| 2 | Real-time OTP sync (two devices) | partial | `useConfirmationSession.test.ts`; two-device sync not run |
+| 3 | PWA install (Android + iOS) | pending-device | `manifest.json` + `index.html` meta code-reviewed |
+| 4 | Safe area insets (notch / Dynamic Island) | pending-device | `viewport-fit=cover`, `safe-content-*` CSS code-reviewed |
+| 5 | Email delivery (invite, turn-down, expiry) | pending-live | `send-email` edge fn; needs `RESEND_API_KEY` in Supabase |
+| 6 | Avatar upload from Edit Profile | partial | `avatarImage.test.ts` 3/3; crop-over-sheet on device pending |
+| 7 | Graph share / export PNG | partial | `graphSnapshot.ts`, `networkPairSummary.test.ts` 5/5; device share pending |
+| 8 | Nightly cron expiry (`run-expiry`) | partial | `expiringSoon.test.ts` 8/8 idempotency; live invoke pending |
+| 9 | Slot limits server-side | pass-code-review | `create-gum-piece` / `respond-gum-piece` enforce 25 / 5 limits |
+| 10 | QR token expiry (60s) | partial | `validateQrToken.test.ts` 10/10; live 60s scan pending |
+| 11 | Confirmation session race | pass-code-review | `start-confirmation` dedupes duplicate sessions |
+| 12 | Connection accepted real-time | partial | E2E accept from notifications; graph refresh not in E2E |
+| 13 | Notification routing per type | partial | `notifications.test.ts` 5/5; E2E `connection_request` only |
+| 14 | PostDetailSheet comment real-time | partial | `realtime.test.ts` 6/6; feed comment composer manual pending |
+
+**Session outcome:** 0 fail, 2 pass-code-review, 5 partial, 3 pending-device, 4 pending-live. No new blocker specs filed.
 
 ---
 

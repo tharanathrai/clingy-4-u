@@ -1,6 +1,6 @@
 # Sticky Bridges — Developer Documentation
-**Version:** 0.8 (Post-MVP flow audit)
-**Last updated:** 2026-06-11 — `IMPLEMENTATION_PLAN.md` for specs `009+`; flow audit symbols; manual test matrix mapped
+**Version:** 0.9 (Regression matrix refresh)
+**Last updated:** 2026-06-12 — spec `011` manual matrix items 1–14 documented in `docs/regression-matrix.md`; stale manual labels refreshed
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -71,14 +71,14 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### QR Add / First Contact
-**Status: Working** — audit 🟡 (partial E2E; QR error cases unit-tested; live 60s expiry manual — see `IMPLEMENTATION_PLAN.md` spec `011`)
+**Status: Working** — audit 🟡 (partial E2E; `validateQrToken.test.ts` 10/10; live 60s scan pending-device — matrix item 10)
 - What works: `generate-qr-token` edge function creates 60s rotating tokens; QR displayed via `qrcode.react`; in-app scanner via `html5-qrcode`; deep link `/connect?token=` flow for sharing; `validate-qr-token` edge function validates token; all 5 error cases (expired, own, already_connected, request_pending, generic/network) handled with correct messages and actions (dismiss, retry, view profile); `AddScan.tsx` and `Connect.tsx` both have full error handling. Journey layout: `/add` pinned footer (`pageShellPinnedFooter` + scrollable QR region); `/add/scan` and `/connect` use `pageShellJourneyScroll` with tab-bar clearance. Spec: `specs/004-onboarding-journey-consistency`.
 - Components / hooks: `src/pages/Add.tsx`, `src/pages/AddScan.tsx`, `src/pages/Connect.tsx`, `src/lib/validateQrToken.ts`
 
 ---
 
 ### Connection Requests
-**Status: Verified (manual)** — audit 🟡 (stale matrix May 2026; E2E: accept from notifications only)
+**Status: Working** — audit 🟡 (E2E: accept from notifications; graph real-time refresh partial — matrix item 12)
 - What works: Pending connection list with skeleton loading; accept/reject via `respond-connection` edge function; `ConnectionRequestSheet` used from notifications; `invalidateConnectionFlow` called on accept to update React Query cache for network graph + pending counter; toast feedback; real-time on connections table via `usePendingRequestCount` hook.
 - Components / hooks: `src/pages/ConnectionRequests.tsx`, `src/components/connections/ConnectionRequestSheet.tsx`, `src/hooks/usePendingRequestCount.ts`, `src/lib/invalidate.ts`
 
@@ -92,28 +92,28 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Pocket View
-**Status: Working** — audit 🟡 (no dedicated automated test; slot limits manual)
+**Status: Working** — audit 🟡 (slot limits pass-code-review in edge fns — matrix item 9; no dedicated UI test)
 - What works: Full list of placeholder + active gum pieces sorted (placeholder first, then by `expires_at`); skeleton loading (3 cards); error state with retry; two empty states per DESIGN.md spec (no connections vs has connections); slot counter ("X / 25") visible in header; "Pocket full" tooltip on FAB; slot counter gating; new-gum FAB; real-time invalidation via Supabase channel → React Query invalidateQueries; pagination.
 - Components / hooks: `src/pages/Home.tsx`, `src/hooks/useGumPieces.ts`, `src/components/gum/GumPieceCard.tsx`
 
 ---
 
 ### Invite Accept / Decline
-**Status: Verified (manual)** — audit 🟡 (stale manual; core loop item 1 pending in plan)
+**Status: Working** — audit 🟡 (core loop pending-live — matrix item 1)
 - What works: Piece detail loaded via React Query (`useQuery`); context-sensitive actions — recipient: accept/pass on placeholder; creator: cancel placeholder; either party: mark-as-done + turn-down on active; respond via `useMutation` → `respond-gum-piece`; notification types differ for creator cancel (`plan_turned_down`) vs recipient pass (`invite_rejected`) on placeholders; turn-down confirmation sheet; real-time subscription invalidates query via `subscribePostgresChannel`; expired invite shows "This invite has expired." on accept; skeleton loading screen.
 - Components / hooks: `src/pages/PieceDetail.tsx`
 
 ---
 
 ### Confirmation Ceremony
-**Status: Verified (manual)** — audit 🟡 (OTP two-device sync manual item 2 pending)
+**Status: Working** — audit 🟡 (`useConfirmationSession.test.ts`; OTP two-device partial — matrix items 2, 11)
 - What works: `start-confirmation` creates OTP session; `submit-confirmation` validates and forms bridge on both confirms; real-time subscription via `useConfirmationSession` with direct React Query `setQueryData` updates via `subscribePostgresChannel`; OTP displayed with countdown timer; both-user confirm state tracked visually; expiry handling with "Try again" retry; bridge-formed detection via DELETE event; `UnwrapCeremony` animation with reduced-motion support; skeleton loading screen.
 - Components / hooks: `src/pages/PieceConfirm.tsx`, `src/hooks/useConfirmationSession.ts`, `src/components/confirmation/OTPDisplay.tsx`, `src/components/confirmation/UnwrapCeremony.tsx`
 
 ---
 
 ### Bridge Formation
-**Status: Verified (manual)** — audit 🟡 (server-side only; covered by ceremony E2E manual)
+**Status: Working** — audit 🟡 (server-side in `submit-confirmation`; covered by ceremony + matrix item 1 pending-live)
 - Purely server-side in `submit-confirmation`. Bridge row inserted, notifications sent for both users, graveyard skipped for confirmed pieces, `draft_post_id` returned for post opt-in.
 
 ---
@@ -134,28 +134,28 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Feed
-**Status: Verified (manual)** — audit 🟡 (stale manual; comment real-time item 14 pending)
+**Status: Working** — audit 🟡 (comment real-time partial — matrix item 14)
 - What works: Feed posts from connected users + own posts; chronological order; skeleton loading (3 card skeletons); error state with retry; empty state with correct DESIGN.md copy; `FeedPostCard` with reactions, comments, author avatar; `PostDetailSheet` with comment list and composer; real-time via `subscribePostgresChannel` + React Query invalidation; optimistic reaction toggle via `useMutation` with `setQueryData` rollback; scroll position restoration; pagination.
 - Components / hooks: `src/pages/Feed.tsx`, `src/hooks/useFeed.ts`, `src/hooks/usePost.ts`, `src/components/feed/FeedPostCard.tsx`, `src/components/feed/PostDetailSheet.tsx`
 
 ---
 
 ### Notifications
-**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `expiringSoon.test.ts`; full routing matrix item 13 manual)
+**Status: Verified (automated)** — audit 🟡 (`notifications.test.ts` 5/5 ✓; `expiringSoon.test.ts` 8/8; routing partial — matrix item 13; stale expiry tap → spec `012`)
 - What works: Notification list with unread count; real-time INSERT direct cache patch via `setQueryData`; real-time UPDATE patch in-place; all via `subscribePostgresChannel`; mark-as-read/mark-all/dismiss via optimistic `useMutation` with rollback; skeleton loading (4 rows); empty state ("All caught up."); error state with retry; routing to correct destination per type; `post_reaction` intentionally excluded (PRD section 14); `plan_expired` included in enrichNotifications gumPieceIds filter.
 - Components / hooks: `src/pages/Notifications.tsx`, `src/hooks/useNotifications.ts`, `src/components/notifications/NotificationItem.tsx`
 
 ---
 
 ### Settings
-**Status: Verified (manual)** — audit 🟡 (stale manual)
+**Status: Working** — audit 🟡 (avatar upload partial — matrix item 6)
 - What works: Account section (avatar, name, email, edit profile, sign out); notification toggles (localStorage only per spec); about section with version; skeleton loading screen.
 - Components / hooks: `src/pages/Settings.tsx`
 
 ---
 
 ### Graveyard
-**Status: Verified (manual)** — audit 🟡 (stale manual; expiry cron item 8 pending)
+**Status: Working** — audit 🟡 (expiry cron partial — matrix item 8; `expiringSoon.test.ts` 8/8)
 - What works: List of expired-after-1-year gum pieces; desaturated styling; humanized dates; empty state with correct DESIGN.md copy; pagination; skeleton loading (3 card skeletons).
 - Components / hooks: `src/pages/Graveyard.tsx`
 
@@ -179,11 +179,11 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Network Graph | 🟡 | P2 spec `013` export quality |
 | Profile | ✅ | — |
 | Feed | 🟡 | Manual item 14 |
-| Notifications | 🟡 | P1 specs `009`, `012`; manual item 13 |
-| Settings | 🟡 | Manual item 6 |
-| Graveyard | 🟡 | Manual item 8 |
+| Notifications | 🟡 | P1 spec `012`; routing partial (item 13) |
+| Settings | 🟡 | Avatar upload partial (item 6) |
+| Graveyard | 🟡 | Expiry cron partial (item 8) |
 
-**P0 ship blockers:** none. **P1 Ralph queue:** `011` → `012`.
+**P0 ship blockers:** none. **P1 Ralph queue:** `012` (spec `011` complete — see `docs/regression-matrix.md` manual table).
 
 ---
 
@@ -297,30 +297,32 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 
 ## Flows needing manual testing
 
-1. **Full core loop end-to-end** — Two real users: sign up → add each other via QR → create plan → accept → mark as done → OTP confirmation → bridge forms → appears in network graph → feed post opt-in.
+> **Last matrix run:** 2026-06-12 (spec `011`). Per-item status in `docs/regression-matrix.md` §Manual test matrix. Summary: 0 fail, 2 pass-code-review, 5 partial, 3 pending-device, 4 pending-live.
 
-2. **Real-time OTP sync** — Both users on the confirmation screen simultaneously on separate devices. Verify code appears on responder's screen without refresh. Verify both-confirmed state triggers unwrap ceremony simultaneously on both devices.
+1. **Full core loop end-to-end** — Two real users: sign up → add each other via QR → create plan → accept → mark as done → OTP confirmation → bridge forms → appears in network graph → feed post opt-in. **Status: pending-live**
 
-3. **PWA install** — Chrome on Android (Add to Home Screen), Safari on iOS (Add to Home Screen). Verify standalone display mode, theme color, icon display.
+2. **Real-time OTP sync** — Both users on the confirmation screen simultaneously on separate devices. Verify code appears on responder's screen without refresh. Verify both-confirmed state triggers unwrap ceremony simultaneously on both devices. **Status: partial**
 
-4. **Safe area insets on iPhone with notch / Dynamic Island** — Verify tab bar, floating FAB, bottom sheets all clear the home indicator. Check with `env(safe-area-inset-bottom)`.
+3. **PWA install** — Chrome on Android (Add to Home Screen), Safari on iOS (Add to Home Screen). Verify standalone display mode, theme color, icon display. **Status: pending-device**
 
-5. **Email delivery** — Verify invite email received (check spam), turn-down email received, expiry email received. Requires `RESEND_API_KEY` (or SendGrid) set in Supabase edge function secrets.
+4. **Safe area insets on iPhone with notch / Dynamic Island** — Verify tab bar, floating FAB, bottom sheets all clear the home indicator. Check with `env(safe-area-inset-bottom)`. **Status: pending-device**
 
-6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects.
+5. **Email delivery** — Verify invite email received (check spam), turn-down email received, expiry email received. Requires `RESEND_API_KEY` (or SendGrid) set in Supabase edge function secrets. **Status: pending-live**
 
-7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background. With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported.
+6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects. **Status: partial**
 
-8. **Nightly cron expiry** — Manually call `run-expiry`. (a) Set an active piece's `expires_at` within 30 days: verify both users receive `plan_expiring_soon` once; re-run does not duplicate. (b) Set `expires_at` to the past: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user `plan_expired` notifications.
+7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background. With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported. **Status: partial**
 
-9. **Slot limits enforced server-side** — Verify that direct API calls to `create-gum-piece` beyond 25 global / 5 per-pair are blocked even without the UI restrictions. Verify RLS prevents reading other users' gum pieces.
+8. **Nightly cron expiry** — Manually call `run-expiry`. (a) Set an active piece's `expires_at` within 30 days: verify both users receive `plan_expiring_soon` once; re-run does not duplicate. (b) Set `expires_at` to the past: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user `plan_expired` notifications. **Status: partial** (`expiringSoon.test.ts` 8/8)
 
-10. **QR token expiry in the wild** — Scan a QR code after 60 seconds. Verify "This code has expired. Ask them to refresh." message with dismiss button.
+9. **Slot limits enforced server-side** — Verify that direct API calls to `create-gum-piece` beyond 25 global / 5 per-pair are blocked even without the UI restrictions. Verify RLS prevents reading other users' gum pieces. **Status: pass-code-review**
 
-11. **Confirmation session race condition** — Both users tap "Mark as done" simultaneously. Verify only one session is created (edge function deduplication) and both see the same OTP.
+10. **QR token expiry in the wild** — Scan a QR code after 60 seconds. Verify "This code has expired. Ask them to refresh." message with dismiss button. **Status: partial** (`validateQrToken.test.ts` 10/10)
 
-12. **Connection accepted real-time** — Accept a connection request on the ConnectionRequests page. Verify the network graph updates without a manual refresh (React Query cache invalidated via `invalidateNetworkGraphCache`).
+11. **Confirmation session race condition** — Both users tap "Mark as done" simultaneously. Verify only one session is created (edge function deduplication) and both see the same OTP. **Status: pass-code-review** (`start-confirmation` dedup)
 
-13. **Notification routing** — Tap each notification type and verify navigation: `invite_received` → `/piece/:id`; `bridge_formed` → `/network` with node pre-selected; `connection_request` → ConnectionRequestSheet inline; `post_comment` → `/feed`.
+12. **Connection accepted real-time** — Accept a connection request on the ConnectionRequests page. Verify the network graph updates without a manual refresh (React Query cache invalidated via `invalidateNetworkGraphCache`). **Status: partial** (E2E notifications accept)
 
-14. **PostDetailSheet comment composer** — Open a post, add a comment, verify it appears in the list in real-time (React Query `usePost` invalidated by channel).
+13. **Notification routing** — Tap each notification type and verify navigation: `invite_received` → `/piece/:id`; `bridge_formed` → `/network` with node pre-selected; `connection_request` → ConnectionRequestSheet inline; `post_comment` → `/feed`. **Status: partial**
+
+14. **PostDetailSheet comment composer** — Open a post, add a comment, verify it appears in the list in real-time (React Query `usePost` invalidated by channel). **Status: partial**

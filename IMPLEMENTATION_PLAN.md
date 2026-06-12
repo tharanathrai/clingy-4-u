@@ -12,9 +12,11 @@
 | Specs `001`–`007` | `## Status: COMPLETE` — Ralph may output `<promise>ALL_DONE</promise>` for this set only |
 | Spec `008` | Meta-spec: audit + this plan |
 | Spec `009` | COMPLETE — `plan_expiring_soon` cron in `run-expiry` |
-| Specs `010+` | **Unlock further Ralph work** — pick lowest incomplete number first |
+| Spec `010` | COMPLETE — Playwright profile back E2E |
+| Spec `011` | COMPLETE — regression matrix refresh (items 1–14 documented) |
+| Specs `012+` | **Unlock further Ralph work** — pick lowest incomplete number first |
 
-**Recommended Ralph order:** `009` → `010` → `011` → `012` → (P2 as promoted)
+**Recommended Ralph order:** `012` → (P2 as promoted)
 
 ---
 
