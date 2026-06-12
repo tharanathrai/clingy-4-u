@@ -126,10 +126,10 @@ Specs: `specs/003-ui-consistency-audit`, `specs/004-onboarding-journey-consisten
 ---
 
 ### Profile (Own + Others)
-**Status: Verified (automated)** — audit 🔧 (`profileUser.test.tsx` back header ✓; Playwright back-nav pending — spec `010`)
+**Status: Verified (automated)** — audit ✅ (`profileUser.test.tsx` + `e2e/profile-back.spec.ts` back-nav ✓)
 - What works: Own profile with avatar, name, bio, gumball, category breakdown; graveyard icon button in header top-left (`ProfileMeHeader`, Ghost icon → `/home/graveyard`); settings icon top-right; edit sheet; auto-generates bio via `useMutation` → `generate-profile-bio` if null; other user profile with shared bridges section; `BackHeader` on `/profile/:username` (loading, error, not-found, and happy path) with history back, optional `returnTo`/`selectUserId` from network, or `/home` fallback; correct redirect if viewing own username; `EditProfileSheet` with username availability check, circular avatar field (tap to change, crop sheet, remove photo sets `avatar_url` null); skeleton screen for loading state. Bottom graveyard text link removed (spec `001-profile-graveyard-icon`).
 - Components / hooks: `src/pages/ProfileMe.tsx`, `src/pages/ProfileUser.tsx`, `src/pages/Profile.tsx`, `src/hooks/useProfile.ts`, `src/components/profile/Gumball.tsx`, `src/components/profile/EditProfileSheet.tsx`, `src/components/profile/ProfileMeHeader.tsx`, `src/components/profile/ProfileAvatarField.tsx`, `src/components/profile/AvatarCropSheet.tsx`, `src/hooks/useAvatarUpload.ts`, `src/lib/avatarImage.ts`
-- Tests: `src/tests/profileUser.test.tsx` (back header + navigation), `src/tests/profileMe.test.tsx`, `src/tests/profileMeHeader.test.tsx`, `src/tests/avatarImage.test.ts`
+- Tests: `src/tests/profileUser.test.tsx` (back header + navigation), `e2e/profile-back.spec.ts` (feed/network/cold-open back paths + own-profile regression), `src/tests/profileMe.test.tsx`, `src/tests/profileMeHeader.test.tsx`, `src/tests/avatarImage.test.ts`
 
 ---
 
@@ -177,13 +177,13 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Confirmation Ceremony | 🟡 | Manual items 2, 11 |
 | Bridge Formation | 🟡 | Manual item 1 |
 | Network Graph | 🟡 | P2 spec `013` export quality |
-| Profile | 🔧 | P1 spec `010` Playwright back-nav |
+| Profile | ✅ | — |
 | Feed | 🟡 | Manual item 14 |
 | Notifications | 🟡 | P1 specs `009`, `012`; manual item 13 |
 | Settings | 🟡 | Manual item 6 |
 | Graveyard | 🟡 | Manual item 8 |
 
-**P0 ship blockers:** none. **P1 Ralph queue:** `009` → `010` → `011` → `012`.
+**P0 ship blockers:** none. **P1 Ralph queue:** `011` → `012`.
 
 ---
 
