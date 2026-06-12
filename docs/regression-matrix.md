@@ -35,6 +35,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-06-12 Regression matrix refresh (spec 011) | All 15 flows (audit + label refresh) | None | None (read-only review) | 97/97 ✓ (`expiringSoon.test.ts` 8/8, `validateQrToken.test.ts` 10/10, `profile-back` unit 6/6) | Playwright 18/18 ✓ | No failures; 6 items pending-live, 3 pending-device, 5 partial — see table below |
 | 2026-06-12 Contextual state audit (spec 014) | Profile, Network, Feed, Notifications | `navigationContext.ts`, `notificationRouting.ts` | None | `navigationContext.test.ts` 4/4, `sharedBridgesSection.test.tsx` 1/1, `notificationRouting.test.ts` 12/12, `bridgeDetailSheet.test.tsx` extended | Playwright 19/19 ✓ (`profile-back` C-02) | C-04 `restorePostId` overlay restore deferred |
 | 2026-06-12 Feed profile navigation (spec 015) | Feed, Profile | `Feed.tsx`, `PostDetailSheet.tsx`, `ProfileUser.tsx`, `navigationContext.ts` | None | `feedProfileNavigation.test.tsx` 3/3, `navigationContext.test.ts` extended, `profileUser.test.tsx` +1 | Playwright 20/20 ✓ (post detail restore F-03) | C-04 stretch shipped; own-profile tap gate F-01 |
+| 2026-06-12 Network share export (spec 016) | Network Graph | `syncGraphCanvasRef.ts`, `networkSnapshotPrep.ts`, `NetworkGraph.tsx`, `GraphShareButton.tsx` | None | `graphSnapshot.test.ts` 3/3, `graphShareButton.test.tsx` 3/3, `networkSnapshotPrep.test.ts` 2/2, `syncGraphCanvasRef.test.ts` 2/2; 135 unit total | Manual: save without node selection on device | Canvas ref rAF retry; error toast on failed capture |
 
 ---
 
@@ -50,7 +51,7 @@ Statuses: **pass-automated** | **pass-code-review** | **partial** | **pending-de
 | 4 | Safe area insets (notch / Dynamic Island) | pending-device | `viewport-fit=cover`, `safe-content-*` CSS code-reviewed |
 | 5 | Email delivery (invite, turn-down, expiry) | pending-live | `send-email` edge fn; needs `RESEND_API_KEY` in Supabase |
 | 6 | Avatar upload from Edit Profile | partial | `avatarImage.test.ts` 3/3; crop-over-sheet on device pending |
-| 7 | Graph share / export PNG | partial | `graphSnapshot.ts`, `networkPairSummary.test.ts` 5/5; device share pending |
+| 7 | Graph share / export PNG | pass-automated | `graphSnapshot.test.ts` 3/3, `graphShareButton.test.tsx` 3/3, `networkSnapshotPrep.test.ts` 2/2, `syncGraphCanvasRef.test.ts` 2/2 (spec `016`); native `navigator.share` on device still manual |
 | 8 | Nightly cron expiry (`run-expiry`) | partial | `expiringSoon.test.ts` 8/8 idempotency; live invoke pending |
 | 9 | Slot limits server-side | pass-code-review | `create-gum-piece` / `respond-gum-piece` enforce 25 / 5 limits |
 | 10 | QR token expiry (60s) | partial | `validateQrToken.test.ts` 10/10; live 60s scan pending |

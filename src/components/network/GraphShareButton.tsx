@@ -12,7 +12,7 @@ interface GraphShareButtonProps {
   prepareForSnapshot?: () => Promise<() => void>
 }
 
-type ToastMessage = 'shared' | 'saved' | null
+type ToastMessage = 'shared' | 'saved' | 'error' | null
 
 export function GraphShareButton({
   graphRef,
@@ -70,6 +70,11 @@ export function GraphShareButton({
       })
 
       return captureGraphSnapshot(graphRef.current)
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Graph snapshot capture failed', error)
+      }
+      return null
     } finally {
       restoreSnapshot?.()
     }
@@ -86,6 +91,7 @@ export function GraphShareButton({
     try {
       const snapshot = await buildSnapshot()
       if (!snapshot) {
+        showToast('error')
         return
       }
 
@@ -110,6 +116,7 @@ export function GraphShareButton({
     try {
       const snapshot = await buildSnapshot()
       if (!snapshot) {
+        showToast('error')
         return
       }
 
@@ -182,7 +189,11 @@ export function GraphShareButton({
 
       {toast ? (
         <div className="absolute right-0 top-12 whitespace-nowrap rounded-full bg-surface-2 px-3 py-1 text-xs text-text">
-          {toast === 'shared' ? 'Shared' : 'Saved to your photos'}
+          {toast === 'shared'
+            ? 'Shared'
+            : toast === 'saved'
+              ? 'Saved to your photos'
+              : "Couldn't save image — try again"}
         </div>
       ) : null}
     </div>

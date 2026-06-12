@@ -15,6 +15,7 @@ import {
   type NetworkGraphNode,
 } from '../../hooks/useNetworkGraph.ts'
 import { getMajorityBridgeColor, getPairLinkDistance } from '../../lib/networkPairSummary.ts'
+import { syncGraphCanvasRef } from '../../lib/syncGraphCanvasRef.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
 
 type GraphLinkKind = 'chalk' | 'bridge'
@@ -405,24 +406,61 @@ export function NetworkGraph({
     }
 
     const hasConnections = nodes.some((node) => !node.isSelf)
-    onGraphStateChange({
-      hasConnections,
-      canvasReady:
-        hasConnections && graphSize.width > 0 && graphSize.height > 0 && !loading && !error,
-      loading,
-      error,
-    })
-  }, [edges.length, error, graphSize.height, graphSize.width, loading, nodes, onGraphStateChange])
+    const graphDimensionsReady = graphSize.width > 0 && graphSize.height > 0
+    const baseReady = hasConnections && graphDimensionsReady && !loading && !error
 
-  useEffect(() => {
-    if (!graphCanvasRef || !graphContainerRef.current) {
+    const report = (canvasReady: boolean) => {
+      onGraphStateChange({
+        hasConnections,
+        canvasReady,
+        loading,
+        error,
+      })
+    }
+
+    if (!baseReady) {
+      report(false)
       return
     }
-    const canvas = graphContainerRef.current.querySelector('canvas')
-    if (canvas) {
-      graphCanvasRef.current = canvas
+
+    const container = graphContainerRef.current
+    if (syncGraphCanvasRef(container, graphCanvasRef)) {
+      report(true)
+      return
     }
-  }, [edges.length, graphCanvasRef, nodes.length])
+
+    let frameId = 0
+    let cancelled = false
+
+    report(false)
+
+    const trySync = () => {
+      if (cancelled) {
+        return
+      }
+      if (syncGraphCanvasRef(graphContainerRef.current, graphCanvasRef)) {
+        report(true)
+        return
+      }
+      frameId = window.requestAnimationFrame(trySync)
+    }
+
+    frameId = window.requestAnimationFrame(trySync)
+
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [
+    edges.length,
+    error,
+    graphCanvasRef,
+    graphSize.height,
+    graphSize.width,
+    loading,
+    nodes,
+    onGraphStateChange,
+  ])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
     const baseRadius = node.isSelf ? 36 : 18

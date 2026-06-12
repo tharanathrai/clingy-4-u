@@ -7,6 +7,7 @@ import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { prepareGraphSnapshotCapture } from '../lib/networkSnapshotPrep.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
 import { usePendingRequestCount } from '../hooks/usePendingRequestCount.ts'
 import type { Bridge, User } from '../types/index.ts'
@@ -72,38 +73,41 @@ export default function Network() {
   }
 
   const prepareGraphSnapshot = useCallback(async (): Promise<() => void> => {
-    const previousUserId = selectedUserId
-    const previousBridge = selectedBridge
-    const previousUser = selectedUser
-
-    if (!previousUserId && !previousBridge) {
-      return () => {}
-    }
-
-    setSelectedBridge(null)
-    setSelectedUserId(null)
-    setSelectedUser(null)
-
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => resolve())
-      })
-    })
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 120)
-    })
-
-    return () => {
-      if (previousUserId) {
-        setSelectedUserId(previousUserId)
-        if (previousUser) {
-          setSelectedUser(previousUser)
-        }
-      }
-      if (previousBridge) {
-        setSelectedBridge(previousBridge)
-      }
-    }
+    return prepareGraphSnapshotCapture(
+      {
+        selectedUserId,
+        selectedBridge,
+        selectedUser,
+      },
+      {
+        clearSelection: () => {
+          setSelectedBridge(null)
+          setSelectedUserId(null)
+          setSelectedUser(null)
+        },
+        restoreSelection: (state) => {
+          if (state.selectedUserId) {
+            setSelectedUserId(state.selectedUserId)
+            if (state.selectedUser) {
+              setSelectedUser(state.selectedUser)
+            }
+          }
+          if (state.selectedBridge) {
+            setSelectedBridge(state.selectedBridge)
+          }
+        },
+        waitForPaint: async () => {
+          await new Promise<void>((resolve) => {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => resolve())
+            })
+          })
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, 120)
+          })
+        },
+      },
+    )
   }, [selectedBridge, selectedUser, selectedUserId])
 
   const graphActionsDisabled =

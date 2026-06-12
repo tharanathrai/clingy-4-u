@@ -4,6 +4,7 @@ One-line summaries appended after each completed spec.
 
 | Date | Spec | Summary |
 |------|------|---------|
+| 2026-06-12 | 016-network-share-export | Canvas ref rAF sync before `canvasReady`; share/save without node selection; error toast; 10 new unit tests |
 | 2026-06-12 | 015-feed-profile-navigation | Own-profile feed taps disabled; `restorePostId` round-trip reopens post detail; `canNavigateToProfile` + `profileBackReturnState` |
 | 2026-06-12 | 014-contextual-state-audit | Navigation context matrix in DEVDOC; C-01–C-04 fixes; `navigationContext.ts`; extended stale notification routing |
 | 2026-06-12 | 013-profile-bridge-detail-fix | Profile shared-bridge sheet hides network CTAs; viewer avatar on bridge detail; `bridgeDetailSheet.test.tsx` |

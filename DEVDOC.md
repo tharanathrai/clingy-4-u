@@ -169,9 +169,9 @@ Spec: `specs/015-feed-profile-navigation`
 ---
 
 ### Network Graph
-**Status: Verified (automated)** — audit 🟡 (`networkPairSummary.test.ts` ✓; export quality / device share manual — spec `013` P2)
+**Status: Verified (automated)** — audit 🟡 (`networkPairSummary.test.ts` ✓; `graphSnapshot.test.ts`, `graphShareButton.test.tsx`, `networkSnapshotPrep.test.ts`, `syncGraphCanvasRef.test.ts` — spec `016`; native share on device still manual)
 - What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap (`variant="network"`) with viewer avatar, **Make plan**, and **View profile** shortcuts; recenter button (round 44×44); share menu whenever graph has connections—no node selection required; export briefly clears selection so PNG includes full chalk mesh; header Add/Requests menu with request badge; `ConnectionRequests` uses standard Back button; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
-- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
+- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/lib/syncGraphCanvasRef.ts`, `src/lib/networkSnapshotPrep.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
 
@@ -261,7 +261,7 @@ All 13 edge functions manually validate the JWT by calling `supabase.auth.getUse
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
 
 ### 6. Graph export via direct canvas snapshot
-Network graph export uses `captureGraphSnapshot()` in `src/lib/graphSnapshot.ts` (2× canvas draw, no `html2canvas`). Share/save does not require a selected node; `prepareGraphSnapshot` on `Network.tsx` clears selection before capture and restores afterward so exports show chalk spokes, not gummy bridge lines.
+Network graph export uses `captureGraphSnapshot()` in `src/lib/graphSnapshot.ts` (2× canvas draw, no `html2canvas`). Share/save does not require a selected node; `prepareGraphSnapshotCapture` (`networkSnapshotPrep.ts`) clears selection before capture and restores afterward so exports show chalk spokes, not gummy bridge lines. `NetworkGraph` binds the ForceGraph canvas via `syncGraphCanvasRef` with `requestAnimationFrame` retries and only reports `canvasReady` once the ref is attached (spec `016`). Failed capture shows a toast instead of failing silently.
 
 ### 7. `submit-confirmation` auto-creates draft posts
 On bridge formation, a `posts` row with `is_public = false` is created. The `draft_post_id` drives the post opt-in prompt in `UnwrapCeremony`. Publishing uses `create-post` edge function.
