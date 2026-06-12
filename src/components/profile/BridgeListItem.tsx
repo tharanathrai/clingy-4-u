@@ -60,6 +60,7 @@ export function BridgeListItem({ bridge, otherUser }: BridgeListItemProps) {
             bridge={bridge}
             otherUser={otherUser}
             otherUserId={otherUser.id}
+            variant="profile"
             onClose={() => {
               setOpen(false)
             }}

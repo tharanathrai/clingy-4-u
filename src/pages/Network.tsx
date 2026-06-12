@@ -188,6 +188,7 @@ export default function Network() {
           bridge={selectedBridge}
           otherUser={selectedUser}
           otherUserId={selectedUserId}
+          variant="network"
           onClose={() => {
             setSelectedBridge(null)
           }}

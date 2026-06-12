@@ -2,15 +2,45 @@ import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
+import { useAuth } from '../../hooks/useAuth.ts'
+import { useProfile } from '../../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import type { Bridge, User } from '../../types/index.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
+
+export type BridgeDetailVariant = 'network' | 'profile'
 
 interface BridgeDetailSheetProps {
   bridge: Bridge | null
   otherUser: User | null
   otherUserId: string | null
   onClose: () => void
+  variant?: BridgeDetailVariant
+}
+
+function ParticipantAvatar({
+  user,
+  label,
+}: {
+  user: Pick<User, 'avatar_url' | 'display_name'> | null
+  label: string
+}) {
+  return (
+    <article className="rounded-lg border border-white/10 bg-surface-2 p-3">
+      {user?.avatar_url ? (
+        <img
+          src={withAvatarSize(user.avatar_url, 48) ?? user.avatar_url}
+          alt={user.display_name}
+          className="mb-2 h-12 w-12 rounded-full object-cover"
+        />
+      ) : (
+        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent/30 text-base font-medium text-text">
+          {(user?.display_name?.trim().charAt(0) ?? '?').toUpperCase()}
+        </div>
+      )}
+      <p className="text-sm font-medium text-text">{label}</p>
+    </article>
+  )
 }
 
 const toCategorySlug = (value: string): CategorySlug => {
@@ -24,7 +54,11 @@ export function BridgeDetailSheet({
   bridge,
   otherUser,
   onClose,
+  variant = 'network',
 }: BridgeDetailSheetProps) {
+  const { user } = useAuth()
+  const { profile: viewerProfile } = useProfile({ userId: user?.id })
+
   if (!bridge) {
     return null
   }
@@ -56,28 +90,14 @@ export function BridgeDetailSheet({
       <p className="mt-3 text-sm text-text-2">{formattedDate}</p>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <article className="rounded-lg border border-white/10 bg-surface-2 p-3">
-          <div className="mb-2 h-12 w-12 rounded-full bg-accent/30" />
-          <p className="text-sm font-medium text-text">You</p>
-        </article>
-        <article className="rounded-lg border border-white/10 bg-surface-2 p-3">
-          {otherUser?.avatar_url ? (
-            <img
-              src={withAvatarSize(otherUser.avatar_url, 48) ?? otherUser.avatar_url}
-              alt={otherUser.display_name}
-              className="mb-2 h-12 w-12 rounded-full object-cover"
-            />
-          ) : (
-            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent/30 text-base font-medium text-text">
-              {(otherUser?.display_name?.trim().charAt(0) ?? '?').toUpperCase()}
-            </div>
-          )}
-          <p className="text-sm font-medium text-text">
-            {otherUser?.display_name ?? 'Unknown'}
-          </p>
-        </article>
+        <ParticipantAvatar user={viewerProfile} label="You" />
+        <ParticipantAvatar
+          user={otherUser}
+          label={otherUser?.display_name ?? 'Unknown'}
+        />
       </div>
 
+      {variant === 'network' ? (
       <div className="mt-6 grid grid-cols-2 gap-3">
         {otherUser?.id ? (
           <Link
@@ -109,6 +129,7 @@ export function BridgeDetailSheet({
           </span>
         )}
       </div>
+      ) : null}
       </div>
     </section>
   )
