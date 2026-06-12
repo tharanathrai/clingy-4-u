@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
+import { GumBlob } from '../ui/GumBlob.tsx'
+import { LiquidButton } from '../ui/LiquidButton.tsx'
+import { LiquidSurface } from '../ui/LiquidSurface.tsx'
 import { supabase } from '../../lib/supabase.ts'
 import type { Bridge } from '../../types/index.ts'
 
@@ -29,6 +32,7 @@ export function UnwrapCeremony({
 
   const categorySlug = toCategorySlug(bridge.category)
   const accentClass = useMemo(() => toAccentClass(categorySlug), [categorySlug])
+  const accentHex = CATEGORIES[categorySlug].color_hex
   const reducedMotion = useMemo(() => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   }, [])
@@ -168,7 +172,7 @@ export function UnwrapCeremony({
 
   return (
     <section className="safe-screen-height mx-auto flex w-full max-w-md flex-col items-center justify-center bg-bg px-5 pb-72 text-text">
-      <div className="unwrap-scene">
+      <div className="unwrap-scene" style={{ '--unwrap-accent': accentHex } as CSSProperties}>
         <div className="unwrap-wrapper" aria-hidden>
           <div
             className={`unwrap-half unwrap-half-top ${phase !== 'start' ? 'unwrap-half-top-open' : ''}`}
@@ -179,12 +183,16 @@ export function UnwrapCeremony({
         </div>
 
         <div
-          className={`unwrap-gum ${accentClass} ${phase === 'gum' || phase === 'line' || phase === 'text' || phase === 'done' ? 'unwrap-gum-in' : ''}`}
-        />
+          className={`unwrap-gum-slot ${phase === 'gum' || phase === 'line' || phase === 'text' || phase === 'done' ? 'unwrap-gum-in' : ''}`}
+        >
+          {phase !== 'start' ? (
+            <GumBlob category={categorySlug} size="lg" variant="settled" ariaHidden />
+          ) : null}
+        </div>
 
         <div className="unwrap-line-track">
           <div
-            className={`unwrap-line ${accentClass} ${phase === 'line' || phase === 'text' || phase === 'done' ? 'unwrap-line-grow' : ''}`}
+            className={`unwrap-line ${accentClass} ${phase === 'line' || phase === 'text' || phase === 'done' ? 'unwrap-line-grow unwrap-line-metallic-pulse' : ''}`}
           />
           <span
             className={`unwrap-line-end ${accentClass} ${phase === 'line' || phase === 'text' || phase === 'done' ? 'unwrap-line-end-pulse' : ''}`}
@@ -204,8 +212,9 @@ export function UnwrapCeremony({
       </div>
 
       <div className="app-fixed-frame safe-bottom-24 z-40 px-5">
-        <div
-          className={`app-fixed-frame-inner rounded-xl border border-white/10 bg-surface p-4 shadow-card transition-all duration-300 ${
+        <LiquidSurface
+          elevated
+          className={`app-fixed-frame-inner rounded-xl p-4 shadow-liquid-elevated transition-all duration-300 ${
             showPrompt ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-6 opacity-0'
           }`}
         >
@@ -214,7 +223,7 @@ export function UnwrapCeremony({
             value={postBody}
             onChange={(event) => setPostBody(event.target.value)}
             maxLength={500}
-            className="post-optin-textarea mt-3 w-full rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-3 focus:outline-none"
+            className="post-optin-textarea liquid-input mt-3 text-sm"
             placeholder="Write your post..."
             disabled={loadingDraft}
           />
@@ -222,24 +231,25 @@ export function UnwrapCeremony({
           {error ? <p className="mt-2 text-sm text-playful">{error}</p> : null}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
+            <LiquidButton
+              variant="primary"
+              category={categorySlug}
               onClick={() => void handlePostIt()}
               disabled={submitting || postBody.trim().length === 0 || postBody.length > 500}
-              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="w-full px-4 py-2 disabled:opacity-60"
             >
               {submitting ? 'Saving...' : 'Post it'}
-            </button>
-            <button
-              type="button"
+            </LiquidButton>
+            <LiquidButton
+              variant="secondary"
               onClick={() => void handleSkip()}
               disabled={submitting}
-              className="rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-60"
+              className="w-full px-4 py-2 disabled:opacity-60"
             >
               Skip
-            </button>
+            </LiquidButton>
           </div>
-        </div>
+        </LiquidSurface>
       </div>
     </section>
   )

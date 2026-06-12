@@ -145,14 +145,14 @@ export default function Welcome() {
             value={displayName}
             maxLength={50}
             onChange={(event) => setDisplayName(event.target.value)}
-            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+            className="liquid-input mt-2"
             placeholder="Your name"
           />
           <p className="mt-2 text-xs text-text-3">{displayName.length}/50</p>
 
           <button
             type="button"
-            className="mt-auto rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-liquid-primary mt-auto px-7 py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!isDisplayNameValid}
             onClick={() => setStep(2)}
           >
@@ -175,7 +175,7 @@ export default function Welcome() {
             value={username}
             maxLength={30}
             onChange={(event) => setUsername(event.target.value.toLowerCase())}
-            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+            className="liquid-input mt-2"
             placeholder="username"
           />
           <p className="mt-2 text-xs text-text-3">{sanitizedUsername.length}/30</p>
@@ -195,14 +195,14 @@ export default function Welcome() {
           <div className="mt-auto flex gap-3 pt-4">
             <button
               type="button"
-              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+              className="btn-liquid-secondary flex-1 px-7 py-3.5"
               onClick={() => setStep(1)}
             >
               Back
             </button>
             <button
               type="button"
-              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-liquid-primary flex-1 px-7 py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!isUsernamePatternValid || usernameAvailable !== true}
               onClick={() => setStep(3)}
             >
@@ -237,7 +237,7 @@ export default function Welcome() {
           <div className="mt-auto flex gap-3 pt-4">
             <button
               type="button"
-              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+              className="btn-liquid-secondary flex-1 px-7 py-3.5"
               onClick={() => setStep(2)}
               disabled={submitting}
             >
@@ -245,7 +245,7 @@ export default function Welcome() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-liquid-primary flex-1 px-7 py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => void handleComplete()}
               disabled={submitting || !canComplete}
             >

@@ -1,7 +1,7 @@
 # Sticky Bridges — Design System
-**Version:** 0.2  
+**Version:** 0.3  
 **Status:** Living document — updated alongside PRD and DEVDOC  
-**Last updated:** 2026-06-11 (MVP shipped)
+**Last updated:** 2026-06-12 (Liquid Metal UI)
 
 ---
 
@@ -312,7 +312,69 @@ Canvas snapshot (2× resolution) with `--color-bg` background. Share button is v
 
 ---
 
-## 11. Texture + Atmosphere
+## 11. Liquid Metal Materials (v0.3)
+
+Three material pillars extend §1 without replacing category semantics:
+
+1. **Stickiness** — viscous edges, subtle drip accents on `GumBlob`, elements that pull/release with elastic easing rather than snapping.
+2. **Fluidity** — slow ambient drift (`.fluid-ambient-drift`), desynced blob morphs, drifting specular highlights on surfaces.
+3. **Liquid metal** — specular + rim + depth on hero gum and elevated surfaces; warm lilac base unchanged, chrome as highlight only.
+
+**Tokens (`:root` + Tailwind):**
+
+```
+--material-highlight   rgba(255,255,255,0.38)
+--material-rim         rgba(255,255,255,0.12)
+--material-depth       rgba(0,0,0,0.45)
+--fluid-sheen          rgba(207,142,232,0.22)
+--surface-liquid       #1A1728
+--surface-liquid-elevated #221F32
+```
+
+**Primitives (code):**
+- `GumBlob` — layered gum object (core, specular, rim, drip); variants `settled` | `floating` | `matte`
+- `LiquidSurface` — card/sheet background with sheen; `elevated` for tab bar, sheets, unread rows
+- `LiquidButton` — primary / secondary / blob CTAs with press sheen
+- `.liquid-input` — concave inset fields with rim-light focus
+
+**Fallbacks:** `prefers-reduced-motion: reduce` → static surfaces, no morph/float/drift. `prefers-reduced-transparency: reduce` → opaque liquid surfaces, sheen layers hidden.
+
+---
+
+## 12. Surface Treatments (v0.3)
+
+| Surface | Class | Notes |
+|---|---|---|
+| Cards, feed posts, gum pocket cards | `.liquid-surface` | Gradient fill + inset rim; category top strip retained |
+| Tab bar, bottom sheets, elevated rows | `.liquid-surface-elevated` | Specular top edge, deeper shadow (`shadow-liquid-elevated`) |
+| Hero gum | `GumBlob` | Category via `--gum-color`; settled vs floating vs matte |
+| Primary buttons | `.btn-liquid-primary` | Category override via `.btn-liquid-category-{slug}` |
+| New gum CTA | `.btn-liquid-blob` + `.new-gum-blob` morph | Strongest fluid morph in app |
+
+---
+
+## 13. Fluid Backgrounds (v0.3)
+
+- `.app-device-screen::before` — static warm radial depth layer on all screens
+- `.fluid-ambient-drift` — slow conic blur drift (28s); disabled under reduced motion
+- Grain overlay (below) unchanged at 0.035 opacity — combined layers must not muddy text
+
+---
+
+## 14. Motion for Viscosity (v0.3)
+
+| State | Visual |
+|---|---|
+| Placeholder gum | `floating` — vertical drift + full sheen |
+| Active / confirmed gum | `settled` — morph only, stronger specular lock |
+| Graveyard / expired | `matte` — desaturated, minimal sheen, no drip emphasis |
+| Unwrap ceremony | `GumBlob` bounce + `unwrap-line-metallic-pulse` on bridge stroke (~2s total) |
+
+Elastic easing unchanged: `cubic-bezier(0.34, 1.2, 0.64, 1)`.
+
+---
+
+## 15. Texture + Atmosphere
 
 **Grain overlay:**
 A subtle noise texture across the entire app. Adds tactility — the moodboard's "grainy" aesthetic without being heavy.
@@ -347,7 +409,7 @@ Key UI moments get a soft radial glow behind them in the category color. The gum
 
 ---
 
-## 12. Animation Principles
+## 16. Animation Principles
 
 **Elastic, not bouncy.** Easing for blob morphs and interactive elements:
 ```
@@ -379,7 +441,7 @@ Always wrap continuous animations in:
 
 ---
 
-## 13. Empty States
+## 17. Empty States
 
 Every empty state follows the same structure: a centered illustration (simple SVG, on-brand), a Bagel Fat One headline, a DM Sans subline, and a single CTA button.
 
@@ -396,7 +458,7 @@ Empty state copy is written in the app's voice — warm, slightly dry, never hol
 
 ---
 
-## 14. Icon Style
+## 18. Icon Style
 
 **Style:** Rounded, slightly chunky, 1.5px stroke weight. Not filled, not ultra-thin. Sits between Phosphor Icons (rounded) and Lucide — use Lucide React as the library, `strokeWidth={1.75}`.
 
@@ -406,7 +468,7 @@ Empty state copy is written in the app's voice — warm, slightly dry, never hol
 
 ---
 
-## 15. Voice + Copy Style
+## 19. Voice + Copy Style
 
 The app has a personality. Copy should feel like a friend wrote it, not a product team.
 
@@ -423,7 +485,7 @@ Derived from top 2 categories. Generated server-side on profile load.
 
 ---
 
-## 16. Tailwind Configuration
+## 20. Tailwind Configuration
 
 **Tailwind CSS v4** — tokens in `tailwind.config.js`; entry via `@config "../tailwind.config.js"` and `@import "tailwindcss"` in `src/index.css`.
 
@@ -466,19 +528,22 @@ export default {
 
 ---
 
-## 17. What to Build vs What to Asset
+## 21. What to Build vs What to Asset
 
 | Element | Approach | Status |
 |---|---|---|
-| Gum piece shapes (MVP) | CSS morph blobs + category color | ✅ Shipped |
-| Gum piece shapes (v2) | SVG assets (Figma → `/src/assets/gum/`) | Deferred |
-| Gumball blob | Built in code (`Gumball.tsx` — SVG patches) | ✅ Shipped |
+| Liquid metal system | CSS tokens + `GumBlob` / `LiquidSurface` / `LiquidButton` | ✅ Shipped (v0.3) |
+| Fluid ambient shell | `.fluid-ambient-drift` + screen radial layer | ✅ Shipped |
+| Gum piece shapes (MVP) | `GumBlob` layered CSS morph + category color | ✅ Shipped |
+| Gum piece shapes (v2) | Per-shape SVG assets (Figma → `/src/assets/gum/`) | Deferred |
+| Gumball blob | `Gumball.tsx` — SVG patches + radial gradients + specular | ✅ Shipped |
 | Network graph | `react-force-graph-2d` canvas + `graphSnapshot.ts` export | ✅ Shipped |
 | Category chips / tags | Tailwind (`CategoryChip.tsx`) | ✅ Shipped |
-| Empty state copy | Inline per §13 (no illustration assets yet) | ✅ Shipped |
-| App icon | PNG (`public/icon-192.png`, `icon-512.png`) | ✅ Shipped |
+| Empty state copy | Inline per §17 (no illustration assets yet) | ✅ Shipped |
+| App icon | Liquid metal PNG (`public/icon-192.png`, `icon-512.png`, source `app-icon.svg`) | ✅ Shipped (v0.3) |
 | Grain texture | CSS (`.grain-overlay` in `index.html`) | ✅ Shipped |
 | Animations | CSS keyframes + Tailwind | ✅ Shipped |
+| WebGL liquid metal | True 3D shaders | Deferred (CSS/SVG-first per spec 013) |
 
 ---
 

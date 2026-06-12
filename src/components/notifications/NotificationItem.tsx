@@ -2,6 +2,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Heart } from 'lucide-react'
 import type { Notification } from '../../hooks/useNotifications.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
+import { LiquidSurface } from '../ui/LiquidSurface.tsx'
 
 interface NotificationWithActor extends Notification {
   actor_name?: string
@@ -21,10 +22,12 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
   const hideActor = notification.type === 'post_reaction'
 
   return (
-    <button
+    <LiquidSurface
+      as="button"
       type="button"
       onClick={onPress}
-      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-2 border-accent bg-surface-2' : 'bg-surface'}`}
+      elevated={isUnread}
+      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-2 border-accent' : ''}`}
     >
       {hideActor ? (
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">
@@ -48,7 +51,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
         <p className="text-sm text-text">{copy}</p>
         <p className="mt-1 text-xs text-text-3">{timestamp}</p>
       </div>
-    </button>
+    </LiquidSurface>
   )
 }
 

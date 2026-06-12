@@ -77,6 +77,7 @@ function App() {
   return (
     <div className="app-device-frame">
       <div className="app-device-screen">
+        <div className="fluid-ambient-drift" aria-hidden="true" />
         <div className="grain-overlay" aria-hidden="true" />
         <RouteErrorBoundary>
         <Suspense
@@ -86,7 +87,7 @@ function App() {
             </div>
           }
         >
-          <div key={location.pathname} className={transitionClassName}>
+          <div key={location.pathname} className={`app-route-layer ${transitionClassName}`}>
             <Routes location={location}>
               <Route path="/" element={<LandingPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />

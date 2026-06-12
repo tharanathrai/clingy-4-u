@@ -7,6 +7,8 @@ export default {
         bg: '#12101A',
         surface: '#1E1B2E',
         'surface-2': '#272438',
+        'surface-liquid': '#1A1728',
+        'surface-liquid-elevated': '#221F32',
         text: '#F2EFF8',
         'text-2': '#9B93B8',
         'text-3': '#5C5478',
@@ -32,6 +34,9 @@ export default {
       boxShadow: {
         card: '0 4px 24px rgba(0,0,0,0.3)',
         glow: '0 0 40px rgba(207,142,232,0.15)',
+        liquid: '0 8px 32px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.08)',
+        'liquid-elevated':
+          '0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.14)',
       },
     },
   },

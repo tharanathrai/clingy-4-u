@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Heart, MessageCircle } from 'lucide-react'
 import { CategoryChip } from '../gum/CategoryChip.tsx'
+import { LiquidSurface } from '../ui/LiquidSurface.tsx'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
 import type { Bridge, Post, User } from '../../types/index.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
@@ -47,7 +48,7 @@ export function FeedPostCard({
   const timestamp = toRelativeTimestamp(post.created_at)
 
   return (
-    <article className="overflow-hidden rounded-lg bg-surface shadow-card">
+    <LiquidSurface as="article" className="rounded-lg shadow-liquid">
       <div className={`h-1 w-full ${categoryStripClass[category]}`} />
       <div className="p-5">
         <button
@@ -129,7 +130,7 @@ export function FeedPostCard({
           </div>
         )}
       </div>
-    </article>
+    </LiquidSurface>
   )
 }
 

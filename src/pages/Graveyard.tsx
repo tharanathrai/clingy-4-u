@@ -1,6 +1,9 @@
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { GumBlob } from '../components/ui/GumBlob.tsx'
+import { LiquidSurface } from '../components/ui/LiquidSurface.tsx'
+import { type CategorySlug, CATEGORIES } from '../lib/constants.ts'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -132,13 +135,17 @@ export default function Graveyard() {
           })
 
           return (
-            <article
+            <LiquidSurface
+              as="article"
               key={entry.id}
-              className="graveyard-muted rounded-lg bg-surface px-4 py-4 shadow-card"
+              className="graveyard-muted rounded-lg px-4 py-4 shadow-liquid"
             >
               <div className="flex items-center gap-3">
-                <div
-                  className={`h-11 w-11 shrink-0 rounded-full ${getCategoryClass(entry.category)}`}
+                <GumBlob
+                  category={toCategorySlug(entry.category)}
+                  size="md"
+                  variant="matte"
+                  className="h-11 w-11 shrink-0"
                 />
                 <div className="min-w-0">
                   <p className="truncate text-base text-text">{entry.title}</p>
@@ -147,7 +154,7 @@ export default function Graveyard() {
               </div>
               <p className="mt-3 text-xs text-text-3">created {createdAgo}</p>
               <p className="mt-1 text-xs text-text-3">expired {expiredAgo}</p>
-            </article>
+            </LiquidSurface>
           )
         })}
       </section>
@@ -167,12 +174,10 @@ export default function Graveyard() {
   )
 }
 
-function getCategoryClass(category: string): string {
-  if (category === 'intimate') return 'bg-intimate'
-  if (category === 'active') return 'bg-active'
-  if (category === 'playful') return 'bg-playful'
-  if (category === 'explore') return 'bg-explore'
-  if (category === 'recharge') return 'bg-recharge'
-  if (category === 'savor') return 'bg-savor'
-  return 'bg-support'
+function toCategorySlug(category: string): CategorySlug {
+  if (category in CATEGORIES) {
+    return category as CategorySlug
+  }
+  return 'explore'
 }
+

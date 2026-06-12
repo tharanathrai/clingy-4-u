@@ -67,7 +67,7 @@ export function BottomTabBar() {
   const activeTabPath = getActiveTabPath(location.pathname)
 
   return (
-    <nav className="app-fixed-frame bottom-tab-bar bottom-0 z-40 border-t border-white/10 bg-surface">
+    <nav className="app-fixed-frame bottom-tab-bar liquid-surface-elevated bottom-0 z-40">
       <div className="app-fixed-frame-inner safe-bottom-tab flex w-full items-center justify-between px-5 pb-0.5 pt-1.5">
         {tabs.map((tab) => {
           const isActive = activeTabPath === tab.to
