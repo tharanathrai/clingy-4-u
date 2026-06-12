@@ -370,7 +370,7 @@ App shell: centered device frame (max 430px), grain overlay, safe-area insets, v
 
 Emails sent via `send-email` → Resend API. Requires Supabase secrets: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`.
 
-**Not yet implemented:** `plan_expiring_soon` generation (schema + UI support exist; `run-expiry` does not yet emit 30-day warnings).
+`plan_expiring_soon` warnings are emitted by `run-expiry` when an active piece expires within 30 days (idempotent per user per piece; optional email via Resend).
 
 ---
 
@@ -389,7 +389,7 @@ Emails sent via `send-email` → Resend API. Requires Supabase secrets: `RESEND_
 | `create-post` | Publish or update feed post from bridge |
 | `toggle-reaction` | Add/remove reaction on post |
 | `generate-profile-bio` | Auto-generate profile bio from bridge history |
-| `run-expiry` | Expire placeholders/active pieces; graveyard insert; session cleanup |
+| `run-expiry` | Expire placeholders/active pieces; 30-day `plan_expiring_soon` warnings; graveyard insert; session cleanup |
 | `send-email` | Resend wrapper (service-role only) |
 
 All functions: `verify_jwt = false` in config; JWT validated manually via `auth.getUser(token)`.
@@ -419,7 +419,6 @@ All functions: `verify_jwt = false` in config; JWT validated manually via `auth.
 
 - Bluetooth confirmation (requires Capacitor native build)
 - Push notifications (requires Capacitor)
-- `plan_expiring_soon` cron (30-day warning emails/notifications)
 - Per-shape SVG gum assets (shape stored; UI uses CSS blobs today)
 - LLM-based categorization
 - Group plans (3+ people)

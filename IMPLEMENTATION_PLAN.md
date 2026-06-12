@@ -11,7 +11,8 @@
 |-------|--------|
 | Specs `001`–`007` | `## Status: COMPLETE` — Ralph may output `<promise>ALL_DONE</promise>` for this set only |
 | Spec `008` | Meta-spec: audit + this plan |
-| Specs `009+` | **Unlock further Ralph work** — pick lowest incomplete number first |
+| Spec `009` | COMPLETE — `plan_expiring_soon` cron in `run-expiry` |
+| Specs `010+` | **Unlock further Ralph work** — pick lowest incomplete number first |
 
 **Recommended Ralph order:** `009` → `010` → `011` → `012` → (P2 as promoted)
 
