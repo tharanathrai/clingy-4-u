@@ -183,15 +183,7 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Settings | 🟡 | Avatar upload partial (item 6) |
 | Graveyard | 🟡 | Expiry cron partial (item 8) |
 
-**P0 ship blockers:** none. **P1 Ralph queue:** complete (`009`–`012`). **P2 visual:** spec `013` liquid metal UI ✅ (`DESIGN.md` v0.3).
-
-### Visual refresh (spec 013 — 2026-06-12)
-
-- `DESIGN.md` v0.3: liquid metal materials, fluid ambient shell, `GumBlob` / `LiquidSurface` / `LiquidButton` primitives.
-- CSS-only implementation (no WebGL); warm palette retained, metal as highlight/rim.
-- App icons regenerated (`public/icon-192.png`, `icon-512.png` from `app-icon.svg`).
-- Quality gate: `npm run quality` green (107 tests). Main CSS bundle ~52KB gzip ~11KB — no new runtime deps.
-- Performance baseline: production build unchanged in chunk strategy; Lighthouse mobile `/home` not re-benchmarked in CI (manual spot-check recommended).
+**P0 ship blockers:** none. **P1 Ralph queue:** complete (`009`–`012`). Next: P2 specs `013`+ when promoted.
 
 ---
 

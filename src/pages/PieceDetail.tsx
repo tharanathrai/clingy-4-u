@@ -3,9 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
-import { GumBlob } from '../components/ui/GumBlob.tsx'
-import { LiquidButton } from '../components/ui/LiquidButton.tsx'
-import { GUM_MORPH_CLASSES, gumMorphClassFromId } from '../lib/gumMorph.ts'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -272,20 +269,7 @@ export default function PieceDetail() {
     <main className={pageShellScroll}>
       <BackHeader onBack={handleBack} className="mb-2" />
 
-      <div className="mx-auto flex justify-center">
-        <GumBlob
-          category={category}
-          size="xl"
-          morphClass={id ? gumMorphClassFromId(id) : GUM_MORPH_CLASSES[1]}
-          variant={
-            piece.status === 'placeholder'
-              ? 'floating'
-              : piece.status === 'expired'
-                ? 'matte'
-                : 'settled'
-          }
-        />
-      </div>
+      <div className={`mx-auto h-24 w-24 gum-morph-base gum-morph-37 ${fillClass}`} />
       <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
@@ -323,15 +307,14 @@ export default function PieceDetail() {
       <section className="mt-10 space-y-3 pb-24">
         {canAccept ? (
           <>
-            <LiquidButton
-              variant="primary"
-              category={category}
+            <button
+              type="button"
               onClick={() => respondMutation.mutate('accept')}
               disabled={busyAction !== null}
-              className="w-full px-7 py-3.5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busyAction === 'accept' ? 'Accepting...' : 'Accept'}
-            </LiquidButton>
+            </button>
             <button
               type="button"
               onClick={() => respondMutation.mutate('turn_down')}

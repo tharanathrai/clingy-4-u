@@ -1,10 +1,6 @@
-import type { CSSProperties } from 'react'
 import { differenceInDays, formatDistanceToNow } from 'date-fns'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
-import { gumMorphClassFromId } from '../../lib/gumMorph.ts'
 import type { GumPiece } from '../../hooks/useGumPieces.ts'
-import { GumBlob } from '../ui/GumBlob.tsx'
-import { LiquidSurface } from '../ui/LiquidSurface.tsx'
 import { CategoryChip } from './CategoryChip.tsx'
 
 interface GumPieceCardProps {
@@ -23,12 +19,24 @@ const accentClassByCategory: Record<CategorySlug, string> = {
   support: 'bg-support',
 }
 
+const glowClassByCategory: Record<CategorySlug, string> = {
+  intimate: 'bg-intimate/20',
+  active: 'bg-active/20',
+  playful: 'bg-playful/20',
+  explore: 'bg-explore/20',
+  recharge: 'bg-recharge/20',
+  savor: 'bg-savor/20',
+  support: 'bg-support/20',
+}
+
+const morphDurationClasses = ['gum-morph-3', 'gum-morph-37', 'gum-morph-42'] as const
+
 export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProps) {
   const category = toCategorySlug(piece.category)
   const accentClass = accentClassByCategory[category]
-  const morphClass = gumMorphClassFromId(piece.id)
+  const glowClass = glowClassByCategory[category]
+  const morphClass = morphDurationClasses[idModulo(piece.id, 3)]
   const isPlaceholder = piece.status === 'placeholder'
-  const isExpired = piece.status === 'expired'
   const partnerName =
     currentUserId === piece.recipient_id
       ? piece.creator_display_name ?? 'someone'
@@ -39,25 +47,21 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
   const isWarning = differenceInDays(expiryDate, new Date()) < 7
 
   return (
-    <LiquidSurface
-      as="button"
+    <button
       type="button"
       onClick={onPress}
-      className={`w-full rounded-lg text-left shadow-liquid transition-opacity active:opacity-90 ${isPlaceholder ? 'opacity-60' : ''}`}
+      className={`w-full overflow-hidden rounded-lg bg-surface text-left shadow-card transition-opacity active:opacity-90 ${isPlaceholder ? 'gum-placeholder-float opacity-60' : ''}`}
     >
       <span className={`block h-1 w-full ${accentClass}`} />
       <div className="flex items-center gap-4 p-6">
         <div className="relative h-12 w-12 shrink-0">
           <span
-            className="liquid-glow pointer-events-none absolute inset-0 scale-[1.8] rounded-full blur-md"
-            style={{ '--gum-color': CATEGORIES[category].color_hex } as CSSProperties}
+            className={`pointer-events-none absolute inset-0 scale-[1.7] rounded-full blur-md ${glowClass}`}
             aria-hidden
           />
-          <GumBlob
-            category={category}
-            size="md"
-            morphClass={morphClass}
-            variant={isExpired ? 'matte' : isPlaceholder ? 'floating' : 'settled'}
+          <div
+            className={`relative h-12 w-12 ${accentClass} gum-morph-base ${morphClass}`}
+            aria-hidden
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -71,7 +75,7 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
           </p>
         </div>
       </div>
-    </LiquidSurface>
+    </button>
   )
 }
 
@@ -81,4 +85,13 @@ function toCategorySlug(value: string): CategorySlug {
   }
 
   return 'explore'
+}
+
+function idModulo(id: string, divisor: number): number {
+  let total = 0
+  for (let index = 0; index < id.length; index += 1) {
+    total += id.charCodeAt(index)
+  }
+
+  return total % divisor
 }

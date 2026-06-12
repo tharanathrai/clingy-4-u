@@ -60,39 +60,6 @@ const SCALE_CLASS_BY_SHARE = [
   { max: 1, className: 'gumball-patch-scale-115' },
 ] as const
 
-function GumballPatch({
-  path,
-  slug,
-  scaleClass,
-  onPress,
-  onRelease,
-}: {
-  path: string
-  slug: CategorySlug
-  scaleClass: string
-  onPress: () => void
-  onRelease: () => void
-}) {
-  const gradientId = `gumball-patch-${slug}`
-
-  return (
-    <g className={`gumball-patch ${scaleClass}`}>
-      <path
-        d={path}
-        fill={`url(#${gradientId})`}
-        onPointerDown={onPress}
-        onPointerUp={onRelease}
-      />
-      <path
-        d={path}
-        className="gumball-patch-highlight"
-        fill="url(#gumball-patch-specular)"
-        fillOpacity={0.42}
-      />
-    </g>
-  )
-}
-
 export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const timeoutRef = useRef<number | null>(null)
@@ -153,7 +120,7 @@ export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
         viewBox="0 0 100 100"
         role="img"
         aria-label="Category gumball"
-        className="drop-shadow-[0_0_36px_rgba(207,142,232,0.2)]"
+        className="drop-shadow-[0_0_36px_rgba(207,142,232,0.15)]"
         width={size}
         height={size}
       >
@@ -164,40 +131,6 @@ export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
               d="M50 5 C72 2, 93 16, 95 38 C98 58, 88 82, 67 92 C48 100, 24 95, 12 77 C2 62, 4 39, 14 23 C23 10, 34 7, 50 5 Z"
             />
           </clipPath>
-          <radialGradient id="gumball-empty-liquid" cx="35%" cy="30%" r="70%">
-            <stop offset="0%" stopColor="#3a3548" />
-            <stop offset="45%" stopColor="#272438" />
-            <stop offset="100%" stopColor="#1a1728" />
-          </radialGradient>
-          <radialGradient id="gumball-patch-specular" cx="28%" cy="22%" r="65%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </radialGradient>
-          {PATCHES.map((patch) => (
-            <radialGradient
-              key={patch.slug}
-              id={`gumball-patch-${patch.slug}`}
-              cx="32%"
-              cy="28%"
-              r="75%"
-            >
-              <stop
-                offset="0%"
-                stopColor={CATEGORIES[patch.slug].color_hex}
-                stopOpacity="1"
-              />
-              <stop
-                offset="55%"
-                stopColor={CATEGORIES[patch.slug].color_hex}
-                stopOpacity="0.95"
-              />
-              <stop
-                offset="100%"
-                stopColor={CATEGORIES[patch.slug].color_hex}
-                stopOpacity="0.72"
-              />
-            </radialGradient>
-          ))}
         </defs>
 
         <g clipPath="url(#gumball-blob-clip)">
@@ -212,7 +145,7 @@ export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
                 y="0"
                 width="100"
                 height="100"
-                fill={`url(#gumball-patch-${primaryPatch.slug})`}
+                fill={CATEGORIES[primaryPatch.slug].color_hex}
               />
               {TRACE_PATCHES.map((path, index) => (
                 <path
@@ -229,14 +162,14 @@ export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
                   fillOpacity="0.22"
                 />
               ))}
-              <GumballPatch
-                path={primaryPatch.path}
-                slug={primaryPatch.slug}
-                scaleClass={primaryPatch.scaleClass}
-                onPress={() => {
+              <path
+                d={primaryPatch.path}
+                className={`gumball-patch ${primaryPatch.scaleClass}`}
+                fill={CATEGORIES[primaryPatch.slug].color_hex}
+                onPointerDown={() => {
                   showTooltip(primaryPatch.slug, primaryPatch.count)
                 }}
-                onRelease={() => {
+                onPointerUp={() => {
                   setTooltip(null)
                 }}
               />
@@ -245,35 +178,25 @@ export function Gumball({ categoryBreakdown, size = 160 }: GumballProps) {
 
           {!primaryPatch
             ? visiblePatches.map((patch) => (
-                <GumballPatch
+                <path
                   key={patch.slug}
-                  path={patch.path}
-                  slug={patch.slug}
-                  scaleClass={patch.scaleClass}
-                  onPress={() => {
+                  d={patch.path}
+                  className={`gumball-patch ${patch.scaleClass}`}
+                  fill={CATEGORIES[patch.slug].color_hex}
+                  onPointerDown={() => {
                     showTooltip(patch.slug, patch.count)
                   }}
-                  onRelease={() => {
+                  onPointerUp={() => {
                     setTooltip(null)
                   }}
                 />
               ))
             : null}
         </g>
-        <ellipse
-          cx="34"
-          cy="26"
-          rx="22"
-          ry="14"
-          fill="url(#gumball-patch-specular)"
-          fillOpacity="0.28"
-          clipPath="url(#gumball-blob-clip)"
-          pointerEvents="none"
-        />
       </svg>
 
       {tooltip ? (
-        <div className="liquid-surface pointer-events-none absolute -bottom-7 rounded-full px-3 py-1 text-xs text-text">
+        <div className="pointer-events-none absolute -bottom-7 rounded-full bg-surface-2 px-3 py-1 text-xs text-text">
           {CATEGORIES[tooltip.category].label} · {tooltip.count}{' '}
           {tooltip.count === 1 ? 'bridge' : 'bridges'}
         </div>

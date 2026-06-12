@@ -3,8 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
 import { GumPieceCard } from '../components/gum/GumPieceCard.tsx'
-import { LiquidButton } from '../components/ui/LiquidButton.tsx'
-import { LiquidSurface } from '../components/ui/LiquidSurface.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
@@ -111,22 +109,22 @@ export default function Home() {
         ) : null}
 
         {!loading && !loadingConnections && error ? (
-          <LiquidSurface className="mt-8 rounded-lg p-6 text-center">
+          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <p className="text-sm text-text-2">Couldn&apos;t load your pocket. Pull to refresh.</p>
-            <LiquidButton
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => {
                 void refetch()
               }}
-              className="mt-4 px-5 py-2"
+              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
             >
               Retry
-            </LiquidButton>
-          </LiquidSurface>
+            </button>
+          </section>
         ) : null}
 
         {!loading && !loadingConnections && !error && connectionsCount === 0 ? (
-          <LiquidSurface className="mt-8 rounded-lg p-6 text-center">
+          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <EmptyStateIllustration />
             <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
             <p className="mt-2 text-sm text-text-2">
@@ -134,27 +132,25 @@ export default function Home() {
             </p>
             <Link
               to="/add"
-              className="btn-liquid-primary mt-5 inline-flex px-7 py-3.5 no-underline"
+              className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
-              <span className="btn-liquid-sheen" aria-hidden />
               Add someone
             </Link>
-          </LiquidSurface>
+          </section>
         ) : null}
 
         {!loading && !loadingConnections && !error && connectionsCount > 0 && sortedPieces.length === 0 ? (
-          <LiquidSurface className="mt-8 rounded-lg p-6 text-center">
+          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <EmptyStateIllustration />
             <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
             <p className="mt-2 text-sm text-text-2">Make a plan with someone you love.</p>
             <Link
               to="/piece/new"
-              className="btn-liquid-primary mt-5 inline-flex px-7 py-3.5 no-underline"
+              className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
-              <span className="btn-liquid-sheen" aria-hidden />
               New plan
             </Link>
-          </LiquidSurface>
+          </section>
         ) : null}
 
         {!loading && !loadingConnections && !error && sortedPieces.length > 0 ? (
@@ -198,14 +194,14 @@ export default function Home() {
                 Pocket full — complete or clear a plan first.
               </p>
             ) : null}
-            <LiquidButton
-              variant="blob"
+            <button
+              type="button"
               onClick={handleNewGum}
               disabled={pocketFull}
-              className="new-gum-blob disabled:cursor-not-allowed disabled:opacity-55"
+              className="new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
             >
               new gum
-            </LiquidButton>
+            </button>
           </div>
         </div>
       </main>

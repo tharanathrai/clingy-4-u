@@ -44,11 +44,10 @@ export default function Landing() {
         <div className="mt-10 flex flex-col gap-3">
           <button
             type="button"
-            className="btn-liquid-primary flex w-full items-center justify-center gap-3 px-7 py-3.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-3 rounded-full bg-accent px-7 py-3.5 font-body text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => void handleGoogleSignIn()}
             disabled={submitting}
           >
-            <span className="btn-liquid-sheen" aria-hidden />
             <svg
               width="18"
               height="18"
