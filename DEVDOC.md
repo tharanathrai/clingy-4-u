@@ -169,9 +169,9 @@ Spec: `specs/015-feed-profile-navigation`
 ---
 
 ### Network Graph
-**Status: Verified (automated)** — audit 🟡 (`networkPairSummary.test.ts` ✓; `graphSnapshot.test.ts`, `graphShareButton.test.tsx`, `networkSnapshotPrep.test.ts`, `syncGraphCanvasRef.test.ts` — spec `016`; native share on device still manual)
-- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap (`variant="network"`) with viewer avatar, **Make plan**, and **View profile** shortcuts; recenter button (round 44×44); share menu whenever graph has connections—no node selection required; export briefly clears selection so PNG includes full chalk mesh; header Add/Requests menu with request badge; `ConnectionRequests` uses standard Back button; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
-- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/lib/syncGraphCanvasRef.ts`, `src/lib/networkSnapshotPrep.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
+**Status: Verified (automated)** — audit 🟡 (`networkPairSummary.test.ts` ✓; `graphSnapshot.test.ts`, `graphShareButton.test.tsx`, `networkSnapshotPrep.test.ts`, `networkShareStats.test.ts`, `socialShareCard.test.ts`, `syncGraphCanvasRef.test.ts` — specs `016-network-share-export`, `016-social-share-export`; native share on device still manual)
+- What works: Force-directed graph via `react-force-graph-2d`; nodes for self + all connections; chalk spokes always visible for bridged pairs (majority color, distance by bridge count); thick gummy bridge lines on node select; scoped selection physics with soft pin; `NodeProfileSheet` on node tap; `BridgeDetailSheet` on bridge tap (`variant="network"`) with viewer avatar, **Make plan**, and **View profile** shortcuts; recenter button (round 44×44); share menu whenever graph has connections—no node selection required; export briefly clears selection so PNG includes full chalk mesh; **social share card** (4:5, stats footer, glow, grain) via `buildSocialShareSnapshot` + `composeSocialShareCard`; export-only zoom/label boost; header Add/Requests menu with request badge; `ConnectionRequests` uses standard Back button; error state with retry; empty state per DESIGN.md; real-time invalidation via `subscribePostgresChannel`; lazy-loaded chunk.
+- Components / hooks: `src/pages/Network.tsx`, `src/components/network/NetworkGraph.tsx`, `src/components/network/GraphShareButton.tsx`, `src/components/network/NetworkHeaderMenu.tsx`, `src/lib/networkPairSummary.ts`, `src/lib/graphSnapshot.ts`, `src/lib/socialShareCard.ts`, `src/lib/networkShareStats.ts`, `src/lib/syncGraphCanvasRef.ts`, `src/lib/networkSnapshotPrep.ts`, `src/hooks/useNetworkGraph.ts`, `src/hooks/usePendingRequestCount.ts`
 
 ---
 
@@ -227,7 +227,7 @@ Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ a
 | Invite Accept / Decline | 🟡 | Manual item 1 |
 | Confirmation Ceremony | 🟡 | Manual items 2, 11 |
 | Bridge Formation | 🟡 | Manual item 1 |
-| Network Graph | 🟡 | P2 spec `013` export quality |
+| Network Graph | 🟡 | Social card export shipped (`016-social-share-export`); native share on device manual |
 | Profile | ✅ | — |
 | Feed | 🟡 | Manual item 14 |
 | Notifications | 🟡 | Routing partial (item 13); stale terminal piece taps fixed in `012` + `014` |
@@ -260,8 +260,8 @@ All 13 edge functions manually validate the JWT by calling `supabase.auth.getUse
 ### 5. Category logic duplicated client + server
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
 
-### 6. Graph export via direct canvas snapshot
-Network graph export uses `captureGraphSnapshot()` in `src/lib/graphSnapshot.ts` (2× canvas draw, no `html2canvas`). Share/save does not require a selected node; `prepareGraphSnapshotCapture` (`networkSnapshotPrep.ts`) clears selection before capture and restores afterward so exports show chalk spokes, not gummy bridge lines. `NetworkGraph` binds the ForceGraph canvas via `syncGraphCanvasRef` with `requestAnimationFrame` retries and only reports `canvasReady` once the ref is attached (spec `016`). Failed capture shows a toast instead of failing silently.
+### 6. Graph export via social share card
+Network graph export uses `buildSocialShareSnapshot()` in `src/lib/graphSnapshot.ts`: `captureGraphBitmap` (2× graph canvas) → `composeSocialShareCard` (`src/lib/socialShareCard.ts`, 1080×1350) with stats from `getNetworkShareStats` (`networkShareStats.ts`). Share/save does not require a selected node; `prepareGraphSnapshotCapture` (`networkSnapshotPrep.ts`) enters export mode (zoom boost, name labels), clears selection before capture when needed, and restores afterward so exports show chalk spokes, not gummy bridge lines. `NetworkGraph` binds the ForceGraph canvas via `syncGraphCanvasRef` with `requestAnimationFrame` retries and only reports `canvasReady` once the ref is attached (spec `016-network-share-export`). Failed capture shows a toast instead of failing silently.
 
 ### 7. `submit-confirmation` auto-creates draft posts
 On bridge formation, a `posts` row with `is_public = false` is created. The `draft_post_id` drives the post opt-in prompt in `UnwrapCeremony`. Publishing uses `create-post` edge function.
@@ -360,7 +360,7 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 
 6. **Avatar upload from Edit Profile sheet** — Tap circular avatar or “Change photo” → pick image → adjust zoom in crop sheet → “Use photo” → save → avatar URL updates (React Query cache invalidated). “Remove photo” clears `avatar_url` without deleting Storage objects. **Status: partial**
 
-7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` with chalk spokes + dark background. With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported. **Status: partial**
+7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` as a 4:5 social card (graph + stats footer). With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported. **Status: pass** (automated); confirm native share on device manually.
 
 8. **Nightly cron expiry** — Manually call `run-expiry`. (a) Set an active piece's `expires_at` within 30 days: verify both users receive `plan_expiring_soon` once; re-run does not duplicate. (b) Set `expires_at` to the past: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user `plan_expired` notifications. **Status: partial** (`expiringSoon.test.ts` 8/8)
 

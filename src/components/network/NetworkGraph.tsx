@@ -14,6 +14,7 @@ import {
   type NetworkGraphEdge,
   type NetworkGraphNode,
 } from '../../hooks/useNetworkGraph.ts'
+import { getExportLabelNodeIds, getFirstName } from '../../lib/networkShareStats.ts'
 import { getMajorityBridgeColor, getPairLinkDistance } from '../../lib/networkPairSummary.ts'
 import { syncGraphCanvasRef } from '../../lib/syncGraphCanvasRef.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
@@ -50,7 +51,12 @@ interface NetworkGraphProps {
   }) => void
   graphCanvasRef?: MutableRefObject<HTMLCanvasElement | null>
   recenterTrigger?: number
+  exportMode?: boolean
+  onRegisterExportRecenter?: (recenter: () => void) => void
 }
+
+const EXPORT_SCALE_BOOST = 1.25
+const EXPORT_PADDING_BOOST = 1.25
 
 const MIN_GRAPH_ZOOM = 0.45
 const MAX_GRAPH_ZOOM = 3.25
@@ -78,6 +84,8 @@ export function NetworkGraph({
   onGraphStateChange,
   graphCanvasRef,
   recenterTrigger = 0,
+  exportMode = false,
+  onRegisterExportRecenter,
 }: NetworkGraphProps) {
   const { nodes, edges, loading, error, refetch } = useNetworkGraph()
   const graphRef = useRef<ForceGraphMethods<GraphNode, GraphEdge> | undefined>(
@@ -169,30 +177,57 @@ export function NetworkGraph({
     }
   }, [nodes])
 
-  const recenterGraph = useCallback((duration = 240) => {
-    const bounds = graphContainerRef.current?.getBoundingClientRect()
-    const width = Math.round(bounds?.width ?? graphSize.width)
-    const height = Math.round(bounds?.height ?? graphSize.height)
-    if (width <= 0 || height <= 0) {
-      return
-    }
+  const recenterGraph = useCallback(
+    (duration = 240, options?: { exportPadding?: boolean }) => {
+      const bounds = graphContainerRef.current?.getBoundingClientRect()
+      const width = Math.round(bounds?.width ?? graphSize.width)
+      const height = Math.round(bounds?.height ?? graphSize.height)
+      if (width <= 0 || height <= 0) {
+        return
+      }
 
-    const padding = width < 640 ? 24 : 72
-    const usableWidth = Math.max(1, width - padding * 2)
-    const usableHeight = Math.max(1, height - padding * 2)
-    const worldWidth = worldBounds.right - worldBounds.left
-    const worldHeight = worldBounds.bottom - worldBounds.top
-    const zoom = Math.max(
-      MIN_GRAPH_ZOOM,
-      Math.min(
-        1.2,
-        Math.min(usableWidth / Math.max(1, worldWidth), usableHeight / Math.max(1, worldHeight)),
-      ),
-    )
+      const basePadding = width < 640 ? 24 : 72
+      const padding = options?.exportPadding
+        ? basePadding * EXPORT_PADDING_BOOST
+        : basePadding
+      const usableWidth = Math.max(1, width - padding * 2)
+      const usableHeight = Math.max(1, height - padding * 2)
+      const worldWidth = worldBounds.right - worldBounds.left
+      const worldHeight = worldBounds.bottom - worldBounds.top
+      const fitZoom = Math.min(
+        usableWidth / Math.max(1, worldWidth),
+        usableHeight / Math.max(1, worldHeight),
+      )
+      const exportZoomScale = options?.exportPadding ? 1 / EXPORT_PADDING_BOOST : 1
+      const zoom = Math.max(
+        MIN_GRAPH_ZOOM,
+        Math.min(1.2, fitZoom * exportZoomScale),
+      )
 
-    graphRef.current?.centerAt(0, 20, duration)
-    graphRef.current?.zoom(zoom, duration)
-  }, [graphSize.height, graphSize.width, worldBounds.bottom, worldBounds.left, worldBounds.right, worldBounds.top])
+      graphRef.current?.centerAt(0, 20, duration)
+      graphRef.current?.zoom(zoom, duration)
+    },
+    [
+      graphSize.height,
+      graphSize.width,
+      worldBounds.bottom,
+      worldBounds.left,
+      worldBounds.right,
+      worldBounds.top,
+    ],
+  )
+
+  const recenterGraphForExport = useCallback(() => {
+    recenterGraph(0, { exportPadding: true })
+    graphRef.current?.pauseAnimation()
+    graphRef.current?.resumeAnimation()
+  }, [recenterGraph])
+
+  useEffect(() => {
+    onRegisterExportRecenter?.(recenterGraphForExport)
+  }, [onRegisterExportRecenter, recenterGraphForExport])
+
+  const exportLabelNodeIds = useMemo(() => getExportLabelNodeIds(nodes), [nodes])
 
   const { pairMeta, chalkLinks, bridgeLinks } = useMemo(() => {
     const groupedByPair: Record<string, NetworkGraphEdge[]> = {}
@@ -463,7 +498,8 @@ export function NetworkGraph({
   ])
 
   const nodeCanvasObject = (node: GraphNode, ctx: CanvasRenderingContext2D) => {
-    const baseRadius = node.isSelf ? 36 : 18
+    const exportBoost = exportMode ? EXPORT_SCALE_BOOST : 1
+    const baseRadius = (node.isSelf ? 36 : 18) * exportBoost
     const isSelected = selectedUserId === node.id
     const isHovered = hoveredNodeId === node.id
     const radius = baseRadius * (isSelected || isHovered ? 1.1 : 1)
@@ -510,10 +546,21 @@ export function NetworkGraph({
     } else {
       const initial = (node.user.display_name?.trim()[0] ?? '?').toUpperCase()
       ctx.fillStyle = '#F2EFF8'
-      ctx.font = `${Math.max(12, radius * 0.9)}px "DM Sans"`
+      const labelSize = Math.max(12, radius * 0.9) + (exportMode ? 2 : 0)
+      ctx.font = `${labelSize}px "DM Sans"`
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(initial, node.x ?? 0, node.y ?? 0)
+    }
+
+    if (exportMode && exportLabelNodeIds.has(node.id)) {
+      const firstName = getFirstName(node.user.display_name)
+      const nameSize = 13
+      ctx.fillStyle = '#F2EFF8'
+      ctx.font = `${nameSize}px "DM Sans"`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+      ctx.fillText(firstName, node.x ?? 0, (node.y ?? 0) + radius + 8)
     }
   }
 

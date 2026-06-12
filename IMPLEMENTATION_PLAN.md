@@ -18,7 +18,9 @@
 | Spec `013` | COMPLETE — profile shared-bridge sheet read-only + viewer avatar |
 | Spec `014` | COMPLETE — contextual state audit; C-01–C-04 fixes + navigation matrix |
 | Spec `015` | COMPLETE — feed profile navigation; C-04 stretch (`restorePostId`); F-01–F-05 |
-| Specs `016+` | **P2 polish** — promote before Ralph picks up |
+| Spec `016-network-share-export` | COMPLETE — share/save without node selection; canvas ref sync |
+| Spec `016-social-share-export` | COMPLETE — 4:5 social share card export |
+| Specs `017+` | **P2 polish** — promote before Ralph picks up |
 
 **Recommended Ralph order:** P2 specs `015`+ when promoted
 

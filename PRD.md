@@ -272,7 +272,7 @@ Standalone `categorize-gum` edge function also exists for direct title → categ
 - Interaction: drag nodes; tap node → `NodeProfileSheet`; tap bridge → `BridgeDetailSheet`
 - Connections without bridges: nodes only, no chalk lines
 
-**Export / share:** Available whenever graph has loaded (no node selection required). Captures chalk-spoke mesh; active selection cleared briefly during capture. Canvas PNG at 2× resolution. Native share sheet when supported; save/download fallback. Filename: `my-bridges-[YYYY-MM-DD].png`.
+**Export / share:** Available whenever graph has loaded (no node selection required). Captures chalk-spoke mesh; active selection cleared briefly during capture. Composed **4:5 social card** (1080×1350) with stats footer, category glow, and grain — graph bitmap captured at 2× then framed via `buildSocialShareSnapshot`. Export-only zoom/label boost during capture. Native share sheet when supported; save/download fallback. Filename: `my-bridges-[YYYY-MM-DD].png`.
 
 **Header:** Combined actions menu (Add someone, Requests with badge). Connection requests page uses standard Back control.
 

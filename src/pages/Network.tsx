@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
@@ -8,6 +8,7 @@ import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { prepareGraphSnapshotCapture } from '../lib/networkSnapshotPrep.ts'
+import { getNetworkShareStats } from '../lib/networkShareStats.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
 import { usePendingRequestCount } from '../hooks/usePendingRequestCount.ts'
 import type { Bridge, User } from '../types/index.ts'
@@ -17,7 +18,7 @@ const networkUserCache = new Map<string, User>()
 export default function Network() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { usersById, refetch: refetchGraph } = useNetworkGraph()
+  const { nodes, edges, usersById, refetch: refetchGraph } = useNetworkGraph()
   const pendingRequestCount = usePendingRequestCount()
   const graphCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
@@ -30,6 +31,13 @@ export default function Network() {
     loading: true,
     error: null as string | null,
   })
+  const [snapshotExportMode, setSnapshotExportMode] = useState(false)
+  const exportRecenterRef = useRef<(() => void) | null>(null)
+
+  const shareCardOptions = useMemo(
+    () => getNetworkShareStats(nodes, edges),
+    [edges, nodes],
+  )
 
 
   useEffect(() => {
@@ -106,6 +114,21 @@ export default function Network() {
             window.setTimeout(resolve, 120)
           })
         },
+        enterExportMode: async () => {
+          setSnapshotExportMode(true)
+          await new Promise<void>((resolve) => {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => resolve())
+            })
+          })
+          exportRecenterRef.current?.()
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, 160)
+          })
+        },
+        exitExportMode: () => {
+          setSnapshotExportMode(false)
+        },
       },
     )
   }, [selectedBridge, selectedUser, selectedUserId])
@@ -124,6 +147,7 @@ export default function Network() {
             graphRef={graphCanvasRef}
             disabled={graphActionsDisabled || !graphState.canvasReady}
             prepareForSnapshot={prepareGraphSnapshot}
+            shareCardOptions={shareCardOptions}
           />
         </div>
       </header>
@@ -145,6 +169,10 @@ export default function Network() {
           </div>
         ) : null}
         <NetworkGraph
+          exportMode={snapshotExportMode}
+          onRegisterExportRecenter={(recenter) => {
+            exportRecenterRef.current = recenter
+          }}
           onNodeSelect={(userId, user) => {
             if (!userId) {
               return

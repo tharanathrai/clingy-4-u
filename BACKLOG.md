@@ -4,9 +4,9 @@
 
 ## Network Graph Viewport + Export
 
-1. Share image quality is poor for social posting.
-   - 2× canvas export + chalk mesh without selection implemented (2026-05-26); still room for a social-first preset (larger node scale, better framing, clearer labels, optional safe margins).
-   - Status: TODO (intentionally deferred beyond 2× export)
+1. Share image quality is poor for social posting. ✅ Addressed (spec `016-social-share-export`)
+   - Bridge Constellation Card: 4:5 (1080×1350), stats footer, category glow, grain, export-only zoom/label boost.
+   - Stretch deferred: square/stories presets, spotlight card when a node is selected.
 
 2. Desktop graph framing can start far from the visible viewport. ✅ Addressed
    - Implemented container-based canvas sizing (instead of viewport-only sizing).

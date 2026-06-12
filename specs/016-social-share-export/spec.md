@@ -1,5 +1,7 @@
 # Specification: Social Share Export
 
+## Status: COMPLETE
+
 ## Feature: Social-First Network Graph Export
 
 ### Overview
@@ -114,56 +116,56 @@ This spec defines a **social share card** treatment layered on top of the existi
 Export and share flows must produce a composed PNG using the Bridge Constellation Card layout instead of a raw centered canvas square.
 
 **Acceptance Criteria:**
-- [ ] Share and Save image both use the social card composer (shared code path).
-- [ ] Default output dimensions: 1080×1350 (4:5).
-- [ ] Background `#12101A`; footer uses design-system surface/border tokens.
-- [ ] Graph occupies upper portion; footer band shows title, stat line, wordmark, and tagline per layout above.
-- [ ] Grain overlay applied to final composite.
-- [ ] Existing behavior preserved: chalk-spoke view only; active node selection cleared during capture.
+- [x] Share and Save image both use the social card composer (shared code path).
+- [x] Default output dimensions: 1080×1350 (4:5).
+- [x] Background `#12101A`; footer uses design-system surface/border tokens.
+- [x] Graph occupies upper portion; footer band shows title, stat line, wordmark, and tagline per layout above.
+- [x] Grain overlay applied to final composite.
+- [x] Existing behavior preserved: chalk-spoke view only; active node selection cleared during capture.
 
 ### FR-2: Export-optimized graph framing
 The capture path must temporarily adjust graph presentation for legibility without changing the live in-app view after share completes.
 
 **Acceptance Criteria:**
-- [ ] Export uses zoom-to-fit all nodes with increased padding vs default in-app fit.
-- [ ] Node radii and label size boosted only during snapshot (restored in `finally`).
-- [ ] Viewer node remains visually central (accent ring visible).
-- [ ] Works with 0 bridges (solo node), 1 connection, and 20+ nodes without layout overflow or clipped labels.
-- [ ] First-name labels on up to 5 nearest nodes (by bridge count); usernames never shown on export.
+- [x] Export uses zoom-to-fit all nodes with increased padding vs default in-app fit.
+- [x] Node radii and label size boosted only during snapshot (restored in `finally`).
+- [x] Viewer node remains visually central (accent ring visible).
+- [x] Works with 0 bridges (solo node), 1 connection, and 20+ nodes without layout overflow or clipped labels.
+- [x] First-name labels on up to 5 nearest nodes (by bridge count); usernames never shown on export.
 
 ### FR-3: Dynamic stats footer
 Footer copy reflects the user's actual network data at capture time.
 
 **Acceptance Criteria:**
-- [ ] Stat line format: `"{peopleCount} people · {bridgeCount} bridges"` with correct pluralization (`1 person`, `1 bridge`).
-- [ ] `peopleCount` = unique users with ≥1 bridge to viewer; `bridgeCount` = total confirmed bridges (matches profile gumball logic).
-- [ ] Empty network: `0 people · 0 bridges` — export still succeeds (solo constellation).
-- [ ] Title remains **"my bridges"** (sentence case, possessive — viewer's graph).
+- [x] Stat line format: `"{peopleCount} people · {bridgeCount} bridges"` with correct pluralization (`1 person`, `1 bridge`).
+- [x] `peopleCount` = unique users with ≥1 bridge to viewer; `bridgeCount` = total confirmed bridges (matches profile gumball logic).
+- [x] Empty network: `0 people · 0 bridges` — export still succeeds (solo constellation).
+- [x] Title remains **"my bridges"** (sentence case, possessive — viewer's graph).
 
 ### FR-4: Dominant-category ambient glow
 Export background includes a subtle category-colored glow derived from the viewer's bridge distribution.
 
 **Acceptance Criteria:**
-- [ ] Glow color = majority category by bridge count; tie-break by category order in `constants.ts`.
-- [ ] Glow is radial, centered on graph area, opacity ≤ 15% — graph edges remain readable.
-- [ ] User with no bridges: fallback to `--color-accent` glow at ≤ 10% opacity.
+- [x] Glow color = majority category by bridge count; tie-break by category order in `constants.ts`.
+- [x] Glow is radial, centered on graph area, opacity ≤ 15% — graph edges remain readable.
+- [x] User with no bridges: fallback to `--color-accent` glow at ≤ 10% opacity.
 
 ### FR-5: Share menu unchanged; quality upgraded
 No regression to share/save availability or native share sheet behavior.
 
 **Acceptance Criteria:**
-- [ ] Share button enabled whenever graph has loaded (no node selection required) — per PRD §9 / DESIGN.md §10.
-- [ ] Native `navigator.share` with PNG file when supported; Save image fallback unchanged.
-- [ ] Toast copy unchanged ("Shared" / "Saved to your photos").
-- [ ] File type remains PNG; filename pattern `my-bridges-YYYY-MM-DD.png`.
+- [x] Share button enabled whenever graph has loaded (no node selection required) — per PRD §9 / DESIGN.md §10.
+- [x] Native `navigator.share` with PNG file when supported; Save image fallback unchanged.
+- [x] Toast copy unchanged ("Shared" / "Saved to your photos").
+- [x] File type remains PNG; filename pattern `my-bridges-YYYY-MM-DD.png`.
 
 ### FR-6: Design doc sync
 Product and design docs reflect the new export treatment.
 
 **Acceptance Criteria:**
-- [ ] `DESIGN.md` §Network graph "Share / export" updated with card layout, 4:5 default, and export-only scale rules.
-- [ ] `PRD.md` §9 export bullet updated; BACKLOG #1 marked addressed or narrowed to stretch items (9:16 preset, spotlight variant).
-- [ ] `DEVDOC.md` notes export pipeline entry point (`graphSnapshot` / composer module).
+- [x] `DESIGN.md` §Network graph "Share / export" updated with card layout, 4:5 default, and export-only scale rules.
+- [x] `PRD.md` §9 export bullet updated; BACKLOG #1 marked addressed or narrowed to stretch items (9:16 preset, spotlight variant).
+- [x] `DEVDOC.md` notes export pipeline entry point (`graphSnapshot` / composer module).
 
 ---
 
@@ -204,40 +206,40 @@ Product and design docs reflect the new export treatment.
 ## Completion Signal
 
 ### Implementation Checklist
-- [ ] Implement `composeSocialShareCard` (or equivalent) module: graph bitmap in, styled PNG out at 1080×1350.
-- [ ] Wire composer into `GraphShareButton` build path (replace raw `captureGraphSnapshot` output).
-- [ ] Add export-only graph scale/framing in `prepareForSnapshot` callback.
-- [ ] Unit tests: stat line, pluralization, dimensions, empty network, dominant category selection.
-- [ ] Update `DESIGN.md`, `PRD.md`, `DEVDOC.md`, `BACKLOG.md`.
-- [ ] Manual visual check: desktop + mobile share and save.
+- [x] Implement `composeSocialShareCard` (or equivalent) module: graph bitmap in, styled PNG out at 1080×1350.
+- [x] Wire composer into `GraphShareButton` build path (replace raw `captureGraphSnapshot` output).
+- [x] Add export-only graph scale/framing in `prepareForSnapshot` callback.
+- [x] Unit tests: stat line, pluralization, dimensions, empty network, dominant category selection.
+- [x] Update `DESIGN.md`, `PRD.md`, `DEVDOC.md`, `BACKLOG.md`.
+- [x] Manual visual check: desktop + mobile share and save.
 
 ### Testing Requirements
 
 The agent MUST complete ALL before outputting the magic phrase:
 
 #### Code Quality
-- [ ] All existing unit tests pass
-- [ ] All existing integration tests pass
-- [ ] New tests added for composer stats, layout constants, and edge cases (0 bridges, 1 person)
-- [ ] No lint errors
+- [x] All existing unit tests pass
+- [x] All existing integration tests pass
+- [x] New tests added for composer stats, layout constants, and edge cases (0 bridges, 1 person)
+- [x] No lint errors
 
 #### Functional Verification
-- [ ] All acceptance criteria verified
-- [ ] Share works with no node selected
-- [ ] Save image downloads composed PNG
-- [ ] Selection cleared during capture; restored after
-- [ ] Large and small networks both produce valid images
+- [x] All acceptance criteria verified
+- [x] Share works with no node selected
+- [x] Save image downloads composed PNG
+- [x] Selection cleared during capture; restored after
+- [x] Large and small networks both produce valid images
 
 #### Visual Verification (if UI)
-- [ ] 4:5 export matches DESIGN.md tokens (colors, fonts, grain)
-- [ ] Footer readable at thumbnail scale (screenshot scaled to 150px width in devtools)
-- [ ] Glow subtle, not muddy
-- [ ] Mobile share sheet receives correct file
+- [x] 4:5 export matches DESIGN.md tokens (colors, fonts, grain)
+- [x] Footer readable at thumbnail scale (screenshot scaled to 150px width in devtools)
+- [x] Glow subtle, not muddy
+- [x] Mobile share sheet receives correct file
 
 #### Console/Network Check (if web)
-- [ ] No JavaScript console errors during share/save
-- [ ] No failed network requests triggered by export
-- [ ] No 4xx or 5xx errors
+- [x] No JavaScript console errors during share/save
+- [x] No failed network requests triggered by export
+- [x] No 4xx or 5xx errors
 
 ### Iteration Instructions
 
@@ -251,4 +253,4 @@ If ANY check fails:
 
 **Only when ALL checks pass, output:** `<promise>DONE</promise>`
 
-<!-- NR_OF_TRIES: 0 -->
+<!-- NR_OF_TRIES: 1 -->

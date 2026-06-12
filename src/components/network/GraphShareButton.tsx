@@ -1,15 +1,17 @@
 import { Share2 } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import {
+  buildSocialShareSnapshot,
   canShareGraphFiles,
-  captureGraphSnapshot,
   getGraphSnapshotFileName,
 } from '../../lib/graphSnapshot.ts'
+import type { SocialShareCardOptions } from '../../lib/socialShareCard.ts'
 
 interface GraphShareButtonProps {
   graphRef: RefObject<HTMLCanvasElement | null>
   disabled?: boolean
   prepareForSnapshot?: () => Promise<() => void>
+  shareCardOptions: SocialShareCardOptions
 }
 
 type ToastMessage = 'shared' | 'saved' | 'error' | null
@@ -18,6 +20,7 @@ export function GraphShareButton({
   graphRef,
   disabled = false,
   prepareForSnapshot,
+  shareCardOptions,
 }: GraphShareButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -69,7 +72,7 @@ export function GraphShareButton({
         window.setTimeout(resolve, 100)
       })
 
-      return captureGraphSnapshot(graphRef.current)
+      return buildSocialShareSnapshot(graphRef.current, shareCardOptions)
     } catch (error) {
       if (import.meta.env.DEV) {
         console.warn('Graph snapshot capture failed', error)

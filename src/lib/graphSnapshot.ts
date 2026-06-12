@@ -1,4 +1,5 @@
-const GRAPH_BG = '#12101A'
+import { composeSocialShareCard, type SocialShareCardOptions } from './socialShareCard.ts'
+
 const EXPORT_SCALE = 2
 
 export const getGraphSnapshotFileName = (): string => {
@@ -9,38 +10,55 @@ export const getGraphSnapshotFileName = (): string => {
   return `my-bridges-${year}-${month}-${day}.png`
 }
 
-export const captureGraphSnapshot = (
+export const captureGraphBitmap = (
   sourceCanvas: HTMLCanvasElement,
-): { blob: Blob; dataUrl: string } | null => {
-  const side = Math.max(sourceCanvas.width, sourceCanvas.height) * EXPORT_SCALE
+  scale = EXPORT_SCALE,
+): HTMLCanvasElement | null => {
   const snapshot = document.createElement('canvas')
-  snapshot.width = side
-  snapshot.height = side
+  snapshot.width = sourceCanvas.width * scale
+  snapshot.height = sourceCanvas.height * scale
   const context = snapshot.getContext('2d')
   if (!context) {
     return null
   }
 
-  context.fillStyle = GRAPH_BG
-  context.fillRect(0, 0, snapshot.width, snapshot.height)
-
-  const drawWidth = sourceCanvas.width * EXPORT_SCALE
-  const drawHeight = sourceCanvas.height * EXPORT_SCALE
-  const offsetX = (side - drawWidth) / 2
-  const offsetY = (side - drawHeight) / 2
   context.drawImage(
     sourceCanvas,
     0,
     0,
     sourceCanvas.width,
     sourceCanvas.height,
-    offsetX,
-    offsetY,
-    drawWidth,
-    drawHeight,
+    0,
+    0,
+    snapshot.width,
+    snapshot.height,
   )
 
-  const dataUrl = snapshot.toDataURL('image/png')
+  return snapshot
+}
+
+export const buildSocialShareSnapshot = async (
+  sourceCanvas: HTMLCanvasElement,
+  options: SocialShareCardOptions,
+): Promise<{ blob: Blob; dataUrl: string } | null> => {
+  const graphBitmap = captureGraphBitmap(sourceCanvas)
+  if (!graphBitmap) {
+    return null
+  }
+
+  return composeSocialShareCard(graphBitmap, options)
+}
+
+/** @deprecated Use buildSocialShareSnapshot for share/save exports. */
+export const captureGraphSnapshot = (
+  sourceCanvas: HTMLCanvasElement,
+): { blob: Blob; dataUrl: string } | null => {
+  const graphBitmap = captureGraphBitmap(sourceCanvas)
+  if (!graphBitmap) {
+    return null
+  }
+
+  const dataUrl = graphBitmap.toDataURL('image/png')
   const binary = atob(dataUrl.split(',')[1] ?? '')
   const bytes = new Uint8Array(binary.length)
   for (let index = 0; index < binary.length; index += 1) {

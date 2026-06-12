@@ -27,10 +27,12 @@ const otherUser: User = {
 }
 
 describe('prepareGraphSnapshotCapture', () => {
-  it('returns a no-op restore when nothing is selected', async () => {
+  it('still waits for export paint when nothing is selected', async () => {
     const clearSelection = vi.fn()
     const restoreSelection = vi.fn()
     const waitForPaint = vi.fn(async () => {})
+    const enterExportMode = vi.fn(async () => {})
+    const exitExportMode = vi.fn()
 
     const restore = await prepareGraphSnapshotCapture(
       {
@@ -38,12 +40,14 @@ describe('prepareGraphSnapshotCapture', () => {
         selectedBridge: null,
         selectedUser: null,
       },
-      { clearSelection, restoreSelection, waitForPaint },
+      { clearSelection, restoreSelection, waitForPaint, enterExportMode, exitExportMode },
     )
 
     expect(clearSelection).not.toHaveBeenCalled()
-    expect(waitForPaint).not.toHaveBeenCalled()
+    expect(enterExportMode).toHaveBeenCalledTimes(1)
+    expect(waitForPaint).toHaveBeenCalledTimes(1)
     restore()
+    expect(exitExportMode).toHaveBeenCalledTimes(1)
     expect(restoreSelection).not.toHaveBeenCalled()
   })
 

@@ -12,6 +12,8 @@ export async function prepareGraphSnapshotCapture(
     clearSelection: () => void
     restoreSelection: (state: GraphSnapshotSelectionState) => void
     waitForPaint: () => Promise<void>
+    enterExportMode?: () => Promise<void>
+    exitExportMode?: () => void
   },
 ): Promise<() => void> {
   const snapshot: GraphSnapshotSelectionState = {
@@ -20,14 +22,19 @@ export async function prepareGraphSnapshotCapture(
     selectedUser: state.selectedUser,
   }
 
-  if (!snapshot.selectedUserId && !snapshot.selectedBridge) {
-    return () => {}
+  await actions.enterExportMode?.()
+
+  if (snapshot.selectedUserId || snapshot.selectedBridge) {
+    actions.clearSelection()
+    await actions.waitForPaint()
+  } else {
+    await actions.waitForPaint()
   }
 
-  actions.clearSelection()
-  await actions.waitForPaint()
-
   return () => {
-    actions.restoreSelection(snapshot)
+    actions.exitExportMode?.()
+    if (snapshot.selectedUserId || snapshot.selectedBridge) {
+      actions.restoreSelection(snapshot)
+    }
   }
 }

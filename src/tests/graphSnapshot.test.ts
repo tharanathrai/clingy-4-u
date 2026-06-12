@@ -3,7 +3,11 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { captureGraphSnapshot, getGraphSnapshotFileName } from '../lib/graphSnapshot.ts'
+import {
+  captureGraphBitmap,
+  captureGraphSnapshot,
+  getGraphSnapshotFileName,
+} from '../lib/graphSnapshot.ts'
 
 describe('captureGraphSnapshot', () => {
   let getContextSpy: ReturnType<typeof vi.spyOn>
@@ -43,6 +47,27 @@ describe('captureGraphSnapshot', () => {
     const source = document.createElement('canvas')
 
     expect(captureGraphSnapshot(source)).toBeNull()
+  })
+})
+
+describe('captureGraphBitmap', () => {
+  it('upscales the source canvas by the export scale', () => {
+    const getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
+      () =>
+        ({
+          drawImage: vi.fn(),
+        }) as unknown as CanvasRenderingContext2D,
+    )
+
+    const source = document.createElement('canvas')
+    source.width = 120
+    source.height = 80
+
+    const bitmap = captureGraphBitmap(source)
+
+    expect(bitmap?.width).toBe(240)
+    expect(bitmap?.height).toBe(160)
+    getContextSpy.mockRestore()
   })
 })
 

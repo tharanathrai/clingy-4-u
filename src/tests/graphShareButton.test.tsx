@@ -8,11 +8,17 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
 
-const captureGraphSnapshot = vi.fn()
+const buildSocialShareSnapshot = vi.fn()
 const canShareGraphFiles = vi.fn()
 
+const shareCardOptions = {
+  peopleCount: 2,
+  bridgeCount: 3,
+  glowColor: '#CF8EE8',
+}
+
 vi.mock('../lib/graphSnapshot.ts', () => ({
-  captureGraphSnapshot: (...args: unknown[]) => captureGraphSnapshot(...args),
+  buildSocialShareSnapshot: (...args: unknown[]) => buildSocialShareSnapshot(...args),
   canShareGraphFiles: () => canShareGraphFiles(),
   getGraphSnapshotFileName: () => 'my-bridges-2026-06-12.png',
 }))
@@ -36,7 +42,7 @@ describe('GraphShareButton', () => {
     const graphRef = createRef<HTMLCanvasElement>()
     graphRef.current = canvas
 
-    captureGraphSnapshot.mockReturnValue({
+    buildSocialShareSnapshot.mockResolvedValue({
       blob: new Blob(['png'], { type: 'image/png' }),
       dataUrl: 'data:image/png;base64,abc',
     })
@@ -47,6 +53,7 @@ describe('GraphShareButton', () => {
       <GraphShareButton
         graphRef={graphRef}
         prepareForSnapshot={async () => () => {}}
+        shareCardOptions={shareCardOptions}
       />,
     )
 
@@ -54,7 +61,7 @@ describe('GraphShareButton', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Save image' }))
 
     await waitFor(() => {
-      expect(captureGraphSnapshot).toHaveBeenCalledWith(canvas)
+      expect(buildSocialShareSnapshot).toHaveBeenCalledWith(canvas, shareCardOptions)
     })
     expect(clickSpy).toHaveBeenCalled()
 
@@ -67,12 +74,13 @@ describe('GraphShareButton', () => {
     const graphRef = createRef<HTMLCanvasElement>()
     graphRef.current = canvas
 
-    captureGraphSnapshot.mockReturnValue(null)
+    buildSocialShareSnapshot.mockResolvedValue(null)
 
     render(
       <GraphShareButton
         graphRef={graphRef}
         prepareForSnapshot={async () => () => {}}
+        shareCardOptions={shareCardOptions}
       />,
     )
 
@@ -88,7 +96,7 @@ describe('GraphShareButton', () => {
     const user = userEvent.setup()
     const graphRef = createRef<HTMLCanvasElement>()
 
-    render(<GraphShareButton graphRef={graphRef} />)
+    render(<GraphShareButton graphRef={graphRef} shareCardOptions={shareCardOptions} />)
 
     await user.click(screen.getByRole('button', { name: 'Share network graph' }))
     await user.click(screen.getByRole('menuitem', { name: 'Save image' }))
@@ -96,6 +104,6 @@ describe('GraphShareButton', () => {
     expect(
       await screen.findByText("Couldn't save image — try again"),
     ).toBeInTheDocument()
-    expect(captureGraphSnapshot).not.toHaveBeenCalled()
+    expect(buildSocialShareSnapshot).not.toHaveBeenCalled()
   })
 })
