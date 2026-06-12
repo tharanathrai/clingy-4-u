@@ -1,15 +1,23 @@
 import { useMemo } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { SharedBridgesSection } from '../components/profile/SharedBridgesSection.tsx'
-import { pageShellCentered, pageShellTab } from '../components/layout/pageShell.ts'
+import { pageShellTab } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 
+interface ProfileLocationState {
+  returnTo?: string
+  selectUserId?: string
+}
+
 export default function ProfileUser() {
   const { username } = useParams<{ username: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { user, loading: authLoading } = useAuth()
   const {
     profile,
@@ -30,9 +38,27 @@ export default function ProfileUser() {
       .sort((a, b) => categoryBreakdown[b] - categoryBreakdown[a])
   }, [categoryBreakdown])
 
+  const handleBack = () => {
+    const state = location.state as ProfileLocationState | null
+    if (state?.returnTo) {
+      if (state.selectUserId != null) {
+        navigate(state.returnTo, { state: { selectUserId: state.selectUserId } })
+        return
+      }
+      navigate(state.returnTo)
+      return
+    }
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate('/home')
+  }
+
   if (authLoading || loading) {
     return (
       <main className={pageShellTab}>
+        <BackHeader onBack={handleBack} className="mb-4" />
         <section className="flex flex-col items-center">
           <div className="skeleton h-20 w-20 rounded-full" />
           <div className="skeleton mt-4 h-7 w-44 rounded-full" />
@@ -51,7 +77,8 @@ export default function ProfileUser() {
 
   if (!profile) {
     return (
-      <main className={`${pageShellCentered} px-5 py-8`}>
+      <main className={pageShellTab}>
+        <BackHeader onBack={handleBack} className="mb-4" />
         <h1 className="app-page-title">profile</h1>
         {error ? (
           <>
@@ -65,15 +92,7 @@ export default function ProfileUser() {
             </button>
           </>
         ) : (
-          <>
-            <p className="mt-4 text-sm text-text-2">Profile not found.</p>
-            <Link
-              to="/home"
-              className="mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
-            >
-              Back home
-            </Link>
-          </>
+          <p className="mt-4 text-sm text-text-2">Profile not found.</p>
         )}
       </main>
     )
@@ -85,6 +104,7 @@ export default function ProfileUser() {
 
   return (
     <main className={pageShellTab}>
+      <BackHeader onBack={handleBack} className="mb-4" />
       <section className="flex flex-col items-center text-center">
         {profile.avatar_url ? (
           <img

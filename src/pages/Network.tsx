@@ -200,7 +200,12 @@ export default function Network() {
             setSelectedUserId(null)
           }}
           onViewProfile={(username) => {
-            navigate(`/profile/${username}`)
+            navigate(`/profile/${username}`, {
+              state: {
+                returnTo: '/network',
+                ...(selectedUserId ? { selectUserId: selectedUserId } : {}),
+              },
+            })
           }}
           onCreatePlan={(recipientId) => {
             navigate('/piece/new', {
