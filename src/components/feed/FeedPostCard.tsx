@@ -50,29 +50,38 @@ export function FeedPostCard({
     <article className="overflow-hidden rounded-lg bg-surface shadow-card">
       <div className={`h-1 w-full ${categoryStripClass[category]}`} />
       <div className="p-5">
-        <button
-          type="button"
-          onClick={onAuthorPress}
-          disabled={!onAuthorPress}
-          className="flex w-full items-center gap-3 text-left disabled:cursor-default"
-        >
-          {post.author.avatar_url ? (
-            <img
-              src={withAvatarSize(post.author.avatar_url, 48) ?? post.author.avatar_url}
-              alt={post.author.display_name}
-              className="h-9 w-9 rounded-full object-cover"
-            />
-          ) : (
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-sm text-text-2">
-              {post.author.display_name.slice(0, 1).toUpperCase()}
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-text">{post.author.display_name}</p>
-            <p className="truncate text-xs text-text-3">@{post.author.username}</p>
-          </div>
-          <p className="text-xs text-text-3">{timestamp}</p>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onAuthorPress}
+            disabled={!onAuthorPress}
+            aria-label={`View ${post.author.display_name}'s profile`}
+            className="shrink-0 disabled:cursor-default"
+          >
+            {post.author.avatar_url ? (
+              <img
+                src={withAvatarSize(post.author.avatar_url, 48) ?? post.author.avatar_url}
+                alt={post.author.display_name}
+                className="h-9 w-9 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-2 text-sm text-text-2">
+                {post.author.display_name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-text">{post.author.display_name}</p>
+              <p className="truncate text-xs text-text-3">@{post.author.username}</p>
+            </div>
+            <p className="shrink-0 text-xs text-text-3">{timestamp}</p>
+          </button>
+        </div>
 
         <div className="mt-4">
           <button
