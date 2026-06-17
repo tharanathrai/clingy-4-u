@@ -120,17 +120,26 @@ export default function PieceNew() {
 
       const nextPairUsage: Record<string, number> = {}
       if (myPieceIds.length > 0) {
-        const { data: otherMemberRows } = await supabase
-          .from('gum_piece_members')
-          .select('user_id, gum_piece_id, gum_pieces(status)')
-          .in('gum_piece_id', myPieceIds)
-          .neq('user_id', userId)
-          .in('gum_pieces.status', ['placeholder', 'active'])
+        const { data: activePieceRows } = await supabase
+          .from('gum_pieces')
+          .select('id')
+          .in('id', myPieceIds)
+          .in('status', ['placeholder', 'active'])
 
-        for (const row of otherMemberRows ?? []) {
-          const otherId = row.user_id as string
-          if (!otherIds.includes(otherId)) continue
-          nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
+        const activePieceIds = (activePieceRows ?? []).map((r) => r.id)
+
+        if (activePieceIds.length > 0) {
+          const { data: otherMemberRows } = await supabase
+            .from('gum_piece_members')
+            .select('user_id, gum_piece_id')
+            .in('gum_piece_id', activePieceIds)
+            .neq('user_id', userId)
+
+          for (const row of otherMemberRows ?? []) {
+            const otherId = row.user_id
+            if (!otherIds.includes(otherId)) continue
+            nextPairUsage[otherId] = (nextPairUsage[otherId] ?? 0) + 1
+          }
         }
       }
 
