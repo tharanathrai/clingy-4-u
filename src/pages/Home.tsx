@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
-import { GumPieceCard } from '../components/gum/GumPieceCard.tsx'
+import { CategoryShelf } from '../components/gum/CategoryShelf.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
-import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
+import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import type { GumPiece } from '../hooks/useGumPieces.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { supabase } from '../lib/supabase.ts'
@@ -71,11 +72,16 @@ export default function Home() {
       return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
     })
   }, [pieces])
-  const {
-    visibleItems: visiblePieces,
-    hasMore,
-    loadMore,
-  } = usePaginatedItems(sortedPieces, 6)
+
+  const groupedByCategory = useMemo(() => {
+    const groups: Partial<Record<CategorySlug, GumPiece[]>> = {}
+    for (const piece of sortedPieces) {
+      const cat = piece.category as CategorySlug
+      if (!groups[cat]) groups[cat] = []
+      groups[cat]!.push(piece)
+    }
+    return groups
+  }, [sortedPieces])
 
   const handleNewGum = () => {
     if (pocketFull) {
@@ -154,28 +160,18 @@ export default function Home() {
         ) : null}
 
         {!loading && !loadingConnections && !error && sortedPieces.length > 0 ? (
-          <ul className="mt-6 space-y-3 pb-24">
-            {visiblePieces.map((piece) => (
-              <li key={piece.id}>
-                <GumPieceCard
-                  piece={piece}
+          <div className="mt-6 space-y-6 pb-24">
+            {(Object.keys(CATEGORIES) as CategorySlug[])
+              .filter((cat) => groupedByCategory[cat]?.length)
+              .map((cat) => (
+                <CategoryShelf
+                  key={cat}
+                  category={cat}
+                  pieces={groupedByCategory[cat]!}
                   currentUserId={user?.id ?? ''}
-                  onPress={() => void navigate(`/piece/${piece.id}`)}
+                  onPressItem={(piece) => void navigate(`/piece/${piece.id}`)}
                 />
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {!loading && !loadingConnections && !error && hasMore ? (
-          <div className="mt-4 flex justify-center">
-            <button
-              type="button"
-              onClick={loadMore}
-              className="rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
-            >
-              Load more
-            </button>
+              ))}
           </div>
         ) : null}
 
