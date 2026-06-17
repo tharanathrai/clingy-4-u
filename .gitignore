@@ -36,3 +36,8 @@ playwright-report/
 blob-report/
 coverage/
 Sticky Bridges Design System.zip
+
+# Supabase — schema and project identifiers
+supabase/migrations/
+supabase/*.sql
+supabase/.temp/

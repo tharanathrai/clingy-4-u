@@ -72,7 +72,7 @@ export interface Database {
         Row: {
           id: string
           creator_id: string
-          recipient_id: string
+          recipient_id: string | null
           title: string
           category: string
           color_hex: string
@@ -86,7 +86,7 @@ export interface Database {
         Insert: {
           id?: string
           creator_id: string
-          recipient_id: string
+          recipient_id?: string | null
           title: string
           category: string
           color_hex: string
@@ -100,7 +100,7 @@ export interface Database {
         Update: {
           id?: string
           creator_id?: string
-          recipient_id?: string
+          recipient_id?: string | null
           title?: string
           category?: string
           color_hex?: string
@@ -110,6 +110,36 @@ export interface Database {
           expires_at?: string
           confirmed_at?: string | null
           planned_date?: string | null
+        }
+        Relationships: []
+      }
+      gum_piece_members: {
+        Row: {
+          id: string
+          gum_piece_id: string
+          user_id: string
+          role: 'creator' | 'invitee'
+          status: 'pending' | 'accepted' | 'declined'
+          invited_at: string
+          responded_at: string | null
+        }
+        Insert: {
+          id?: string
+          gum_piece_id: string
+          user_id: string
+          role: 'creator' | 'invitee'
+          status?: 'pending' | 'accepted' | 'declined'
+          invited_at?: string
+          responded_at?: string | null
+        }
+        Update: {
+          id?: string
+          gum_piece_id?: string
+          user_id?: string
+          role?: 'creator' | 'invitee'
+          status?: 'pending' | 'accepted' | 'declined'
+          invited_at?: string
+          responded_at?: string | null
         }
         Relationships: []
       }
@@ -224,8 +254,7 @@ export interface Database {
           gum_piece_id: string
           otp_code: string
           initiator_id: string
-          initiator_confirmed: boolean
-          responder_confirmed: boolean
+          confirmed_member_ids: string[]
           expires_at: string
           created_at: string
         }
@@ -234,8 +263,7 @@ export interface Database {
           gum_piece_id: string
           otp_code: string
           initiator_id: string
-          initiator_confirmed?: boolean
-          responder_confirmed?: boolean
+          confirmed_member_ids?: string[]
           expires_at: string
           created_at?: string
         }
@@ -244,8 +272,7 @@ export interface Database {
           gum_piece_id?: string
           otp_code?: string
           initiator_id?: string
-          initiator_confirmed?: boolean
-          responder_confirmed?: boolean
+          confirmed_member_ids?: string[]
           expires_at?: string
           created_at?: string
         }
@@ -257,6 +284,7 @@ export interface Database {
           gum_piece_id: string
           user_a_id: string
           user_b_id: string
+          member_ids: string[]
           title: string
           category: string
           color_hex: string
@@ -268,6 +296,7 @@ export interface Database {
           gum_piece_id: string
           user_a_id: string
           user_b_id: string
+          member_ids?: string[]
           title: string
           category: string
           color_hex: string
@@ -279,6 +308,7 @@ export interface Database {
           gum_piece_id?: string
           user_a_id?: string
           user_b_id?: string
+          member_ids?: string[]
           title?: string
           category?: string
           color_hex?: string
@@ -296,6 +326,7 @@ export interface Database {
             | 'invite_accepted'
             | 'invite_rejected'
             | 'plan_turned_down'
+            | 'member_declined'
             | 'plan_expiring_soon'
             | 'plan_expired'
             | 'bridge_formed'
@@ -315,6 +346,7 @@ export interface Database {
             | 'invite_accepted'
             | 'invite_rejected'
             | 'plan_turned_down'
+            | 'member_declined'
             | 'plan_expiring_soon'
             | 'plan_expired'
             | 'bridge_formed'
@@ -334,6 +366,7 @@ export interface Database {
             | 'invite_accepted'
             | 'invite_rejected'
             | 'plan_turned_down'
+            | 'member_declined'
             | 'plan_expiring_soon'
             | 'plan_expired'
             | 'bridge_formed'

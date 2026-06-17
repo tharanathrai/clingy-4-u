@@ -11,6 +11,7 @@ export type NotificationType =
   | 'invite_accepted'
   | 'invite_rejected'
   | 'plan_turned_down'
+  | 'member_declined'
   | 'plan_expiring_soon'
   | 'plan_expired'
   | 'bridge_formed'
@@ -248,7 +249,7 @@ async function enrichNotifications(
 
   const gumPiecesById = new Map<
     string,
-    { id: string; creator_id: string; recipient_id: string }
+    { id: string; creator_id: string; recipient_id: string | null }
   >()
   const bridgesById = new Map<
     string,
@@ -363,7 +364,7 @@ async function enrichNotifications(
 function getActorAndTargetUserId(
   notification: Notification,
   userId: string,
-  gumPiecesById: Map<string, { id: string; creator_id: string; recipient_id: string }>,
+  gumPiecesById: Map<string, { id: string; creator_id: string; recipient_id: string | null }>,
   bridgesById: Map<string, { id: string; user_a_id: string; user_b_id: string }>,
   connectionsById: Map<
     string,
@@ -406,6 +407,15 @@ function getActorAndTargetUserId(
   if (!gumPiece) {
     return { actorId: null, targetUserId: null }
   }
-  const otherId = gumPiece.creator_id === userId ? gumPiece.recipient_id : gumPiece.creator_id
-  return { actorId: otherId, targetUserId: otherId }
+  // For invite_received, the actor is always the creator
+  if (notification.type === 'invite_received') {
+    return { actorId: gumPiece.creator_id, targetUserId: gumPiece.creator_id }
+  }
+  // For 2-person plans (recipient_id set), derive as before
+  if (gumPiece.recipient_id) {
+    const otherId = gumPiece.creator_id === userId ? gumPiece.recipient_id : gumPiece.creator_id
+    return { actorId: otherId, targetUserId: otherId }
+  }
+  // Group plans: actor unknown without actor_id stored — degrade gracefully
+  return { actorId: null, targetUserId: null }
 }

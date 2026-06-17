@@ -14,11 +14,12 @@ import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
 import { invalidateGumPieceFlow } from '../lib/invalidate.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
+import type { GumPieceMember } from '../types/index.ts'
 
 interface PieceDetailRow {
   id: string
   creator_id: string
-  recipient_id: string
+  recipient_id: string | null
   title: string
   category: string
   color_hex: string
@@ -29,43 +30,61 @@ interface PieceDetailRow {
   planned_date: string | null
 }
 
-interface ParticipantMeta {
-  id: string
-  display_name: string
-  username: string
-  avatar_url: string | null
-}
-
 interface PieceDetailData {
   piece: PieceDetailRow
-  creator: ParticipantMeta | null
-  recipient: ParticipantMeta | null
+  members: GumPieceMember[]
+  myMember: GumPieceMember | null
 }
 
 const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 async function fetchPieceDetail(id: string, userId: string): Promise<PieceDetailData | null> {
-  const { data, error: pieceError } = await supabase
-    .from('gum_pieces')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle()
+  const [pieceResult, memberResult] = await Promise.all([
+    supabase.from('gum_pieces').select('*').eq('id', id).maybeSingle(),
+    supabase
+      .from('gum_piece_members')
+      .select('id, gum_piece_id, user_id, role, status, invited_at, responded_at')
+      .eq('gum_piece_id', id),
+  ])
 
-  if (pieceError) throw new Error(pieceError.message)
-  if (!data) return null
+  if (pieceResult.error) throw new Error(pieceResult.error.message)
+  if (!pieceResult.data) return null
 
-  if (data.creator_id !== userId && data.recipient_id !== userId) return null
+  const allMemberRows = (memberResult.data ?? []) as GumPieceMember[]
+  const myMember = allMemberRows.find((m) => m.user_id === userId) ?? null
 
-  const { data: participantRows } = await supabase
+  // Authorization: must be a member
+  if (!myMember) return null
+
+  // Fetch user profiles for all members
+  const memberUserIds = allMemberRows.map((m) => m.user_id)
+  const { data: userRows } = await supabase
     .from('users')
     .select('id, display_name, username, avatar_url')
-    .in('id', [data.creator_id, data.recipient_id])
+    .in('id', memberUserIds)
 
-  const creator = (participantRows?.find((row) => row.id === data.creator_id) ?? null) as ParticipantMeta | null
-  const recipient = (participantRows?.find((row) => row.id === data.recipient_id) ?? null) as ParticipantMeta | null
+  const profileById = new Map(
+    (userRows ?? []).map((u) => [u.id as string, u as { id: string; display_name: string; username: string; avatar_url: string | null }]),
+  )
 
-  return { piece: data as PieceDetailRow, creator, recipient }
+  const members: GumPieceMember[] = allMemberRows.map((m) => {
+    const profile = profileById.get(m.user_id)
+    return {
+      ...m,
+      display_name: profile?.display_name,
+      username: profile?.username,
+      avatar_url: profile?.avatar_url,
+    }
+  })
+
+  const myMemberEnriched = members.find((m) => m.user_id === userId) ?? null
+
+  return {
+    piece: pieceResult.data as PieceDetailRow,
+    members,
+    myMember: myMemberEnriched,
+  }
 }
 
 export default function PieceDetail() {
@@ -97,6 +116,12 @@ export default function PieceDetail() {
         filter: `id=eq.${id}`,
         callback: () => { debouncedInvalidateQueries(queryClient, queryKey) },
       },
+      {
+        event: '*',
+        table: 'gum_piece_members',
+        filter: `gum_piece_id=eq.${id}`,
+        callback: () => { debouncedInvalidateQueries(queryClient, queryKey) },
+      },
     ])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, queryClient, userId])
@@ -108,8 +133,8 @@ export default function PieceDetail() {
   }, [toast])
 
   const piece = pieceData?.piece ?? null
-  const creator = pieceData?.creator ?? null
-  const recipient = pieceData?.recipient ?? null
+  const members = pieceData?.members ?? []
+  const myMember = pieceData?.myMember ?? null
 
   // Detect status changes for redirects
   useEffect(() => {
@@ -178,19 +203,22 @@ export default function PieceDetail() {
 
   const category = useMemo(() => toCategorySlug(piece?.category), [piece?.category])
 
+  const otherMembers = useMemo(
+    () => members.filter((m) => m.user_id !== userId),
+    [members, userId],
+  )
+
   const statusLine = useMemo(() => {
     if (!piece || !userId) return ''
-
-    const otherName =
-      userId === piece.creator_id
-        ? recipient?.display_name ?? 'them'
-        : creator?.display_name ?? 'them'
-    if (piece.status === 'placeholder') return `Waiting for ${otherName} to accept`
+    if (piece.status === 'placeholder') {
+      const pendingCount = members.filter((m) => m.role === 'invitee' && m.status === 'pending').length
+      return pendingCount === 1 ? 'Waiting for 1 person to accept' : `Waiting for ${pendingCount} people to accept`
+    }
     if (piece.status === 'active') return `Active · ${formatDistanceToNow(new Date(piece.expires_at), { addSuffix: false })} left`
     if (piece.status === 'turned_down') return 'Turned down'
     if (piece.status === 'expired') return 'Expired'
     return 'Confirmed'
-  }, [creator, piece, recipient, userId])
+  }, [members, piece, userId])
 
   const remainingProgress = useMemo(() => {
     if (!piece) return 0
@@ -210,6 +238,7 @@ export default function PieceDetail() {
     if (category === 'savor') return 'bg-savor'
     return 'bg-support'
   }, [category])
+
   const busyAction = respondMutation.isPending
     ? (respondMutation.variables as 'accept' | 'turn_down' | null)
     : null
@@ -249,12 +278,12 @@ export default function PieceDetail() {
     return <Navigate to="/home" replace />
   }
 
-  const isRecipient = userId === piece.recipient_id
-  const canAccept = piece.status === 'placeholder' && isRecipient
-  const canCancelPlaceholder = piece.status === 'placeholder' && !isRecipient
+  const isInviteePending = myMember?.role === 'invitee' && myMember?.status === 'pending'
+  const isCreator = myMember?.role === 'creator'
+  const canAccept = (piece.status === 'placeholder' || piece.status === 'active') && isInviteePending
+  const canCancelPlaceholder = piece.status === 'placeholder' && isCreator
   const canTurnDownActive = piece.status === 'active'
   const readOnly = ['confirmed', 'expired', 'turned_down'].includes(piece.status)
-  const partner = userId === piece.creator_id ? recipient : creator
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -275,25 +304,43 @@ export default function PieceDetail() {
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
       </div>
-      {partner ? (
-        <div className="mt-4 flex items-center justify-center gap-2">
+
+      {otherMembers.length > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           <span className="text-sm text-text-2">with</span>
-          {partner.avatar_url ? (
-            <img
-              src={partner.avatar_url}
-              alt={partner.display_name}
-              className="h-6 w-6 rounded-full object-cover"
-            />
-          ) : (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
-              {partner.display_name.slice(0, 1).toUpperCase()}
+          {otherMembers.map((member) => (
+            <span key={member.user_id} className="flex items-center gap-1.5">
+              {member.avatar_url ? (
+                <img
+                  src={member.avatar_url}
+                  alt={member.display_name ?? ''}
+                  className="h-6 w-6 rounded-full object-cover"
+                />
+              ) : (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
+                  {(member.display_name ?? '?').slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              {member.username ? (
+                <Link
+                  to={`/profile/${member.username}`}
+                  className="text-sm font-medium text-text underline underline-offset-2"
+                >
+                  {member.display_name}
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-text">{member.display_name}</span>
+              )}
+              {member.role === 'invitee' && member.status !== 'accepted' ? (
+                <span className={`text-xs ${member.status === 'declined' ? 'text-playful' : 'text-text-3'}`}>
+                  ({member.status})
+                </span>
+              ) : null}
             </span>
-          )}
-          <Link to={`/profile/${partner.username}`} className="text-sm font-medium text-text underline underline-offset-2">
-            {partner.display_name}
-          </Link>
+          ))}
         </div>
       ) : null}
+
       <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
       {piece.planned_date ? (
         <p className="mt-1 text-center text-xs text-text-3">

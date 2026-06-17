@@ -14,18 +14,17 @@ const corsHeaders = {
 interface ActivePieceRow {
   id: string
   creator_id: string
-  recipient_id: string
   title: string
   category: string
   color_hex: string
   created_at: string
+  member_ids: string[]
 }
 
 interface ExpiringSoonPieceRow {
   id: string
-  creator_id: string
-  recipient_id: string
   title: string
+  member_ids: string[]
 }
 
 Deno.serve(async (request) => {
@@ -49,6 +48,7 @@ Deno.serve(async (request) => {
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
     const nowIso = new Date().toISOString()
 
+    // Expire placeholder pieces
     const { data: expiredPlaceholders, error: placeholderError } = await serviceClient
       .from('gum_pieces')
       .update({ status: 'expired' })
@@ -60,10 +60,12 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: placeholderError.message })
     }
 
+    // Expiring-soon notifications
     const { windowStartIso, windowEndIso } = getExpiringSoonWindow(new Date(nowIso))
-    const { data: expiringSoonPieces, error: expiringSoonError } = await serviceClient
+
+    const { data: expiringSoonPiecesRaw, error: expiringSoonError } = await serviceClient
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, title')
+      .select('id, title')
       .eq('status', 'active')
       .gt('expires_at', windowStartIso)
       .lte('expires_at', windowEndIso)
@@ -72,10 +74,28 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: expiringSoonError.message })
     }
 
+    const expiringSoonPieceRows = expiringSoonPiecesRaw ?? []
     let expiringSoonNotified = 0
-    const expiringSoonPieceRows = (expiringSoonPieces ?? []) as ExpiringSoonPieceRow[]
+
     if (expiringSoonPieceRows.length > 0) {
-      const expiringSoonPieceIds = expiringSoonPieceRows.map((piece) => piece.id)
+      // Fetch member IDs for expiring-soon pieces
+      const expiringSoonPieceIds = expiringSoonPieceRows.map((p: { id: string }) => p.id)
+      const { data: expiringSoonMembers } = await serviceClient
+        .from('gum_piece_members')
+        .select('gum_piece_id, user_id')
+        .in('gum_piece_id', expiringSoonPieceIds)
+        .eq('status', 'accepted')
+
+      const membersByPiece = groupByPiece(expiringSoonMembers ?? [])
+
+      const piecesForNotify: ExpiringSoonPieceRow[] = expiringSoonPieceRows.map(
+        (p: { id: string; title: string }) => ({
+          id: p.id,
+          title: p.title,
+          member_ids: membersByPiece.get(p.id) ?? [],
+        }),
+      )
+
       const { data: existingExpiringSoon, error: existingExpiringSoonError } =
         await serviceClient
           .from('notifications')
@@ -88,7 +108,7 @@ Deno.serve(async (request) => {
       }
 
       const expiringSoonNotificationRows = buildExpiringSoonNotificationRows(
-        expiringSoonPieceRows,
+        piecesForNotify,
         existingExpiringSoon ?? [],
       )
 
@@ -103,25 +123,25 @@ Deno.serve(async (request) => {
         expiringSoonNotified = expiringSoonNotificationRows.length
 
         const usersByPiece = usersNeedingExpiringSoonEmail(expiringSoonNotificationRows)
-        for (const piece of expiringSoonPieceRows) {
+        for (const piece of piecesForNotify) {
           const userIds = usersByPiece.get(piece.id)
-          if (!userIds || userIds.size === 0) {
-            continue
-          }
+          if (!userIds || userIds.size === 0) continue
           void sendExpiringSoonEmails({
             serviceClient,
             supabaseUrl,
             serviceRoleKey: supabaseServiceRoleKey,
             piece,
             userIds,
+            membersByPiece,
           }).catch(() => undefined)
         }
       }
     }
 
+    // Expire active pieces
     const { data: activeToExpire, error: activeToExpireError } = await serviceClient
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, title, category, color_hex, created_at')
+      .select('id, creator_id, title, category, color_hex, created_at')
       .eq('status', 'active')
       .lt('expires_at', nowIso)
 
@@ -131,8 +151,16 @@ Deno.serve(async (request) => {
 
     let expiredActiveCount = 0
     if ((activeToExpire ?? []).length > 0) {
-      const pieceRows = activeToExpire as ActivePieceRow[]
-      const pieceIds = pieceRows.map((piece) => piece.id)
+      const pieceIds = (activeToExpire ?? []).map((p: { id: string }) => p.id)
+
+      // Fetch member IDs for expiring pieces
+      const { data: expiryMembers } = await serviceClient
+        .from('gum_piece_members')
+        .select('gum_piece_id, user_id')
+        .in('gum_piece_id', pieceIds)
+        .eq('status', 'accepted')
+
+      const membersByPiece = groupByPiece(expiryMembers ?? [])
 
       const { data: updatedActive, error: updateActiveError } = await serviceClient
         .from('gum_pieces')
@@ -146,12 +174,15 @@ Deno.serve(async (request) => {
 
       expiredActiveCount = updatedActive?.length ?? pieceIds.length
 
-      const graveyardRows = pieceRows.map((piece) => {
-        const sortedPair = [piece.creator_id, piece.recipient_id].sort()
+      // Build graveyard rows
+      const graveyardRows = (activeToExpire ?? []).map((piece: { id: string; creator_id: string; title: string; category: string; color_hex: string; created_at: string }) => {
+        const memberIds = membersByPiece.get(piece.id) ?? [piece.creator_id]
+        const sortedPair = memberIds.slice(0, 2).sort()
         return {
           gum_piece_id: piece.id,
-          user_a_id: sortedPair[0],
-          user_b_id: sortedPair[1],
+          user_a_id: sortedPair[0] ?? piece.creator_id,
+          user_b_id: sortedPair[1] ?? sortedPair[0] ?? piece.creator_id,
+          member_ids: memberIds,
           title: piece.title,
           category: piece.category,
           color_hex: piece.color_hex,
@@ -167,40 +198,39 @@ Deno.serve(async (request) => {
         return jsonResponse(500, { error: graveyardError.message })
       }
 
-      const notificationRows = pieceRows.flatMap((piece) => {
-        return [
-          {
-            user_id: piece.creator_id,
-            type: 'plan_expired',
-            reference_id: piece.id,
-            read: false,
-          },
-          {
-            user_id: piece.recipient_id,
-            type: 'plan_expired',
-            reference_id: piece.id,
-            read: false,
-          },
-        ]
+      // Notify all members
+      const notificationRows = (activeToExpire ?? []).flatMap((piece: { id: string }) => {
+        const memberIds = membersByPiece.get(piece.id) ?? []
+        return memberIds.map((userId) => ({
+          user_id: userId,
+          type: 'plan_expired',
+          reference_id: piece.id,
+          read: false,
+        }))
       })
 
-      const { error: notificationError } = await serviceClient
-        .from('notifications')
-        .insert(notificationRows)
-      if (notificationError) {
-        return jsonResponse(500, { error: notificationError.message })
+      if (notificationRows.length > 0) {
+        const { error: notificationError } = await serviceClient
+          .from('notifications')
+          .insert(notificationRows)
+        if (notificationError) {
+          return jsonResponse(500, { error: notificationError.message })
+        }
       }
 
-      for (const piece of pieceRows) {
+      // Fire expiry emails for all members
+      for (const piece of (activeToExpire ?? []) as ActivePieceRow[]) {
+        const memberIds = membersByPiece.get(piece.id) ?? []
         void sendExpiryEmails({
           serviceClient,
           supabaseUrl,
           serviceRoleKey: supabaseServiceRoleKey,
-          piece,
+          piece: { ...piece, member_ids: memberIds },
         }).catch(() => undefined)
       }
     }
 
+    // Cleanup expired sessions
     const { data: cleanedSessions, error: cleanupError } = await serviceClient
       .from('confirmation_sessions')
       .delete()
@@ -223,6 +253,16 @@ Deno.serve(async (request) => {
   }
 })
 
+function groupByPiece(rows: { gum_piece_id: string; user_id: string }[]): Map<string, string[]> {
+  const map = new Map<string, string[]>()
+  for (const row of rows) {
+    const existing = map.get(row.gum_piece_id) ?? []
+    existing.push(row.user_id)
+    map.set(row.gum_piece_id, existing)
+  }
+  return map
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -236,30 +276,35 @@ async function sendExpiringSoonEmails(params: {
   serviceRoleKey: string
   piece: ExpiringSoonPieceRow
   userIds: Set<string>
+  membersByPiece: Map<string, string[]>
 }): Promise<void> {
   const { piece, userIds } = params
-  const [creatorAuth, recipientAuth, creatorProfile, recipientProfile] = await Promise.all([
-    params.serviceClient.auth.admin.getUserById(piece.creator_id),
-    params.serviceClient.auth.admin.getUserById(piece.recipient_id),
-    params.serviceClient
-      .from('users')
-      .select('display_name')
-      .eq('id', piece.creator_id)
-      .maybeSingle<{ display_name: string }>(),
-    params.serviceClient
-      .from('users')
-      .select('display_name')
-      .eq('id', piece.recipient_id)
-      .maybeSingle<{ display_name: string }>(),
+  const allMemberIds = piece.member_ids
+
+  const [authResults, profileResults] = await Promise.all([
+    Promise.all(allMemberIds.map((id) => params.serviceClient.auth.admin.getUserById(id))),
+    params.serviceClient.from('users').select('id, display_name').in('id', allMemberIds),
   ])
 
-  const creatorEmail = creatorAuth.data.user?.email
-  const recipientEmail = recipientAuth.data.user?.email
-  const creatorName = creatorProfile.data?.display_name ?? 'Unknown user'
-  const recipientName = recipientProfile.data?.display_name ?? 'Unknown user'
+  const emailById = new Map(
+    authResults.map((r, i) => [allMemberIds[i], r.data.user?.email]),
+  )
+  const nameById = new Map(
+    ((profileResults.data ?? []) as { id: string; display_name: string }[]).map((u) => [
+      u.id,
+      u.display_name,
+    ]),
+  )
 
   const requests: Promise<Response>[] = []
-  if (userIds.has(piece.creator_id) && creatorEmail) {
+  for (const userId of userIds) {
+    const email = emailById.get(userId)
+    if (!email) continue
+    const othersNames = allMemberIds
+      .filter((id) => id !== userId)
+      .map((id) => nameById.get(id) ?? 'someone')
+      .join(', ')
+
     requests.push(
       fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
         method: 'POST',
@@ -268,25 +313,9 @@ async function sendExpiringSoonEmails(params: {
           Authorization: `Bearer ${params.serviceRoleKey}`,
         },
         body: JSON.stringify({
-          to: creatorEmail,
+          to: email,
           subject: 'A plan is expiring soon',
-          body: `Your plan '${piece.title}' with ${recipientName} expires in the next 30 days. Open Sticky Bridges to confirm it before it expires.`,
-        }),
-      }),
-    )
-  }
-  if (userIds.has(piece.recipient_id) && recipientEmail) {
-    requests.push(
-      fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${params.serviceRoleKey}`,
-        },
-        body: JSON.stringify({
-          to: recipientEmail,
-          subject: 'A plan is expiring soon',
-          body: `Your plan '${piece.title}' with ${creatorName} expires in the next 30 days. Open Sticky Bridges to confirm it before it expires.`,
+          body: `Your plan '${piece.title}' with ${othersNames} expires in the next 30 days. Open the app to confirm it before it expires.`,
         }),
       }),
     )
@@ -304,28 +333,32 @@ async function sendExpiryEmails(params: {
   piece: ActivePieceRow
 }): Promise<void> {
   const { piece } = params
-  const [creatorAuth, recipientAuth, creatorProfile, recipientProfile] = await Promise.all([
-    params.serviceClient.auth.admin.getUserById(piece.creator_id),
-    params.serviceClient.auth.admin.getUserById(piece.recipient_id),
-    params.serviceClient
-      .from('users')
-      .select('display_name')
-      .eq('id', piece.creator_id)
-      .maybeSingle<{ display_name: string }>(),
-    params.serviceClient
-      .from('users')
-      .select('display_name')
-      .eq('id', piece.recipient_id)
-      .maybeSingle<{ display_name: string }>(),
+  const allMemberIds = piece.member_ids
+
+  const [authResults, profileResults] = await Promise.all([
+    Promise.all(allMemberIds.map((id) => params.serviceClient.auth.admin.getUserById(id))),
+    params.serviceClient.from('users').select('id, display_name').in('id', allMemberIds),
   ])
 
-  const creatorEmail = creatorAuth.data.user?.email
-  const recipientEmail = recipientAuth.data.user?.email
-  const creatorName = creatorProfile.data?.display_name ?? 'Unknown user'
-  const recipientName = recipientProfile.data?.display_name ?? 'Unknown user'
+  const emailById = new Map(
+    authResults.map((r, i) => [allMemberIds[i], r.data.user?.email]),
+  )
+  const nameById = new Map(
+    ((profileResults.data ?? []) as { id: string; display_name: string }[]).map((u) => [
+      u.id,
+      u.display_name,
+    ]),
+  )
 
   const requests: Promise<Response>[] = []
-  if (creatorEmail) {
+  for (const userId of allMemberIds) {
+    const email = emailById.get(userId)
+    if (!email) continue
+    const othersNames = allMemberIds
+      .filter((id) => id !== userId)
+      .map((id) => nameById.get(id) ?? 'someone')
+      .join(', ')
+
     requests.push(
       fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
         method: 'POST',
@@ -334,25 +367,9 @@ async function sendExpiryEmails(params: {
           Authorization: `Bearer ${params.serviceRoleKey}`,
         },
         body: JSON.stringify({
-          to: creatorEmail,
+          to: email,
           subject: 'A plan expired',
-          body: `Your plan '${piece.title}' with ${recipientName} expired without being confirmed. It's in your graveyard.`,
-        }),
-      }),
-    )
-  }
-  if (recipientEmail) {
-    requests.push(
-      fetch(`${params.supabaseUrl}/functions/v1/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${params.serviceRoleKey}`,
-        },
-        body: JSON.stringify({
-          to: recipientEmail,
-          subject: 'A plan expired',
-          body: `Your plan '${piece.title}' with ${creatorName} expired without being confirmed. It's in your graveyard.`,
+          body: `Your plan '${piece.title}' with ${othersNames} expired without being confirmed. It's in your graveyard.`,
         }),
       }),
     )

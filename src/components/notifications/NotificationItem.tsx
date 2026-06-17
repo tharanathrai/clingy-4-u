@@ -8,6 +8,7 @@ const unreadBorderByType: Record<NotificationType, string> = {
   invite_accepted:    'border-active',
   invite_rejected:    'border-playful',
   plan_turned_down:   'border-playful',
+  member_declined:    'border-playful',
   plan_expiring_soon: 'border-savor',
   plan_expired:       'border-text-3',
   bridge_formed:      'border-active',
@@ -87,6 +88,9 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   }
   if (type === 'plan_turned_down') {
     return `${name} turned down a plan`
+  }
+  if (type === 'member_declined') {
+    return `${name} passed on your plan`
   }
   if (type === 'plan_expiring_soon') {
     return 'A plan is expiring soon'

@@ -25,10 +25,9 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
   const accentClass = accentClassByCategory[category]
   const morphSeed = idModulo(piece.id, 3)
   const isPlaceholder = piece.status === 'placeholder'
-  const partnerName =
-    currentUserId === piece.recipient_id
-      ? piece.creator_display_name ?? 'someone'
-      : piece.recipient_display_name ?? 'someone'
+
+  const otherMembers = piece.members.filter((m) => m.user_id !== currentUserId)
+  const withText = buildWithText(otherMembers)
 
   const expiryDate = new Date(piece.expires_at)
   const leftText = `${formatDistanceToNow(expiryDate, { addSuffix: false })} left`
@@ -48,7 +47,7 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
           <div className="mt-2">
             <CategoryChip category={category} size="md" />
           </div>
-          <p className="mt-2 text-xs text-text-2">with {partnerName}</p>
+          <p className="mt-2 text-xs text-text-2">{withText}</p>
           <div className="mt-2 flex items-center gap-2">
             <p className={`text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>{leftText}</p>
             {isPlaceholder ? (
@@ -61,6 +60,18 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
       </div>
     </button>
   )
+}
+
+function buildWithText(otherMembers: GumPiece['members']): string {
+  if (otherMembers.length === 0) return 'just you'
+  if (otherMembers.length === 1) {
+    return `with ${otherMembers[0].display_name ?? 'someone'}`
+  }
+  if (otherMembers.length === 2) {
+    return `with ${otherMembers[0].display_name ?? 'someone'} and ${otherMembers[1].display_name ?? 'someone'}`
+  }
+  const first = otherMembers[0].display_name ?? 'someone'
+  return `with ${first} and ${otherMembers.length - 1} others`
 }
 
 function toCategorySlug(value: string): CategorySlug {

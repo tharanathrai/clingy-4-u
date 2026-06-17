@@ -7,11 +7,15 @@ export type GumPieceStatus =
   | 'expired'
   | 'turned_down'
 
+export type GumPieceMemberRole = 'creator' | 'invitee'
+export type GumPieceMemberStatus = 'pending' | 'accepted' | 'declined'
+
 export type NotificationType =
   | 'invite_received'
   | 'invite_accepted'
   | 'invite_rejected'
   | 'plan_turned_down'
+  | 'member_declined'
   | 'plan_expiring_soon'
   | 'plan_expired'
   | 'bridge_formed'
@@ -39,10 +43,23 @@ export interface Connection {
   accepted_at: string | null
 }
 
+export interface GumPieceMember {
+  id: string
+  gum_piece_id: string
+  user_id: string
+  role: GumPieceMemberRole
+  status: GumPieceMemberStatus
+  invited_at: string
+  responded_at: string | null
+  display_name?: string
+  username?: string
+  avatar_url?: string | null
+}
+
 export interface GumPiece {
   id: string
   creator_id: string
-  recipient_id: string
+  recipient_id: string | null
   title: string
   category: string
   color_hex: string
@@ -52,6 +69,7 @@ export interface GumPiece {
   expires_at: string
   confirmed_at: string | null
   planned_date: string | null
+  members?: GumPieceMember[]
 }
 
 export interface Bridge {

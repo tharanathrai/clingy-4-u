@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
-import { OTPDisplay } from '../components/confirmation/OTPDisplay.tsx'
+import { OTPDisplay, type AcceptedMember } from '../components/confirmation/OTPDisplay.tsx'
 import { UnwrapCeremony } from '../components/confirmation/UnwrapCeremony.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import {
@@ -20,7 +20,7 @@ import type { Bridge } from '../types/index.ts'
 interface GumPiece {
   id: string
   creator_id: string
-  recipient_id: string
+  recipient_id: string | null
   title: string
   category: string
   status: 'placeholder' | 'active' | 'confirmed' | 'expired' | 'turned_down'
@@ -41,27 +41,19 @@ export default function PieceConfirm() {
   const [draftPostId, setDraftPostId] = useState<string | null>(null)
   const [suggestedPostBody, setSuggestedPostBody] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [creatorName, setCreatorName] = useState('Unknown user')
-  const [recipientName, setRecipientName] = useState('Unknown user')
+  const [acceptedMembers, setAcceptedMembers] = useState<AcceptedMember[]>([])
 
   const handleSessionDeleted = useCallback(async () => {
-    if (!id || !userId) {
-      return
-    }
+    if (!id || !userId) return
 
-    const bridgeRow = await loadBridgeForPiece(id)
+    const bridgeRow = await loadBridgeForPiece(id, userId)
     if (bridgeRow) {
       const draftPost = await loadDraftPostForBridge(bridgeRow.id, userId)
       setDraftPostId(draftPost?.id ?? null)
       setSuggestedPostBody(
         draftPost?.body ??
           (piece
-            ? buildDraftPostBody({
-                creatorName,
-                recipientName,
-                title: piece.title,
-                category: piece.category,
-              })
+            ? buildFallbackDraftBody(acceptedMembers, userId, piece.title, piece.category)
             : null),
       )
       setBridge(bridgeRow)
@@ -70,7 +62,7 @@ export default function PieceConfirm() {
     }
 
     setFlowState('expired')
-  }, [creatorName, id, piece, recipientName, userId])
+  }, [acceptedMembers, id, piece, userId])
 
   const handleBridgeFormedFromSession = useCallback(() => {
     void handleSessionDeleted()
@@ -86,25 +78,24 @@ export default function PieceConfirm() {
   })
 
   const activeSession = liveSession ?? fallbackSession
-  const isInitiator = user ? activeSession?.initiator_id === user.id : false
+
   const partnerName = useMemo(() => {
-    if (!userId || !piece) {
-      return 'your partner'
-    }
-    return userId === piece.creator_id ? recipientName : creatorName
-  }, [creatorName, piece, recipientName, userId])
+    if (!userId) return 'your partner'
+    const others = acceptedMembers.filter((m) => m.id !== userId)
+    if (others.length === 0) return 'the group'
+    if (others.length === 1) return others[0].name
+    return `${others[0].name} and ${others.length - 1} more`
+  }, [acceptedMembers, userId])
+
   const currentUserName = useMemo(() => {
-    if (!userId || !piece) {
-      return 'You'
-    }
-    return userId === piece.creator_id ? creatorName : recipientName
-  }, [creatorName, piece, recipientName, userId])
+    if (!userId) return 'You'
+    return acceptedMembers.find((m) => m.id === userId)?.name ?? 'You'
+  }, [acceptedMembers, userId])
+
   const category = useMemo(() => toCategorySlug(piece?.category), [piece?.category])
 
   const loadData = useCallback(async () => {
-    if (!id || !userId) {
-      return
-    }
+    if (!id || !userId) return
 
     setFlowState('loading')
     setError(null)
@@ -125,47 +116,52 @@ export default function PieceConfirm() {
       return
     }
 
-    if (pieceRow.creator_id !== userId && pieceRow.recipient_id !== userId) {
+    // Auth check via members table
+    const { data: memberRow } = await supabase
+      .from('gum_piece_members')
+      .select('id, status')
+      .eq('gum_piece_id', id)
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!memberRow || memberRow.status !== 'accepted') {
       setError('You do not have access to this plan.')
       return
     }
 
     setPiece(pieceRow as GumPiece)
 
-    const { data: usersRows } = await supabase
-      .from('users')
-      .select('id, display_name')
-      .in('id', [pieceRow.creator_id, pieceRow.recipient_id])
+    // Fetch all accepted members with their names
+    const { data: memberRows } = await supabase
+      .from('gum_piece_members')
+      .select('user_id')
+      .eq('gum_piece_id', id)
+      .eq('status', 'accepted')
 
-    const creator = usersRows?.find((row) => row.id === pieceRow.creator_id)
-    const recipient = usersRows?.find((row) => row.id === pieceRow.recipient_id)
-    if (creator?.display_name) {
-      setCreatorName(creator.display_name)
-    }
-    if (recipient?.display_name) {
-      setRecipientName(recipient.display_name)
+    const memberIds = (memberRows ?? []).map((m) => m.user_id as string)
+    if (memberIds.length > 0) {
+      const { data: userRows } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .in('id', memberIds)
+
+      const members: AcceptedMember[] = (userRows ?? []).map((u) => ({
+        id: u.id as string,
+        name: (u.display_name as string) ?? 'Unknown',
+      }))
+      setAcceptedMembers(members)
     }
 
-    await startOrJoinSession(
-      id,
-      false,
-      setFallbackSession,
-      setFlowState,
-      setError,
-    )
+    await startOrJoinSession(id, false, setFallbackSession, setFlowState, setError)
   }, [id, userId])
 
   useEffect(() => {
-    if (authLoading || !userId || !id) {
-      return
-    }
+    if (authLoading || !userId || !id) return
     void loadData()
   }, [authLoading, id, loadData, userId])
 
   useEffect(() => {
-    if (sessionError) {
-      setError(sessionError)
-    }
+    if (sessionError) setError(sessionError)
   }, [sessionError])
 
   useEffect(() => {
@@ -175,28 +171,20 @@ export default function PieceConfirm() {
   }, [flowState, liveSession])
 
   useEffect(() => {
-    if (!id || flowState !== 'waiting' || !activeSession) {
-      return
-    }
+    if (!id || flowState !== 'waiting' || !activeSession) return
 
     let cancelled = false
 
     const checkBridgeFallback = async () => {
-      const bridgeRow = await loadBridgeForPiece(id)
+      if (!userId) return
+      const bridgeRow = await loadBridgeForPiece(id, userId)
       if (!cancelled && bridgeRow) {
-        const draftPost = userId
-          ? await loadDraftPostForBridge(bridgeRow.id, userId)
-          : null
+        const draftPost = userId ? await loadDraftPostForBridge(bridgeRow.id, userId) : null
         setDraftPostId(draftPost?.id ?? null)
         setSuggestedPostBody(
           draftPost?.body ??
             (piece
-              ? buildDraftPostBody({
-                  creatorName,
-                  recipientName,
-                  title: piece.title,
-                  category: piece.category,
-                })
+              ? buildFallbackDraftBody(acceptedMembers, userId, piece.title, piece.category)
               : null),
         )
         setBridge(bridgeRow)
@@ -213,18 +201,14 @@ export default function PieceConfirm() {
       cancelled = true
       window.clearInterval(intervalId)
     }
-  }, [activeSession, creatorName, flowState, id, piece, recipientName, userId])
+  }, [acceptedMembers, activeSession, flowState, id, piece, userId])
 
   const handleStartOver = useCallback(async () => {
-    if (!id) {
-      return
-    }
+    if (!id) return
     await startOrJoinSession(id, true, setFallbackSession, setFlowState, setError)
   }, [id])
 
-  if (!id) {
-    return <Navigate to="/home" replace />
-  }
+  if (!id) return <Navigate to="/home" replace />
 
   if (authLoading || flowState === 'loading' || sessionLoading) {
     return (
@@ -238,9 +222,7 @@ export default function PieceConfirm() {
     )
   }
 
-  if (!user || !piece) {
-    return <Navigate to="/home" replace />
-  }
+  if (!user || !piece) return <Navigate to="/home" replace />
 
   if (flowState === 'bridge_formed' && bridge) {
     return (
@@ -292,25 +274,20 @@ export default function PieceConfirm() {
           <OTPDisplay
             code={activeSession.otp_code}
             expiresAt={activeSession.expires_at}
-            confirmed={{
-              initiator: activeSession.initiator_confirmed,
-              responder: activeSession.responder_confirmed,
-            }}
-            isInitiator={Boolean(isInitiator)}
+            confirmedMemberIds={activeSession.confirmed_member_ids ?? []}
+            acceptedMembers={
+              acceptedMembers.length > 0
+                ? acceptedMembers
+                : [{ id: userId!, name: currentUserName }, { id: '__partner__', name: partnerName }]
+            }
+            currentUserId={userId!}
             sessionId={activeSession.id}
-            partnerName={partnerName}
-            currentUserName={currentUserName}
             onBridgeFormed={(nextBridge, nextDraftPostId, nextDraftPostBody) => {
               setDraftPostId(nextDraftPostId)
               setSuggestedPostBody(
                 nextDraftPostBody ??
                   (piece
-                    ? buildDraftPostBody({
-                        creatorName,
-                        recipientName,
-                        title: piece.title,
-                        category: piece.category,
-                      })
+                    ? buildFallbackDraftBody(acceptedMembers, userId!, piece.title, piece.category)
                     : null),
               )
               setBridge(nextBridge)
@@ -337,21 +314,14 @@ async function startOrJoinSession(
   const nowIso = new Date().toISOString()
 
   if (!forceStart) {
-    const { data: existingSession, error: existingError } = await supabase
+    const { data: existingSession } = await supabase
       .from('confirmation_sessions')
-      .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
-      )
+      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at, created_at')
       .eq('gum_piece_id', gumPieceId)
       .gt('expires_at', nowIso)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-
-    if (existingError) {
-      // If client-side RLS blocks this query, the edge function can still
-      // return an active session, so continue instead of hard-failing.
-    }
 
     if (existingSession) {
       setFallbackSession?.(existingSession as ConfirmationSession)
@@ -361,9 +331,7 @@ async function startOrJoinSession(
   }
 
   const { data, error } = await supabase.functions.invoke('start-confirmation', {
-    body: {
-      gum_piece_id: gumPieceId,
-    },
+    body: { gum_piece_id: gumPieceId },
   })
   const payload = (data ?? null) as
     | {
@@ -371,6 +339,7 @@ async function startOrJoinSession(
         otp_code?: string
         expires_at?: string
         initiator_id?: string
+        confirmed_member_ids?: string[]
         error?: string
       }
     | null
@@ -393,25 +362,25 @@ async function startOrJoinSession(
     gum_piece_id: gumPieceId,
     otp_code: payload.otp_code,
     initiator_id: payload.initiator_id ?? '',
-    initiator_confirmed: false,
-    responder_confirmed: false,
+    confirmed_member_ids: payload.confirmed_member_ids ?? [],
     expires_at: payload.expires_at,
     created_at: nowIso,
   })
   setFlowState?.('waiting')
 }
 
-async function loadBridgeForPiece(gumPieceId: string): Promise<Bridge | null> {
+async function loadBridgeForPiece(gumPieceId: string, userId: string): Promise<Bridge | null> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    // Find a bridge for this piece that involves the current user
     const { data } = await supabase
       .from('bridges')
       .select('*')
       .eq('gum_piece_id', gumPieceId)
+      .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+      .limit(1)
       .maybeSingle()
 
-    if (data) {
-      return data as Bridge
-    }
+    if (data) return data as Bridge
 
     await sleep(250)
   }
@@ -434,14 +403,25 @@ async function loadDraftPostForBridge(
       .limit(1)
       .maybeSingle<{ id: string; body: string }>()
 
-    if (data?.id) {
-      return data
-    }
+    if (data?.id) return data
 
     await sleep(250)
   }
 
   return null
+}
+
+function buildFallbackDraftBody(
+  acceptedMembers: AcceptedMember[],
+  userId: string,
+  title: string,
+  category: string,
+): string {
+  const currentUser = acceptedMembers.find((m) => m.id === userId)
+  const others = acceptedMembers.filter((m) => m.id !== userId)
+  const creatorName = currentUser?.name ?? 'You'
+  const recipientName = others[0]?.name ?? 'someone'
+  return buildDraftPostBody({ creatorName, recipientName, title, category })
 }
 
 function sleep(durationMs: number): Promise<void> {

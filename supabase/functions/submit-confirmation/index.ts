@@ -16,15 +16,13 @@ interface ConfirmationSessionRow {
   gum_piece_id: string
   otp_code: string
   initiator_id: string
-  initiator_confirmed: boolean
-  responder_confirmed: boolean
+  confirmed_member_ids: string[]
   expires_at: string
 }
 
 interface GumPieceRow {
   id: string
   creator_id: string
-  recipient_id: string
   title: string
   category: string
   color_hex: string
@@ -37,11 +35,6 @@ interface BridgeRow {
   category: string
   color_hex: string
   formed_at: string
-}
-
-interface UserNameRow {
-  id: string
-  display_name: string
 }
 
 Deno.serve(async (request) => {
@@ -90,9 +83,7 @@ Deno.serve(async (request) => {
 
     const { data: session, error: sessionError } = await serviceClient
       .from('confirmation_sessions')
-      .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at',
-      )
+      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at')
       .eq('id', sessionId)
       .maybeSingle<ConfirmationSessionRow>()
 
@@ -111,7 +102,7 @@ Deno.serve(async (request) => {
 
     const { data: piece, error: pieceError } = await serviceClient
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, title, category, color_hex, status')
+      .select('id, creator_id, title, category, color_hex, status')
       .eq('id', session.gum_piece_id)
       .maybeSingle<GumPieceRow>()
 
@@ -124,32 +115,33 @@ Deno.serve(async (request) => {
     if (piece.status !== 'active' && piece.status !== 'confirmed') {
       return jsonResponse(400, { error: 'invalid_status' })
     }
-    if (piece.creator_id !== userId && piece.recipient_id !== userId) {
+
+    // Authorization: caller must be an accepted member
+    const { data: memberRow, error: memberError } = await serviceClient
+      .from('gum_piece_members')
+      .select('id, status')
+      .eq('gum_piece_id', piece.id)
+      .eq('user_id', userId)
+      .maybeSingle<{ id: string; status: string }>()
+
+    if (memberError) {
+      return jsonResponse(500, { error: memberError.message })
+    }
+    if (!memberRow || memberRow.status !== 'accepted') {
       return jsonResponse(403, { error: 'forbidden' })
     }
 
-    const isInitiator = userId === session.initiator_id
-    if (!isInitiator && userId !== piece.creator_id && userId !== piece.recipient_id) {
-      return jsonResponse(403, { error: 'forbidden' })
-    }
-
-    const updatePayload: {
-      initiator_confirmed?: boolean
-      responder_confirmed?: boolean
-    } = {}
-    if (isInitiator) {
-      updatePayload.initiator_confirmed = true
-    } else {
-      updatePayload.responder_confirmed = true
-    }
+    // Add this user to confirmed_member_ids if not already present
+    const currentConfirmed = session.confirmed_member_ids ?? []
+    const updatedConfirmed = currentConfirmed.includes(userId)
+      ? currentConfirmed
+      : [...currentConfirmed, userId]
 
     const { data: updatedSession, error: updateSessionError } = await serviceClient
       .from('confirmation_sessions')
-      .update(updatePayload)
+      .update({ confirmed_member_ids: updatedConfirmed })
       .eq('id', session.id)
-      .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at',
-      )
+      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at')
       .single<ConfirmationSessionRow>()
 
     if (updateSessionError || !updatedSession) {
@@ -158,132 +150,165 @@ Deno.serve(async (request) => {
       })
     }
 
-    const bridgeShouldForm =
-      updatedSession.initiator_confirmed &&
-      updatedSession.responder_confirmed &&
-      new Date(updatedSession.expires_at).getTime() > Date.now()
+    // Fetch all accepted members for this piece
+    const { data: acceptedMembers, error: membersError } = await serviceClient
+      .from('gum_piece_members')
+      .select('user_id')
+      .eq('gum_piece_id', piece.id)
+      .eq('status', 'accepted')
 
-    if (!bridgeShouldForm) {
-      return jsonResponse(200, { success: true, bridge_formed: false })
+    if (membersError) {
+      return jsonResponse(500, { error: membersError.message })
     }
 
-    const sortedPair = [piece.creator_id, piece.recipient_id].sort()
-    const userAId = sortedPair[0]
-    const userBId = sortedPair[1]
+    const acceptedMemberIds = (acceptedMembers ?? []).map((m: { user_id: string }) => m.user_id)
+    const confirmedIds = updatedSession.confirmed_member_ids ?? []
+    const sessionStillValid = new Date(updatedSession.expires_at).getTime() > Date.now()
 
-    const { data: existingBridge, error: existingBridgeError } = await serviceClient
+    // Bridge forms when all accepted members have confirmed and session is still valid
+    const allConfirmed =
+      sessionStillValid &&
+      acceptedMemberIds.length > 0 &&
+      acceptedMemberIds.every((id) => confirmedIds.includes(id))
+
+    if (!allConfirmed) {
+      return jsonResponse(200, { success: true, bridge_formed: false, confirmed_member_ids: confirmedIds })
+    }
+
+    // Check if bridges already formed for this piece
+    const { data: existingBridges, error: existingBridgesError } = await serviceClient
       .from('bridges')
       .select('id, activity_title, category, color_hex, formed_at')
       .eq('gum_piece_id', piece.id)
-      .maybeSingle<BridgeRow>()
 
-    if (existingBridgeError) {
-      return jsonResponse(500, { error: existingBridgeError.message })
+    if (existingBridgesError) {
+      return jsonResponse(500, { error: existingBridgesError.message })
     }
 
-    let bridge = existingBridge
+    let bridges = existingBridges as BridgeRow[] | null
 
-    if (!bridge) {
-      const { data: updatedPiece, error: updatePieceError } = await serviceClient
+    if (!bridges || bridges.length === 0) {
+      // Mark piece as confirmed
+      const { error: updatePieceError } = await serviceClient
         .from('gum_pieces')
-        .update({
-          status: 'confirmed',
-          confirmed_at: nowIso,
-        })
+        .update({ status: 'confirmed', confirmed_at: nowIso })
         .eq('id', piece.id)
-        .select('id')
-        .single()
 
-      if (updatePieceError || !updatedPiece) {
-        return jsonResponse(500, {
-          error: updatePieceError?.message ?? 'Failed to update gum piece.',
-        })
+      if (updatePieceError) {
+        return jsonResponse(500, { error: updatePieceError.message })
       }
 
-      const { data: createdBridge, error: createBridgeError } = await serviceClient
-        .from('bridges')
-        .insert({
-          gum_piece_id: piece.id,
-          user_a_id: userAId,
-          user_b_id: userBId,
-          category: piece.category,
-          color_hex: piece.color_hex,
-          activity_title: piece.title,
-          formed_at: nowIso,
-        })
-        .select('id, activity_title, category, color_hex, formed_at')
-        .single<BridgeRow>()
+      // Create all N-choose-2 bridge pairs
+      const bridgeRows = []
+      for (let i = 0; i < acceptedMemberIds.length; i++) {
+        for (let j = i + 1; j < acceptedMemberIds.length; j++) {
+          const sorted = [acceptedMemberIds[i], acceptedMemberIds[j]].sort()
+          bridgeRows.push({
+            gum_piece_id: piece.id,
+            user_a_id: sorted[0],
+            user_b_id: sorted[1],
+            category: piece.category,
+            color_hex: piece.color_hex,
+            activity_title: piece.title,
+            formed_at: nowIso,
+          })
+        }
+      }
 
-      if (createBridgeError || !createdBridge) {
+      const { data: createdBridges, error: createBridgesError } = await serviceClient
+        .from('bridges')
+        .insert(bridgeRows)
+        .select('id, activity_title, category, color_hex, formed_at')
+
+      if (createBridgesError || !createdBridges) {
+        // Retry read in case of race condition
         const retry = await serviceClient
           .from('bridges')
           .select('id, activity_title, category, color_hex, formed_at')
           .eq('gum_piece_id', piece.id)
-          .maybeSingle<BridgeRow>()
-        if (retry.error || !retry.data) {
+
+        if (retry.error || !retry.data || retry.data.length === 0) {
           return jsonResponse(500, {
-            error:
-              createBridgeError?.message ??
-              retry.error?.message ??
-              'Failed to create bridge.',
+            error: createBridgesError?.message ?? retry.error?.message ?? 'Failed to create bridges.',
           })
         }
-        bridge = retry.data
+        bridges = retry.data as BridgeRow[]
       } else {
-        bridge = createdBridge
+        bridges = createdBridges as BridgeRow[]
       }
 
-      const bridgeId = bridge.id
-      const notifications = [
-        {
-          user_id: piece.creator_id,
+      // Notify all accepted members
+      const notifications = acceptedMemberIds.flatMap((memberId) =>
+        (bridges ?? []).map((bridge) => ({
+          user_id: memberId,
           type: 'bridge_formed',
-          reference_id: bridgeId,
+          reference_id: bridge.id,
           read: false,
-        },
-        {
-          user_id: piece.recipient_id,
-          type: 'bridge_formed',
-          reference_id: bridgeId,
-          read: false,
-        },
-      ]
+        }))
+      )
 
+      // Deduplicate notifications (each user gets one bridge_formed per bridge)
       const { error: notificationError } = await serviceClient
         .from('notifications')
         .insert(notifications)
+
       if (notificationError) {
         return jsonResponse(500, { error: notificationError.message })
       }
+
+      // Create draft posts: each member gets a draft post per bridge they're in
+      await ensureDraftPosts({
+        serviceClient,
+        bridges: bridges ?? [],
+        acceptedMemberIds,
+        callingUserId: userId,
+        creatorId: piece.creator_id,
+        category: piece.category,
+        title: piece.title,
+      })
     }
 
-    const draftPost = await ensureDraftPosts({
-      serviceClient,
-      bridgeId: bridge.id,
-      callingUserId: userId,
-      creatorId: piece.creator_id,
-      recipientId: piece.recipient_id,
-      category: piece.category,
-      title: piece.title,
-    })
-    if (!draftPost) {
-      return jsonResponse(500, { error: 'Failed to create draft post.' })
-    }
+    // Find the bridge between the caller and another member (for the draft post response)
+    const callerBridge = (bridges ?? []).find(
+      (b) => b.id && (
+        (acceptedMemberIds.includes(userId))
+      )
+    ) ?? bridges?.[0]
 
     const { error: deleteSessionError } = await serviceClient
       .from('confirmation_sessions')
       .delete()
       .eq('id', session.id)
+
     if (deleteSessionError) {
       return jsonResponse(500, { error: deleteSessionError.message })
+    }
+
+    // Find caller's draft post
+    let draftPostId: string | null = null
+    let draftPostBody: string | null = null
+
+    if (callerBridge) {
+      const { data: draftPost } = await serviceClient
+        .from('posts')
+        .select('id, body')
+        .eq('bridge_id', callerBridge.id)
+        .eq('author_id', userId)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<{ id: string; body: string }>()
+
+      draftPostId = draftPost?.id ?? null
+      draftPostBody = draftPost?.body ?? null
     }
 
     return jsonResponse(200, {
       success: true,
       bridge_formed: true,
-      bridge,
-      draft_post_id: draftPost.id,
-      draft_post_body: draftPost.body,
+      bridges,
+      draft_post_id: draftPostId,
+      draft_post_body: draftPostBody,
     })
   } catch (error) {
     return jsonResponse(500, {
@@ -301,59 +326,44 @@ function jsonResponse(status: number, body: unknown): Response {
 
 async function ensureDraftPosts(params: {
   serviceClient: ReturnType<typeof createClient>
-  bridgeId: string
+  bridges: BridgeRow[]
+  acceptedMemberIds: string[]
   callingUserId: string
   creatorId: string
-  recipientId: string
   category: string
   title: string
-}): Promise<{ id: string; body: string } | null> {
-  const { data: users, error: usersError } = await params.serviceClient
+}): Promise<void> {
+  const { data: users } = await params.serviceClient
     .from('users')
     .select('id, display_name')
-    .in('id', [params.creatorId, params.recipientId])
+    .in('id', params.acceptedMemberIds)
 
-  if (usersError) {
-    return null
-  }
+  const userRows = (users ?? []) as { id: string; display_name: string }[]
+  const nameById = new Map(userRows.map((u) => [u.id, u.display_name]))
 
-  const userRows = (users ?? []) as UserNameRow[]
-  const creatorName =
-    userRows.find((user) => user.id === params.creatorId)?.display_name ?? 'Unknown user'
-  const recipientName =
-    userRows.find((user) => user.id === params.recipientId)?.display_name ?? 'someone'
+  // For each bridge, create a draft post for each of the two participants
+  for (const bridge of params.bridges) {
+    const participants = [bridge.user_a_id, bridge.user_b_id]
+    for (const authorId of participants) {
+      const partnerId = participants.find((id) => id !== authorId) ?? participants[0]
+      const authorName = nameById.get(authorId) ?? 'Unknown'
+      const partnerName = nameById.get(partnerId) ?? 'someone'
 
-  const body = buildDraftBody({
-    firstName: creatorName,
-    secondName: recipientName,
-    title: params.title,
-    category: params.category,
-  })
+      const body = buildDraftBody({
+        firstName: authorName,
+        secondName: partnerName,
+        title: params.title,
+        category: params.category,
+      })
 
-  const participantIds = [params.creatorId, params.recipientId]
-  const draftIds = new Map<string, string>()
-
-  for (const participantId of participantIds) {
-    const draftId = await ensureDraftPostForUser({
-      serviceClient: params.serviceClient,
-      bridgeId: params.bridgeId,
-      authorId: participantId,
-      body,
-    })
-
-    if (!draftId) {
-      return null
+      await ensureDraftPostForUser({
+        serviceClient: params.serviceClient,
+        bridgeId: bridge.id,
+        authorId,
+        body,
+      })
     }
-
-    draftIds.set(participantId, draftId)
   }
-
-  const draftId = draftIds.get(params.callingUserId)
-  if (!draftId) {
-    return null
-  }
-
-  return { id: draftId, body }
 }
 
 async function ensureDraftPostForUser(params: {
@@ -362,7 +372,7 @@ async function ensureDraftPostForUser(params: {
   authorId: string
   body: string
 }): Promise<string | null> {
-  const { data: existingDraft, error: existingDraftError } = await params.serviceClient
+  const { data: existingDraft } = await params.serviceClient
     .from('posts')
     .select('id')
     .eq('bridge_id', params.bridgeId)
@@ -372,14 +382,11 @@ async function ensureDraftPostForUser(params: {
     .limit(1)
     .maybeSingle<{ id: string }>()
 
-  if (existingDraftError) {
-    return null
-  }
   if (existingDraft?.id) {
     return existingDraft.id
   }
 
-  const { data: createdPost, error: createPostError } = await params.serviceClient
+  const { data: createdPost } = await params.serviceClient
     .from('posts')
     .insert({
       bridge_id: params.bridgeId,
@@ -390,11 +397,7 @@ async function ensureDraftPostForUser(params: {
     .select('id')
     .single<{ id: string }>()
 
-  if (createPostError || !createdPost) {
-    return null
-  }
-
-  return createdPost.id
+  return createdPost?.id ?? null
 }
 
 function buildDraftBody(params: {

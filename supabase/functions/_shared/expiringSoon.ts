@@ -25,8 +25,7 @@ export function isActivePieceExpiringSoon(
 
 export interface PieceForExpiringSoon {
   id: string
-  creator_id: string
-  recipient_id: string
+  member_ids: string[]
 }
 
 export interface ExistingExpiringNotification {
@@ -55,7 +54,7 @@ export function buildExpiringSoonNotificationRows(
   const rows: ExpiringSoonNotificationRow[] = []
 
   for (const piece of pieces) {
-    for (const userId of [piece.creator_id, piece.recipient_id]) {
+    for (const userId of piece.member_ids) {
       const key = `${userId}:${piece.id}`
       if (existingKeys.has(key)) {
         continue

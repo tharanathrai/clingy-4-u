@@ -3,17 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase.ts'
 import type { Bridge } from '../../types/index.ts'
 
+export interface AcceptedMember {
+  id: string
+  name: string
+}
+
 interface OTPDisplayProps {
   code: string
   expiresAt: string
-  confirmed: {
-    initiator: boolean
-    responder: boolean
-  }
-  isInitiator: boolean
+  confirmedMemberIds: string[]
+  acceptedMembers: AcceptedMember[]
+  currentUserId: string
   sessionId: string
-  partnerName: string
-  currentUserName: string
   onBridgeFormed: (
     bridge: Bridge,
     draftPostId: string | null,
@@ -29,11 +30,10 @@ const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export function OTPDisplay({
   code,
   expiresAt,
-  confirmed,
-  isInitiator,
+  confirmedMemberIds,
+  acceptedMembers,
+  currentUserId,
   sessionId,
-  partnerName,
-  currentUserName,
   onBridgeFormed,
   onSessionExpired,
   onStartOver,
@@ -66,17 +66,11 @@ export function OTPDisplay({
     }
   }, [expiresAt])
 
-  const hasConfirmed =
-    localConfirmed ||
-    (isInitiator ? confirmed.initiator : confirmed.responder)
-  const currentUserConfirmed = hasConfirmed
-  const partnerConfirmed = isInitiator ? confirmed.responder : confirmed.initiator
+  const hasConfirmed = localConfirmed || confirmedMemberIds.includes(currentUserId)
   const isWarning = secondsLeft <= 60
 
   const handleConfirm = async () => {
-    if (hasConfirmed || submitting) {
-      return
-    }
+    if (hasConfirmed || submitting) return
 
     setSubmitting(true)
     setError(null)
@@ -105,7 +99,7 @@ export function OTPDisplay({
       | {
           error?: string
           bridge_formed?: boolean
-          bridge?: Bridge
+          bridges?: Bridge[]
           draft_post_id?: string
           draft_post_body?: string
         }
@@ -123,9 +117,10 @@ export function OTPDisplay({
       return
     }
 
-    if (payload?.bridge_formed && payload.bridge) {
+    if (payload?.bridge_formed && payload.bridges && payload.bridges.length > 0) {
+      const bridge = payload.bridges[0]
       onBridgeFormed(
-        payload.bridge,
+        bridge,
         payload.draft_post_id ?? null,
         payload.draft_post_body ?? null,
       )
@@ -136,13 +131,17 @@ export function OTPDisplay({
     setSubmitting(false)
   }
 
+  const memberLabel = acceptedMembers.length <= 2
+    ? `Show this to ${acceptedMembers.filter(m => m.id !== currentUserId).map(m => m.name).join(' and ')} - everyone tap confirm`
+    : `Share this code — everyone tap confirm`
+
+  const gridCols = acceptedMembers.length <= 2 ? 'grid-cols-2' : acceptedMembers.length === 3 ? 'grid-cols-3' : 'grid-cols-2'
+
   return (
     <section className="relative flex flex-col rounded-lg bg-surface px-5 py-7 text-text shadow-card">
       <div className="otp-hero-glow" aria-hidden />
       <div className="relative z-10">
-        <p className="text-center text-sm text-text-2">
-          Show this to {partnerName} - both of you tap confirm
-        </p>
+        <p className="text-center text-sm text-text-2">{memberLabel}</p>
         <p className="otp-code-text mt-4 text-center">{code}</p>
         <p
           className={`mt-2 text-center text-sm ${isWarning ? 'text-savor' : 'text-text-2'}`}
@@ -150,15 +149,14 @@ export function OTPDisplay({
           {secondsLeft > 0 ? `${secondsLeft}s remaining` : 'Expired'}
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <AvatarChip
-            label={currentUserName}
-            confirmed={currentUserConfirmed}
-          />
-          <AvatarChip
-            label={partnerName}
-            confirmed={partnerConfirmed}
-          />
+        <div className={`mt-6 grid ${gridCols} gap-3`}>
+          {acceptedMembers.map((member) => (
+            <AvatarChip
+              key={member.id}
+              label={member.name}
+              confirmed={member.id === currentUserId ? hasConfirmed : confirmedMemberIds.includes(member.id)}
+            />
+          ))}
         </div>
 
         {error ? <p className="mt-5 text-center text-sm text-playful">{error}</p> : null}

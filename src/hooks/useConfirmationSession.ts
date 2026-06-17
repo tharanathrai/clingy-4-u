@@ -9,8 +9,7 @@ export interface ConfirmationSession {
   gum_piece_id: string
   otp_code: string
   initiator_id: string
-  initiator_confirmed: boolean
-  responder_confirmed: boolean
+  confirmed_member_ids: string[]
   expires_at: string
   created_at: string
 }
@@ -30,7 +29,7 @@ async function fetchConfirmationSession(gumPieceId: string): Promise<Confirmatio
   const { data, error: queryError } = await supabase
     .from('confirmation_sessions')
     .select(
-      'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
+      'id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at, created_at',
     )
     .eq('gum_piece_id', gumPieceId)
     .gt('expires_at', new Date().toISOString())

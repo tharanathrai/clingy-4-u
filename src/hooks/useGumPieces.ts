@@ -6,11 +6,12 @@ import { queryKeys } from '../lib/queryKeys.ts'
 import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
+import type { GumPieceMember } from '../types/index.ts'
 
 export interface GumPiece {
   id: string
   creator_id: string
-  recipient_id: string
+  recipient_id: string | null
   title: string
   category: string
   color_hex: string
@@ -20,8 +21,7 @@ export interface GumPiece {
   expires_at: string
   confirmed_at: string | null
   planned_date: string | null
-  creator_display_name?: string
-  recipient_display_name?: string
+  members: GumPieceMember[]
 }
 
 interface UseGumPiecesResult {
@@ -32,39 +32,84 @@ interface UseGumPiecesResult {
 }
 
 async function fetchGumPieces(userId: string): Promise<GumPiece[]> {
-  const { data, error: queryError } = await supabase
+  // Step 1: Get piece IDs where this user is a member
+  const { data: memberRows, error: memberError } = await supabase
+    .from('gum_piece_members')
+    .select('gum_piece_id')
+    .eq('user_id', userId)
+
+  if (memberError) throw new Error(memberError.message)
+
+  const pieceIds = (memberRows ?? []).map((r) => r.gum_piece_id as string)
+  if (pieceIds.length === 0) return []
+
+  // Step 2: Fetch active/placeholder pieces from those IDs
+  const { data: rawPieces, error: piecesError } = await supabase
     .from('gum_pieces')
     .select('*')
+    .in('id', pieceIds)
     .in('status', ['placeholder', 'active'])
-    .or(`creator_id.eq.${userId},recipient_id.eq.${userId}`)
     .order('created_at', { ascending: false })
 
-  if (queryError) {
-    throw new Error(queryError.message)
-  }
+  if (piecesError) throw new Error(piecesError.message)
+  if (!rawPieces || rawPieces.length === 0) return []
 
-  const rawPieces = (data ?? []) as GumPiece[]
-  const participantIds = Array.from(
-    new Set(rawPieces.flatMap((piece) => [piece.creator_id, piece.recipient_id])),
+  const activePieceIds = rawPieces.map((p) => p.id as string)
+
+  // Step 3: Fetch all members for those pieces with user profiles
+  const { data: allMemberRows, error: allMembersError } = await supabase
+    .from('gum_piece_members')
+    .select('id, gum_piece_id, user_id, role, status, invited_at, responded_at')
+    .in('gum_piece_id', activePieceIds)
+
+  if (allMembersError) throw new Error(allMembersError.message)
+
+  const memberUserIds = Array.from(
+    new Set((allMemberRows ?? []).map((m) => m.user_id as string)),
   )
 
   let nameById = new Map<string, string>()
-  if (participantIds.length > 0) {
+  let usernameById = new Map<string, string>()
+  let avatarById = new Map<string, string | null>()
+
+  if (memberUserIds.length > 0) {
     const { data: userRows } = await supabase
       .from('users')
-      .select('id, display_name')
-      .in('id', participantIds)
+      .select('id, display_name, username, avatar_url')
+      .in('id', memberUserIds)
 
-    nameById = new Map(
-      (userRows ?? []).map((row) => [row.id as string, row.display_name as string]),
-    )
+    for (const row of userRows ?? []) {
+      nameById.set(row.id as string, row.display_name as string)
+      usernameById.set(row.id as string, row.username as string)
+      avatarById.set(row.id as string, row.avatar_url as string | null)
+    }
+  }
+
+  // Group members by piece
+  const membersByPiece = new Map<string, GumPieceMember[]>()
+  for (const m of allMemberRows ?? []) {
+    const pieceId = m.gum_piece_id as string
+    const list = membersByPiece.get(pieceId) ?? []
+    list.push({
+      id: m.id as string,
+      gum_piece_id: pieceId,
+      user_id: m.user_id as string,
+      role: m.role as GumPieceMember['role'],
+      status: m.status as GumPieceMember['status'],
+      invited_at: m.invited_at as string,
+      responded_at: m.responded_at as string | null,
+      display_name: nameById.get(m.user_id as string),
+      username: usernameById.get(m.user_id as string),
+      avatar_url: avatarById.get(m.user_id as string),
+    })
+    membersByPiece.set(pieceId, list)
   }
 
   return rawPieces.map((piece) => ({
     ...piece,
-    creator_display_name: nameById.get(piece.creator_id),
-    recipient_display_name: nameById.get(piece.recipient_id),
-  }))
+    recipient_id: piece.recipient_id ?? null,
+    members: membersByPiece.get(piece.id as string) ?? [],
+  })) as GumPiece[]
 }
 
 export function useGumPieces(): UseGumPiecesResult {
@@ -86,6 +131,11 @@ export function useGumPieces(): UseGumPiecesResult {
       {
         event: '*',
         table: 'gum_pieces',
+        callback: () => { debouncedInvalidateQueries(queryClient, qk) },
+      },
+      {
+        event: '*',
+        table: 'gum_piece_members',
         callback: () => { debouncedInvalidateQueries(queryClient, qk) },
       },
     ])

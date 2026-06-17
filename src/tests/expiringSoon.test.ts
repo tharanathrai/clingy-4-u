@@ -47,8 +47,7 @@ describe('isActivePieceExpiringSoon', () => {
 describe('buildExpiringSoonNotificationRows', () => {
   const piece = {
     id: 'piece-1',
-    creator_id: 'user-a',
-    recipient_id: 'user-b',
+    member_ids: ['user-a', 'user-b'],
   }
 
   it('creates one notification per user per piece', () => {

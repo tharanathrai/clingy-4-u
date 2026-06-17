@@ -12,8 +12,6 @@ interface StartConfirmationBody {
 
 interface GumPieceRow {
   id: string
-  creator_id: string
-  recipient_id: string
   status: 'placeholder' | 'active' | 'confirmed' | 'expired' | 'turned_down'
 }
 
@@ -22,8 +20,7 @@ interface ConfirmationSessionRow {
   gum_piece_id: string
   otp_code: string
   initiator_id: string
-  initiator_confirmed: boolean
-  responder_confirmed: boolean
+  confirmed_member_ids: string[]
   expires_at: string
   created_at: string
 }
@@ -68,32 +65,39 @@ Deno.serve(async (request) => {
 
     const { data: piece, error: pieceError } = await serviceClient
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, status')
+      .select('id, status')
       .eq('id', gumPieceId)
       .maybeSingle<GumPieceRow>()
 
     if (pieceError) {
       return jsonResponse(500, { error: pieceError.message })
     }
-
     if (!piece) {
       return jsonResponse(404, { error: 'gum_piece_not_found' })
     }
-
     if (piece.status !== 'active') {
       return jsonResponse(400, { error: 'invalid_status' })
     }
 
-    if (piece.creator_id !== userId && piece.recipient_id !== userId) {
+    // Authorization: caller must be an accepted member
+    const { data: memberRow, error: memberError } = await serviceClient
+      .from('gum_piece_members')
+      .select('id, status')
+      .eq('gum_piece_id', gumPieceId)
+      .eq('user_id', userId)
+      .maybeSingle<{ id: string; status: string }>()
+
+    if (memberError) {
+      return jsonResponse(500, { error: memberError.message })
+    }
+    if (!memberRow || memberRow.status !== 'accepted') {
       return jsonResponse(403, { error: 'forbidden' })
     }
 
     const nowIso = new Date().toISOString()
     const existingSessionsResult = await serviceClient
       .from('confirmation_sessions')
-      .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
-      )
+      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at, created_at')
       .eq('gum_piece_id', gumPieceId)
       .gt('expires_at', nowIso)
       .order('created_at', { ascending: true })
@@ -106,7 +110,7 @@ Deno.serve(async (request) => {
     if (existingSessions.length > 0) {
       const canonicalSession = existingSessions[0]
       if (existingSessions.length > 1) {
-        const duplicateIds = existingSessions.slice(1).map((session) => session.id)
+        const duplicateIds = existingSessions.slice(1).map((s) => s.id)
         const { error: dedupeError } = await serviceClient
           .from('confirmation_sessions')
           .delete()
@@ -116,11 +120,24 @@ Deno.serve(async (request) => {
         }
       }
 
+      // If caller not yet in confirmed_member_ids, add them
+      if (!canonicalSession.confirmed_member_ids.includes(userId)) {
+        const updatedIds = [...canonicalSession.confirmed_member_ids, userId]
+        const { error: updateError } = await serviceClient
+          .from('confirmation_sessions')
+          .update({ confirmed_member_ids: updatedIds })
+          .eq('id', canonicalSession.id)
+        if (updateError) {
+          return jsonResponse(500, { error: updateError.message })
+        }
+      }
+
       return jsonResponse(200, {
         session_id: canonicalSession.id,
         otp_code: canonicalSession.otp_code,
         expires_at: canonicalSession.expires_at,
         initiator_id: canonicalSession.initiator_id,
+        confirmed_member_ids: canonicalSession.confirmed_member_ids,
       })
     }
 
@@ -135,11 +152,10 @@ Deno.serve(async (request) => {
         gum_piece_id: gumPieceId,
         otp_code: otpCode,
         initiator_id: userId,
-        initiator_confirmed: true,
-        responder_confirmed: false,
+        confirmed_member_ids: [userId],
         expires_at: expiresAt,
       })
-      .select('id, otp_code, expires_at, initiator_id, created_at')
+      .select('id, otp_code, expires_at, initiator_id, confirmed_member_ids, created_at')
       .single()
 
     if (createSessionError || !createdSession) {
@@ -148,11 +164,10 @@ Deno.serve(async (request) => {
       })
     }
 
+    // Deduplicate in case of race condition
     const activeSessionsResult = await serviceClient
       .from('confirmation_sessions')
-      .select(
-        'id, gum_piece_id, otp_code, initiator_id, initiator_confirmed, responder_confirmed, expires_at, created_at',
-      )
+      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at, created_at')
       .eq('gum_piece_id', gumPieceId)
       .gt('expires_at', nowIso)
       .order('created_at', { ascending: true })
@@ -168,7 +183,7 @@ Deno.serve(async (request) => {
     }
 
     if (activeSessions.length > 1) {
-      const duplicateIds = activeSessions.slice(1).map((session) => session.id)
+      const duplicateIds = activeSessions.slice(1).map((s) => s.id)
       const { error: dedupeError } = await serviceClient
         .from('confirmation_sessions')
         .delete()
@@ -183,6 +198,7 @@ Deno.serve(async (request) => {
       otp_code: canonicalSession.otp_code,
       expires_at: canonicalSession.expires_at,
       initiator_id: canonicalSession.initiator_id,
+      confirmed_member_ids: canonicalSession.confirmed_member_ids,
     })
   } catch (error) {
     return jsonResponse(500, {
