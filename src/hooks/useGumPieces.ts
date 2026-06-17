@@ -19,6 +19,7 @@ export interface GumPiece {
   accepted_at: string | null
   expires_at: string
   confirmed_at: string | null
+  planned_date: string | null
   creator_display_name?: string
   recipient_display_name?: string
 }

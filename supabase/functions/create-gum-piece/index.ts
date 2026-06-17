@@ -11,6 +11,7 @@ interface CreateGumPieceBody {
   recipient_id?: string
   title?: string
   category?: string
+  planned_date?: string
 }
 
 const gumShapes = [
@@ -128,6 +129,11 @@ Deno.serve(async (request) => {
       })
     }
 
+    const plannedDate = resolvePlannedDate(body.planned_date)
+    if (plannedDate === null) {
+      return jsonResponse(400, { error: 'planned_date_invalid' })
+    }
+
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     const shape = getRandomShape()
     const { data: createdPiece, error: createPieceError } = await serviceClient
@@ -141,6 +147,7 @@ Deno.serve(async (request) => {
         shape,
         status: 'placeholder',
         expires_at: expiresAt,
+        planned_date: plannedDate,
       })
       .select('id, title, category, color_hex, status, expires_at')
       .single()
@@ -178,6 +185,25 @@ Deno.serve(async (request) => {
     })
   }
 })
+
+function resolvePlannedDate(raw?: string): string | null {
+  const maxMs = Date.now() + 365 * 24 * 60 * 60 * 1000
+  if (!raw) {
+    return new Date(maxMs).toISOString().slice(0, 10)
+  }
+  const parsed = new Date(raw + 'T00:00:00Z')
+  if (isNaN(parsed.getTime())) {
+    return null
+  }
+  if (parsed.getTime() > maxMs) {
+    return null
+  }
+  const todayMs = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime()
+  if (parsed.getTime() < todayMs) {
+    return null
+  }
+  return raw
+}
 
 function resolveCategory(title: string, requestedSlug?: string) {
   if (requestedSlug) {

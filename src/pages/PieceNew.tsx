@@ -51,7 +51,11 @@ export default function PieceNew() {
   const [title, setTitle] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
+  const [plannedDate, setPlannedDate] = useState('')
   const [toast, setToast] = useState<string | null>(null)
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const maxDateStr = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   const locationState = location.state as LocationState | null
 
@@ -197,11 +201,13 @@ export default function PieceNew() {
       recipientId: rId,
       title: t,
       category,
+      plannedDate: pd,
       recipientName,
     }: {
       recipientId: string
       title: string
       category: CategorySlug | null
+      plannedDate: string
       recipientName: string | undefined
     }) => {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -219,6 +225,7 @@ export default function PieceNew() {
           recipient_id: rId,
           title: t,
           ...(category ? { category } : {}),
+          ...(pd ? { planned_date: pd } : {}),
         }),
       })
 
@@ -298,6 +305,7 @@ export default function PieceNew() {
       recipientId,
       title: title.trim(),
       category: resolvedCategory,
+      plannedDate,
       recipientName: selectedRecipientName,
     })
   }
@@ -443,6 +451,24 @@ export default function PieceNew() {
             />
           </div>
         ) : null}
+      </section>
+
+      <section className="mt-6">
+        <div className="flex items-baseline gap-2">
+          <label htmlFor="planned-date" className="text-xs text-text-3">
+            by when?
+          </label>
+          <span className="text-xs text-text-3 opacity-60">optional · defaults to 1 year from today</span>
+        </div>
+        <input
+          id="planned-date"
+          type="date"
+          value={plannedDate}
+          min={todayStr}
+          max={maxDateStr}
+          onChange={(event) => setPlannedDate(event.target.value)}
+          className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-sm text-text outline-none focus:border-white/20 [color-scheme:dark]"
+        />
       </section>
 
       <button

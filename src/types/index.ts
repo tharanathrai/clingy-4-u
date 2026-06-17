@@ -51,6 +51,7 @@ export interface GumPiece {
   accepted_at: string | null
   expires_at: string
   confirmed_at: string | null
+  planned_date: string | null
 }
 
 export interface Bridge {

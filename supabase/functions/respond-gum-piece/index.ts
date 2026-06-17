@@ -17,6 +17,7 @@ type GumPieceRow = {
   recipient_id: string
   title: string
   status: 'placeholder' | 'active' | 'confirmed' | 'expired' | 'turned_down'
+  planned_date: string | null
 }
 
 Deno.serve(async (request) => {
@@ -64,7 +65,7 @@ Deno.serve(async (request) => {
     const userId = authData.user.id
     const { data: piece, error: pieceError } = await serviceClient
       .from('gum_pieces')
-      .select('id, creator_id, recipient_id, title, status')
+      .select('id, creator_id, recipient_id, title, status, planned_date')
       .eq('id', gumPieceId)
       .maybeSingle<GumPieceRow>()
 
@@ -133,7 +134,14 @@ Deno.serve(async (request) => {
       }
 
       const acceptedAt = new Date().toISOString()
-      const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      let expiresAt: string
+      if (piece.planned_date) {
+        const d = new Date(piece.planned_date + 'T00:00:00Z')
+        d.setUTCDate(d.getUTCDate() + 1)
+        expiresAt = d.toISOString()
+      } else {
+        expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      }
       const { data: updatedPiece, error: updateError } = await serviceClient
         .from('gum_pieces')
         .update({

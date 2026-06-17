@@ -81,6 +81,7 @@ export interface Database {
           accepted_at: string | null
           expires_at: string
           confirmed_at: string | null
+          planned_date: string | null
         }
         Insert: {
           id?: string
@@ -94,6 +95,7 @@ export interface Database {
           accepted_at?: string | null
           expires_at: string
           confirmed_at?: string | null
+          planned_date?: string | null
         }
         Update: {
           id?: string
@@ -107,6 +109,7 @@ export interface Database {
           accepted_at?: string | null
           expires_at?: string
           confirmed_at?: string | null
+          planned_date?: string | null
         }
         Relationships: []
       }
