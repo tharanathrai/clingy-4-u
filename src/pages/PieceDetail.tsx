@@ -1,6 +1,6 @@
 import { format, formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
@@ -14,7 +14,7 @@ import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
 import { invalidateGumPieceFlow } from '../lib/invalidate.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
-import type { GumPieceMember } from '../types/index.ts'
+import type { GumPieceMember, PendingEdit } from '../types/index.ts'
 
 interface PieceDetailRow {
   id: string
@@ -28,6 +28,7 @@ interface PieceDetailRow {
   accepted_at: string | null
   expires_at: string
   planned_date: string | null
+  pending_edit: PendingEdit | null
 }
 
 interface PieceDetailData {
@@ -81,7 +82,7 @@ async function fetchPieceDetail(id: string, userId: string): Promise<PieceDetail
   const myMemberEnriched = members.find((m) => m.user_id === userId) ?? null
 
   return {
-    piece: pieceResult.data as PieceDetailRow,
+    piece: pieceResult.data as unknown as PieceDetailRow,
     members,
     myMember: myMemberEnriched,
   }
@@ -92,9 +93,11 @@ export default function PieceDetail() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [showTurnDownConfirm, setShowTurnDownConfirm] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const locationState = location.state as { toast?: string } | null
+  const [toast, setToast] = useState<string | null>(locationState?.toast ?? null)
   const previousStatusRef = useRef<PieceDetailRow['status'] | null>(null)
 
   const queryKey = queryKeys.pieceDetail(id, userId)
@@ -162,6 +165,39 @@ export default function PieceDetail() {
       return () => window.clearTimeout(timeoutId)
     }
   }, [navigate, piece])
+
+  const editRespondMutation = useMutation({
+    mutationFn: async (action: 'accept_edit' | 'decline_edit') => {
+      if (!piece) throw new Error('No piece')
+      let accessToken = await getValidAccessToken()
+      if (!accessToken) throw new Error('Session expired')
+
+      let response = await callEditFunction(piece.id, action, accessToken)
+      if (response.status === 401) {
+        accessToken = await getValidAccessToken(true)
+        if (accessToken) response = await callEditFunction(piece.id, action, accessToken)
+      }
+
+      if (!response.ok) {
+        let errorCode: string | null = null
+        try {
+          const payload = (await response.json()) as { error?: string }
+          errorCode = payload.error ?? null
+        } catch {
+          errorCode = null
+        }
+        throw new Error(errorCode ?? 'Something went wrong - try again.')
+      }
+    },
+    onSuccess: () => {
+      if (userId && id) {
+        invalidateGumPieceFlow(userId, queryClient, id)
+      }
+    },
+    onError: (err) => {
+      setToast(err instanceof Error ? err.message : 'Something went wrong - try again.')
+    },
+  })
 
   const respondMutation = useMutation({
     mutationFn: async (action: 'accept' | 'turn_down') => {
@@ -280,10 +316,28 @@ export default function PieceDetail() {
 
   const isInviteePending = myMember?.role === 'invitee' && myMember?.status === 'pending'
   const isCreator = myMember?.role === 'creator'
+  const isAcceptedMember = myMember?.status === 'accepted'
   const canAccept = (piece.status === 'placeholder' || piece.status === 'active') && isInviteePending
   const canCancelPlaceholder = piece.status === 'placeholder' && isCreator
   const canTurnDownActive = piece.status === 'active'
   const readOnly = ['confirmed', 'expired', 'turned_down'].includes(piece.status)
+
+  // Edit / proposal state
+  const pendingEdit = piece.pending_edit ?? null
+  const canEditPlaceholder = piece.status === 'placeholder' && isCreator
+  const canProposeEdit = piece.status === 'active' && isAcceptedMember && !pendingEdit
+  const hasPendingEdit = piece.status === 'active' && pendingEdit !== null
+  const isPendingEditProposer = hasPendingEdit && pendingEdit?.proposed_by === userId
+  const canRespondToEdit = hasPendingEdit && !isPendingEditProposer && isAcceptedMember
+  const editBusyAction = editRespondMutation.isPending
+    ? (editRespondMutation.variables as 'accept_edit' | 'decline_edit' | null)
+    : null
+
+  // Find proposer display name
+  const proposerMember = hasPendingEdit
+    ? members.find((m) => m.user_id === pendingEdit?.proposed_by)
+    : null
+  const proposerName = proposerMember?.display_name ?? 'Someone'
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -354,6 +408,78 @@ export default function PieceDetail() {
           style={{ width: `${remainingProgress}%` }}
         />
       </div>
+
+      {/* Edit entry points */}
+      {(canEditPlaceholder || canProposeEdit) ? (
+        <div className="mt-4 flex justify-center">
+          <Link
+            to={`/piece/${piece.id}/edit`}
+            className="text-sm text-text-3 underline underline-offset-2 hover:text-text-2"
+          >
+            {canEditPlaceholder ? 'Edit plan' : 'Suggest a change'}
+          </Link>
+        </div>
+      ) : null}
+
+      {/* Pending edit proposal banner */}
+      {hasPendingEdit && pendingEdit ? (
+        <div className="mt-5 rounded-xl border border-white/10 bg-surface p-4">
+          <p className="text-sm font-medium text-text">
+            {isPendingEditProposer ? 'You proposed a change' : `${proposerName} proposed a change`}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {pendingEdit.title !== undefined ? (
+              <li className="text-xs text-text-2">
+                Title <span className="text-text-3 line-through">{piece.title}</span>{' '}
+                <span className="text-text">→ {pendingEdit.title}</span>
+              </li>
+            ) : null}
+            {pendingEdit.category !== undefined ? (
+              <li className="text-xs text-text-2">
+                Category <span className="text-text-3 line-through">{piece.category}</span>{' '}
+                <span className="text-text">→ {pendingEdit.category}</span>
+              </li>
+            ) : null}
+            {pendingEdit.planned_date !== undefined ? (
+              <li className="text-xs text-text-2">
+                Date{' '}
+                {pendingEdit.planned_date ? (
+                  <span className="text-text">
+                    → {format(new Date(pendingEdit.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+                  </span>
+                ) : (
+                  <span className="text-text">→ cleared</span>
+                )}
+              </li>
+            ) : null}
+          </ul>
+
+          {isPendingEditProposer ? (
+            <p className="mt-3 text-xs text-text-3">Waiting for others to accept.</p>
+          ) : null}
+
+          {canRespondToEdit ? (
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => editRespondMutation.mutate('accept_edit')}
+                disabled={editBusyAction !== null}
+                className="btn-primary flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {editBusyAction === 'accept_edit' ? 'Accepting...' : 'Accept'}
+              </button>
+              <button
+                type="button"
+                onClick={() => editRespondMutation.mutate('decline_edit')}
+                disabled={editBusyAction !== null}
+                className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-50"
+              >
+                {editBusyAction === 'decline_edit' ? 'Declining...' : 'Decline'}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <section className="mt-10 space-y-3 pb-24">
         {canAccept ? (
@@ -457,6 +583,22 @@ function toCategorySlug(value?: string): CategorySlug {
     return value as CategorySlug
   }
   return 'explore'
+}
+
+async function callEditFunction(
+  gumPieceId: string,
+  action: 'accept_edit' | 'decline_edit',
+  accessToken: string,
+): Promise<Response> {
+  return fetch(`${functionsBaseUrl}/edit-gum-piece`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ gum_piece_id: gumPieceId, action }),
+  })
 }
 
 async function callRespondFunction(

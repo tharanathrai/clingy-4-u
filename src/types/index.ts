@@ -23,6 +23,9 @@ export type NotificationType =
   | 'post_reaction'
   | 'connection_request'
   | 'connection_accepted'
+  | 'plan_edit_proposed'
+  | 'plan_edit_accepted'
+  | 'plan_edit_declined'
 
 export interface User {
   id: string
@@ -56,6 +59,15 @@ export interface GumPieceMember {
   avatar_url?: string | null
 }
 
+export interface PendingEdit {
+  title?: string
+  category?: string
+  planned_date?: string | null
+  proposed_by: string
+  proposed_at: string
+  accepted_by: string[]
+}
+
 export interface GumPiece {
   id: string
   creator_id: string
@@ -69,6 +81,7 @@ export interface GumPiece {
   expires_at: string
   confirmed_at: string | null
   planned_date: string | null
+  pending_edit: PendingEdit | null
   members?: GumPieceMember[]
 }
 
