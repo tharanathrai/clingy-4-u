@@ -194,9 +194,11 @@ export default function PieceDetail() {
 
   const remainingProgress = useMemo(() => {
     if (!piece) return 0
-    const remainingMs = new Date(piece.expires_at).getTime() - Date.now()
-    const MAX_MS = 365 * 24 * 60 * 60 * 1000
-    return Math.round(Math.max(0, Math.min(remainingMs / MAX_MS, 1)) * 100)
+    const start = new Date(piece.created_at).getTime()
+    const end = new Date(piece.expires_at).getTime()
+    if (end <= start) return 0
+    const remainingMs = Math.max(0, end - Date.now())
+    return Math.round((remainingMs / (end - start)) * 100)
   }, [piece])
 
   const fillClass = useMemo(() => {
