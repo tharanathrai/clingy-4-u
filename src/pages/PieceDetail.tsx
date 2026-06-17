@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -26,6 +26,7 @@ interface PieceDetailRow {
   created_at: string
   accepted_at: string | null
   expires_at: string
+  planned_date: string | null
 }
 
 interface ParticipantMeta {
@@ -297,6 +298,11 @@ export default function PieceDetail() {
         </div>
       ) : null}
       <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
+      {piece.planned_date ? (
+        <p className="mt-1 text-center text-xs text-text-3">
+          by {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+        </p>
+      ) : null}
 
       <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
         <div
