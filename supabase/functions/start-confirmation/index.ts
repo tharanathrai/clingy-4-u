@@ -193,6 +193,26 @@ Deno.serve(async (request) => {
       }
     }
 
+    // Notify other accepted members only when this user initiated the canonical session
+    if (canonicalSession.initiator_id === userId) {
+      const { data: otherMembers } = await serviceClient
+        .from('gum_piece_members')
+        .select('user_id')
+        .eq('gum_piece_id', gumPieceId)
+        .eq('status', 'accepted')
+        .neq('user_id', userId)
+
+      if ((otherMembers ?? []).length > 0) {
+        await serviceClient.from('notifications').insert(
+          (otherMembers as Array<{ user_id: string }>).map((m) => ({
+            user_id: m.user_id,
+            type: 'confirmation_started',
+            reference_id: gumPieceId,
+          })),
+        )
+      }
+    }
+
     return jsonResponse(200, {
       session_id: canonicalSession.id,
       otp_code: canonicalSession.otp_code,

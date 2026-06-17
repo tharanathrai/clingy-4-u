@@ -7,7 +7,7 @@ import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
-import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
+import { pageShellCentered, pageShellScroll, toastFrameClass } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -413,7 +413,7 @@ export default function PieceDetail() {
   const isAcceptedMember = myMember?.status === 'accepted'
   const canAccept = (piece.status === 'placeholder' || piece.status === 'active') && isInviteePending
   const canCancelPlaceholder = piece.status === 'placeholder' && isCreator
-  const canTurnDownActive = piece.status === 'active'
+  const canTurnDownActive = piece.status === 'active' && isAcceptedMember
   const readOnly = ['confirmed', 'expired', 'turned_down'].includes(piece.status)
 
   // Edit / proposal state
@@ -568,7 +568,13 @@ export default function PieceDetail() {
 
       {/* Pending edit proposal banner */}
       {hasPendingEdit && pendingEdit ? (
-        <div className={`mt-5 overflow-hidden rounded-xl bg-surface ${canRespondToEdit ? `border border-${fillClass.replace('bg-', '')}/40` : 'border border-white/10'}`}>
+        <div
+          className="mt-5 overflow-hidden rounded-xl bg-surface"
+          style={canRespondToEdit
+            ? { border: `1px solid ${CATEGORIES[category]?.color_hex ?? '#ffffff'}66` }
+            : { border: '1px solid rgba(255,255,255,0.1)' }
+          }
+        >
           {/* Category-colored top strip */}
           <div className={`h-0.5 w-full ${fillClass}`} />
           <div className="p-4">
@@ -755,7 +761,7 @@ export default function PieceDetail() {
       </section>
 
       {toast ? (
-        <div className="app-fixed-frame safe-bottom-24 px-5">
+        <div className={toastFrameClass}>
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

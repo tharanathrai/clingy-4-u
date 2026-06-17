@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
-import { pageShellScroll } from '../components/layout/pageShell.ts'
+import { pageShellScroll, toastFrameClass } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import type { CategorySlug } from '../lib/constants.ts'
@@ -46,12 +46,14 @@ export default function PieceNew() {
   >({})
   const [pairSlotUsage, setPairSlotUsage] = useState<Record<string, number>>({})
   const [connectionsLoading, setConnectionsLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   // Multi-select: set of selected recipient IDs
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [recipientQuery, setRecipientQuery] = useState('')
   const [showRecipientOptions, setShowRecipientOptions] = useState(false)
   const [title, setTitle] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(null)
+  const [categoryManuallySelected, setCategoryManuallySelected] = useState(false)
   const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
   const [plannedDate, setPlannedDate] = useState('')
   const [toast, setToast] = useState<string | null>(null)
@@ -71,6 +73,7 @@ export default function PieceNew() {
     }
 
     setConnectionsLoading(true)
+    setConnectionError(null)
     try {
       const { data: connectionRows } = await supabase
         .from('connections')
@@ -152,6 +155,8 @@ export default function PieceNew() {
 
       setBridgeStrengthByConnectionId(nextStrength)
       setPairSlotUsage(nextPairUsage)
+    } catch {
+      setConnectionError('Could not load your connections.')
     } finally {
       setConnectionsLoading(false)
     }
@@ -176,18 +181,23 @@ export default function PieceNew() {
   useEffect(() => {
     const trimmed = title.trim()
     if (!trimmed) {
-      setSelectedCategory(null)
+      if (!categoryManuallySelected) {
+        setSelectedCategory(null)
+      }
       setIsSuggestingCategory(false)
       return
     }
 
     setIsSuggestingCategory(true)
     const timeoutId = window.setTimeout(() => {
-      setSelectedCategory(categorizeTitle(trimmed))
+      if (!categoryManuallySelected) {
+        setSelectedCategory(categorizeTitle(trimmed))
+      }
       setIsSuggestingCategory(false)
     }, 500)
 
     return () => window.clearTimeout(timeoutId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title])
 
   const backTarget = locationState?.returnTo ?? '/home'
@@ -244,6 +254,7 @@ export default function PieceNew() {
       return { count: recipientIds.length }
     },
     onSuccess: ({ count }) => {
+      setCategoryManuallySelected(false)
       void queryClient.invalidateQueries({ queryKey: queryKeys.gumPieces(userId) })
       const label = count === 1 ? 'them' : `${count} people`
       navigate('/home', {
@@ -331,7 +342,18 @@ export default function PieceNew() {
       ) : (
         <section className="mt-6">
           <p className="text-xs text-text-3">Choose people</p>
-          {connections.length === 0 ? (
+          {connectionError ? (
+            <>
+              <p className="mt-2 text-sm text-playful">{connectionError}</p>
+              <button
+                type="button"
+                onClick={() => void loadConnections()}
+                className="mt-3 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
+              >
+                Retry
+              </button>
+            </>
+          ) : connections.length === 0 ? (
             <>
               <p className="mt-2 text-sm text-text-2">Add someone first before making a plan.</p>
               <Link
@@ -471,13 +493,16 @@ export default function PieceNew() {
           />
           <p className="mt-2 text-right text-xs text-text-3">{title.length} / 60</p>
         </div>
-        {title.trim() ? (
+        {(title.trim() || selectedCategory !== null) ? (
           <div
             className={`mt-4 transition-opacity ${isSuggestingCategory ? 'opacity-70' : 'opacity-100'}`}
           >
             <CategoryPicker
               selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
+              onSelect={(cat) => {
+                setCategoryManuallySelected(true)
+                setSelectedCategory(cat)
+              }}
             />
           </div>
         ) : null}
@@ -511,7 +536,7 @@ export default function PieceNew() {
       </button>
 
       {toast ? (
-        <div className="app-fixed-frame safe-bottom-24 px-5">
+        <div className={toastFrameClass}>
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

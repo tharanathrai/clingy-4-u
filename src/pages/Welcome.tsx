@@ -98,7 +98,7 @@ export default function Welcome() {
       }
 
       markProfileReady(user.id, queryClient)
-      navigate('/add', { replace: true })
+      navigate('/add', { replace: true, state: { fromOnboarding: true } })
     } catch {
       setErrorMessage('Something went wrong - try again.')
       setSubmitting(false)

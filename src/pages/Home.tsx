@@ -88,6 +88,10 @@ export default function Home() {
       return
     }
 
+    if (loadingConnections) {
+      return
+    }
+
     if (connectionsCount < 1) {
       setToast('add someone first')
       return
@@ -116,7 +120,7 @@ export default function Home() {
 
         {!loading && !loadingConnections && error ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Couldn&apos;t load your pocket. Pull to refresh.</p>
+            <p className="text-sm text-text-2">Couldn&apos;t load your pocket.</p>
             <button
               type="button"
               onClick={() => {
@@ -193,7 +197,7 @@ export default function Home() {
             <button
               type="button"
               onClick={handleNewGum}
-              disabled={pocketFull}
+              disabled={pocketFull || loadingConnections}
               className="btn-primary new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
             >
               new gum

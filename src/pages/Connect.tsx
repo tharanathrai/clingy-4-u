@@ -151,10 +151,13 @@ export default function Connect() {
           <p className="mt-3 max-w-xs text-sm text-text-2">
             Sign in first so we can send your connection request.
           </p>
+          <p className="mt-4 max-w-xs text-xs text-text-3">
+            The QR code expires in 60 s. If it expires during sign-in, ask your friend to show you a fresh code.
+          </p>
           <button
             type="button"
             onClick={() => void handleSignIn()}
-            className="btn-primary mt-8 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+            className="btn-primary mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
           >
             Sign in with Google
           </button>
@@ -183,9 +186,17 @@ export default function Connect() {
                   View profile
                 </Link>
               ) : null}
-              {(connectIssue.type === 'expired' ||
-                connectIssue.type === 'own' ||
+              {(connectIssue.type === 'own' ||
                 connectIssue.type === 'request_pending') ? (
+                <button
+                  type="button"
+                  onClick={() => setConnectIssue(null)}
+                  className="rounded-full bg-surface px-4 py-2 text-xs text-text-2"
+                >
+                  Dismiss
+                </button>
+              ) : null}
+              {connectIssue.type === 'expired' ? (
                 <button
                   type="button"
                   onClick={() => setConnectIssue(null)}
@@ -210,6 +221,13 @@ export default function Connect() {
                 Go to pocket
               </Link>
             </div>
+            {connectIssue.type === 'expired' ? (
+              <p className="mt-3 text-xs text-text-3">
+                Ask your friend to open{' '}
+                <Link to="/add" className="underline underline-offset-2">Add someone</Link>
+                {' '}and share a fresh code.
+              </p>
+            ) : null}
           </section>
         ) : null}
 

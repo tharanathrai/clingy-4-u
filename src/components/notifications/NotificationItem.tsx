@@ -16,9 +16,10 @@ const unreadBorderByType: Record<NotificationType, string> = {
   connection_accepted:'border-explore',
   post_reaction:      'border-support',
   post_comment:       'border-accent',
-  plan_edit_proposed: 'border-savor',
-  plan_edit_accepted: 'border-active',
-  plan_edit_declined: 'border-playful',
+  plan_edit_proposed:  'border-savor',
+  plan_edit_accepted:  'border-active',
+  plan_edit_declined:  'border-playful',
+  confirmation_started: 'border-accent',
 }
 
 interface NotificationWithActor extends Notification {
@@ -124,6 +125,9 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   }
   if (type === 'plan_edit_declined') {
     return `${name} declined your proposed change`
+  }
+  if (type === 'confirmation_started') {
+    return `${name} is ready to confirm — tap to complete the plan`
   }
 
   return 'You have a new notification'

@@ -247,12 +247,12 @@ export default function PieceConfirm() {
       )}
 
       <h1 className="mt-2 text-center font-display text-3xl text-text">
-        {partnerName}&apos;s plan
+        {piece.title}
       </h1>
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
       </div>
-      <p className="mt-3 text-center text-base text-text">{piece.title}</p>
+      <p className="mt-3 text-center text-sm text-text-2">confirming with {partnerName}</p>
 
       {error ? <p className="mt-6 text-center text-sm text-playful">{error}</p> : null}
 

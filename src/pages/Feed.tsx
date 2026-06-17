@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toastFrameClass } from '../components/layout/pageShell.ts'
 import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
@@ -27,6 +28,7 @@ export default function Feed() {
   const restorePostIdFromState = (location.state as AppLocationState | null)?.restorePostId
   const queryClient = useQueryClient()
   const [localPosts, setLocalPosts] = useState(posts)
+  const [toast, setToast] = useState<string | null>(null)
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
   const [focusComposerOnOpen, setFocusComposerOnOpen] = useState(false)
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
@@ -87,6 +89,12 @@ export default function Feed() {
     window.history.pushState({ ...nextState, feedPostDetailOpen: true }, '', window.location.href)
     hasPostDetailHistoryEntryRef.current = true
   }, [selectedPostId])
+
+  useEffect(() => {
+    if (!toast) return
+    const toastId = window.setTimeout(() => setToast(null), 2400)
+    return () => window.clearTimeout(toastId)
+  }, [toast])
 
   useEffect(() => {
     if (!selectedPostId) {
@@ -151,6 +159,7 @@ export default function Feed() {
       if (context?.previousPost) {
         queryClient.setQueryData<PostQueryResult>(queryKeys.post(postId, userId), context.previousPost)
       }
+      setToast('Could not react — try again.')
     },
   })
 
@@ -196,6 +205,12 @@ export default function Feed() {
             <p className="mt-2 text-sm text-text-2">
               Your feed fills up when your people do things together.
             </p>
+            <Link
+              to="/piece/new"
+              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+            >
+              Make a plan
+            </Link>
           </section>
         ) : null}
 
@@ -238,6 +253,14 @@ export default function Feed() {
           </div>
         ) : null}
       </main>
+
+      {toast ? (
+        <div className={toastFrameClass}>
+          <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
+            {toast}
+          </p>
+        </div>
+      ) : null}
 
       <PostDetailSheet
         postId={selectedPostId}

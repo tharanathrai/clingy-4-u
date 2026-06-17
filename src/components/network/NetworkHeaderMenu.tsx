@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CATEGORIES } from '../../lib/constants.ts'
 
 interface NetworkHeaderMenuProps {
   pendingRequestCount: number
@@ -85,6 +86,18 @@ export function NetworkHeaderMenu({ pendingRequestCount }: NetworkHeaderMenuProp
               </span>
             ) : null}
           </Link>
+          <div className="border-t border-white/10 px-4 pb-2 pt-3">
+            <p className="mb-2 text-[10px] uppercase tracking-wider text-text-3">Bridge colors</p>
+            {(Object.values(CATEGORIES) as Array<{ slug: string; label: string; color_hex: string }>).map((cat) => (
+              <div key={cat.slug} className="flex items-center gap-2 py-0.5">
+                <span
+                  className="h-2 w-4 shrink-0 rounded-full"
+                  style={{ backgroundColor: cat.color_hex }}
+                />
+                <span className="text-xs text-text-2">{cat.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </div>

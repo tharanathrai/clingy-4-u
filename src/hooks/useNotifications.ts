@@ -22,6 +22,7 @@ export type NotificationType =
   | 'plan_edit_proposed'
   | 'plan_edit_accepted'
   | 'plan_edit_declined'
+  | 'confirmation_started'
 
 export interface Notification {
   id: string

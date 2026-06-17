@@ -6,7 +6,7 @@ import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { ProfileMeHeader, ProfileMeHeaderSkeleton } from '../components/profile/ProfileMeHeader.tsx'
-import { pageShellTab } from '../components/layout/pageShell.ts'
+import { pageShellTab, toastFrameClass } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -158,7 +158,7 @@ export default function ProfileMe() {
       ) : null}
 
       {toast ? (
-        <div className="app-fixed-frame safe-bottom-24 px-5">
+        <div className={toastFrameClass}>
           <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
             {toast}
           </p>

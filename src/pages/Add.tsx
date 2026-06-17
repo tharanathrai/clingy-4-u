@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Camera, RefreshCcw } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Camera, RefreshCcw, Share2 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
@@ -63,6 +63,8 @@ function clearCachedToken() {
 export default function Add() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromOnboarding = (location.state as { fromOnboarding?: boolean } | null)?.fromOnboarding === true
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [remainingMs, setRemainingMs] = useState(0)
@@ -207,9 +209,15 @@ export default function Add() {
 
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <h1 className="app-page-title">add someone</h1>
-        <p className="mt-2 text-sm text-text-2">
-          Show this to someone nearby.
-        </p>
+        {fromOnboarding ? (
+          <p className="mt-2 text-sm text-text-2">
+            You&apos;re all set! Show this to a friend to connect.
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-text-2">
+            Show this to someone nearby.
+          </p>
+        )}
 
         {/* QR card — gradient border is the countdown ring */}
         <div
@@ -257,14 +265,31 @@ export default function Add() {
         ) : null}
       </div>
 
-      {/* Single bottom action — scan mode */}
-      <Link
-        to="/add/scan"
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-      >
-        <Camera size={16} strokeWidth={1.75} />
-        Scan their code instead
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link
+          to="/add/scan"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+        >
+          <Camera size={16} strokeWidth={1.75} />
+          Scan their code instead
+        </Link>
+        {typeof navigator.share === 'function' && token ? (
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.share({
+                title: 'Connect with me on Sticky Bridges',
+                text: 'Tap the link to send me a connection request.',
+                url: qrValue,
+              }).catch(() => undefined)
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+          >
+            <Share2 size={16} strokeWidth={1.75} />
+            Share link instead
+          </button>
+        ) : null}
+      </div>
     </main>
   )
 }

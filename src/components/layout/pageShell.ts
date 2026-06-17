@@ -13,3 +13,6 @@ export const pageShellPinnedFooter = `${pageShellBase} flex flex-col pb-[var(--a
 
 /** Journey push screens with tab bar visible (add/scan, connect) */
 export const pageShellJourneyScroll = `${pageShellScroll} pb-tab-clearance flex flex-col`
+
+/** Standard toast frame — fixed above tab bar. Home uses safe-bottom-28 (above FAB). */
+export const toastFrameClass = 'app-fixed-frame safe-bottom-24 z-40 px-5'

@@ -1,6 +1,7 @@
 import { CheckCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Layout } from '../components/layout/Layout.tsx'
+import { toastFrameClass } from '../components/layout/pageShell.ts'
 import { iconButtonClassName } from '../lib/iconButton.ts'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -61,6 +62,10 @@ export default function Notifications() {
       })
       return
     }
+    if (type === 'confirmation_started') {
+      void navigate(`/piece/${referenceId}/confirm`)
+      return
+    }
     if (routesToGumPiece(type)) {
       const { data: pieceRow } = await supabase
         .from('gum_pieces')
@@ -98,7 +103,7 @@ export default function Notifications() {
     }
 
     if (type === 'post_comment' || type === 'post_reaction') {
-      void navigate('/feed')
+      void navigate('/feed', { state: { restorePostId: referenceId } })
     }
   }
 
@@ -179,7 +184,7 @@ export default function Notifications() {
         ) : null}
 
         {toast ? (
-          <div className="app-fixed-frame safe-bottom-24 px-5">
+          <div className={toastFrameClass}>
             <p className="app-fixed-frame-inner rounded-md bg-surface-2 px-4 py-3 text-center text-sm text-text">
               {toast}
             </p>
