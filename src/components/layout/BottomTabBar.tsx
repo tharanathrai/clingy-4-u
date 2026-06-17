@@ -2,7 +2,7 @@ import {
   Bell,
   CircleUserRound,
   Home,
-  Share2,
+  Newspaper,
   Waypoints,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
@@ -23,7 +23,7 @@ interface TabConfig {
 const tabs: TabConfig[] = [
   { to: '/home', label: 'Pocket', icon: Home },
   { to: '/network', label: 'Network', icon: Waypoints },
-  { to: '/feed', label: 'Feed', icon: Share2 },
+  { to: '/feed', label: 'Feed', icon: Newspaper },
   { to: '/notifications', label: 'Notifications', icon: Bell, hasBadge: true },
   { to: '/profile/me', label: 'Profile', icon: CircleUserRound },
 ]
@@ -95,6 +95,11 @@ export function BottomTabBar() {
               >
                 {tab.label}
               </span>
+              <span
+                className={`h-0.5 w-4 rounded-full transition-all duration-200 ${
+                  isActive ? 'bg-accent' : 'bg-transparent'
+                }`}
+              />
             </Link>
           )
         })}

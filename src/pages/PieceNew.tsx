@@ -324,7 +324,7 @@ export default function PieceNew() {
         </section>
       ) : (
         <section className="mt-6">
-          <p className="text-xs uppercase text-text-3">Choose someone</p>
+          <p className="text-xs text-text-3">Choose someone</p>
           {connections.length === 0 ? (
             <>
               <p className="mt-2 text-sm text-text-2">Add someone first before making a plan.</p>
@@ -419,7 +419,7 @@ export default function PieceNew() {
       )}
 
       <section className="mt-6">
-        <label htmlFor="piece-title" className="text-xs uppercase text-text-3">
+        <label htmlFor="piece-title" className="text-xs text-text-3">
           Plan title
         </label>
         <div className="mt-2 rounded-md border border-white/10 bg-surface-2 p-3">

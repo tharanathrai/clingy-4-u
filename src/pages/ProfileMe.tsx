@@ -121,15 +121,15 @@ export default function ProfileMe() {
           </div>
         ) : null}
 
-        <div className="mt-7 flex items-center gap-2 text-text-3">
+        <div className="mt-6 flex items-center gap-2.5 text-text-3">
           {profile.avatar_url ? (
             <img
               src={profile.avatar_url}
               alt={profile.display_name}
-              className="h-7 w-7 rounded-full border border-white/20 object-cover"
+              className="h-10 w-10 rounded-full border border-white/20 object-cover"
             />
           ) : (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-surface-2 text-xs text-text-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-surface-2 text-sm text-text-2">
               {profile.display_name.slice(0, 1).toUpperCase()}
             </div>
           )}

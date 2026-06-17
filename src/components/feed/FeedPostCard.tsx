@@ -83,17 +83,15 @@ export function FeedPostCard({
           </button>
         </div>
 
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={onOpenDetail}
-            className="w-full rounded-md bg-surface-2 px-4 py-3 text-left text-base leading-relaxed text-text"
-          >
-            {post.body}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onOpenDetail}
+          className="mt-4 w-full text-left text-base leading-relaxed text-text"
+        >
+          {post.body}
+        </button>
 
-        <div className="mt-3 flex items-center justify-between gap-2 text-xs text-text-2">
+        <div className="mt-4 flex items-center justify-between gap-2 text-xs text-text-2">
           <div className="flex min-w-0 items-center gap-2">
             <CategoryChip category={category} size="sm" />
             <button
@@ -106,7 +104,33 @@ export function FeedPostCard({
             </button>
           </div>
 
-          {!hideActions || showReactionInMetaWhenHidden ? (
+          {!hideActions ? (
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={onComment}
+                className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
+                aria-label="Open comments"
+              >
+                <MessageCircle size={16} strokeWidth={1.75} />
+                <span>{post.commentCount}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onReact}
+                className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
+                aria-label="Toggle reaction"
+              >
+                <Heart
+                  size={16}
+                  strokeWidth={1.75}
+                  className={post.hasReacted ? 'text-accent' : 'text-text-2'}
+                  fill={post.hasReacted ? 'currentColor' : 'none'}
+                />
+                <span>{post.reactionCount}</span>
+              </button>
+            </div>
+          ) : showReactionInMetaWhenHidden ? (
             <button
               type="button"
               onClick={onReact}
@@ -114,7 +138,7 @@ export function FeedPostCard({
               aria-label="Toggle reaction"
             >
               <Heart
-                size={18}
+                size={16}
                 strokeWidth={1.75}
                 className={post.hasReacted ? 'text-accent' : 'text-text-2'}
                 fill={post.hasReacted ? 'currentColor' : 'none'}
@@ -123,20 +147,6 @@ export function FeedPostCard({
             </button>
           ) : null}
         </div>
-
-        {hideActions ? null : (
-          <div className="mt-2 flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onComment}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3 py-2 text-sm text-text-2 transition-opacity active:opacity-80"
-              aria-label="Open comments"
-            >
-              <MessageCircle size={20} strokeWidth={1.75} />
-              <span>{post.commentCount}</span>
-            </button>
-          </div>
-        )}
       </div>
     </article>
   )

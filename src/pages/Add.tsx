@@ -181,17 +181,11 @@ export default function Add() {
     return `${window.location.origin}/connect?token=${token}`
   }, [token])
 
-  const ringStyle = useMemo(() => {
-    if (!expiresAt) {
-      return undefined
-    }
-
+  const remainingFraction = useMemo(() => {
+    if (!expiresAt) return 1
     const effectiveRemainingMs = Math.max(0, remainingMs - HEAD_LOCK_MS)
     const effectiveDurationMs = QR_TTL_MS - HEAD_LOCK_MS
-    const progress = 1 - effectiveRemainingMs / effectiveDurationMs
-    const rotation = Math.min(1, Math.max(0, progress)) * 360
-
-    return { transform: `rotate(${rotation}deg)` }
+    return Math.min(1, Math.max(0, effectiveRemainingMs / effectiveDurationMs))
   }, [expiresAt, remainingMs])
 
   const remainingSeconds = Math.ceil(remainingMs / 1000)
@@ -215,7 +209,22 @@ export default function Add() {
         </p>
 
         <div className="relative mt-6 flex h-64 w-64 shrink-0 items-center justify-center rounded-full bg-surface">
-          <div className="qr-countdown-ring" style={ringStyle} />
+          <svg
+            aria-hidden
+            className="absolute inset-2 h-[calc(100%-16px)] w-[calc(100%-16px)]"
+            viewBox="0 0 100 100"
+            style={{ transform: 'rotate(-90deg)' }}
+          >
+            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(207,142,232,0.12)" strokeWidth="3" />
+            <circle
+              cx="50" cy="50" r="45"
+              fill="none"
+              stroke="#cf8ee8"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={`${remainingFraction * 283} 283`}
+            />
+          </svg>
           <div className="relative z-10 rounded-lg bg-white p-3">
             {loading ? (
               <div className="flex h-48 w-48 items-center justify-center text-sm text-black/60">

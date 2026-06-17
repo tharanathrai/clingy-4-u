@@ -211,7 +211,7 @@ export default function PieceDetail() {
     return 'bg-support'
   }, [category])
 
-  const filledSegments = Math.max(0, Math.min(20, Math.round((expiryProgress / 100) * 20)))
+  const remainingProgress = Math.max(0, 100 - expiryProgress)
   const busyAction = respondMutation.isPending
     ? (respondMutation.variables as 'accept' | 'turn_down' | null)
     : null
@@ -271,7 +271,7 @@ export default function PieceDetail() {
       <BackHeader onBack={handleBack} className="mb-2" />
 
       <div className="flex justify-center">
-        <GumBlob category={category} size={96} />
+        <GumBlob category={category} size={136} />
       </div>
       <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>
       <div className="mt-3 flex justify-center">
@@ -291,20 +291,18 @@ export default function PieceDetail() {
             </span>
           )}
           <span className="text-sm text-text-2">with</span>
-          <Link to={`/profile/${partner.username}`} className="text-sm text-text underline-offset-2 hover:underline">
+          <Link to={`/profile/${partner.username}`} className="text-sm text-text underline underline-offset-2">
             {partner.display_name}
           </Link>
         </div>
       ) : null}
       <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
 
-      <div className="mt-5 flex gap-0.5 rounded-full bg-surface-2 p-0.5">
-        {Array.from({ length: 20 }, (_, index) => (
-          <span
-            key={index}
-            className={`h-1 flex-1 rounded-full ${index < filledSegments ? fillClass : 'bg-surface'}`}
-          />
-        ))}
+      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+        <div
+          className={`h-full rounded-full transition-none ${fillClass}`}
+          style={{ width: `${remainingProgress}%` }}
+        />
       </div>
 
       <section className="mt-10 space-y-3 pb-24">

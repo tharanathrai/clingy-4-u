@@ -48,10 +48,15 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
           <div className="mt-2">
             <CategoryChip category={category} size="md" />
           </div>
-          <p className="mt-2 text-xs text-text-3">with {partnerName}</p>
-          <p className={`mt-2 text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>
-            {leftText} {isPlaceholder ? '(pending)' : ''}
-          </p>
+          <p className="mt-2 text-xs text-text-2">with {partnerName}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <p className={`text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>{leftText}</p>
+            {isPlaceholder ? (
+              <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-text-3">
+                awaiting
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
     </button>

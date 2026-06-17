@@ -140,8 +140,7 @@ export default function Network() {
     <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-start justify-between px-5">
         <h1 className="app-page-title">your bridges</h1>
-        <div className="relative flex flex-col items-center gap-2">
-          <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
+        <div className="flex items-center gap-2 pt-1">
           <RecenterGraphButton onRecenter={handleRecenter} disabled={graphActionsDisabled} />
           <GraphShareButton
             graphRef={graphCanvasRef}
@@ -149,6 +148,7 @@ export default function Network() {
             prepareForSnapshot={prepareGraphSnapshot}
             shareCardOptions={shareCardOptions}
           />
+          <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
         </div>
       </header>
 

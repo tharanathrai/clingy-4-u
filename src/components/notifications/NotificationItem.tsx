@@ -1,7 +1,21 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Heart } from 'lucide-react'
-import type { Notification } from '../../hooks/useNotifications.ts'
+import type { Notification, NotificationType } from '../../hooks/useNotifications.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
+
+const unreadBorderByType: Record<NotificationType, string> = {
+  invite_received:    'border-accent',
+  invite_accepted:    'border-active',
+  invite_rejected:    'border-playful',
+  plan_turned_down:   'border-playful',
+  plan_expiring_soon: 'border-savor',
+  plan_expired:       'border-text-3',
+  bridge_formed:      'border-active',
+  connection_request: 'border-explore',
+  connection_accepted:'border-explore',
+  post_reaction:      'border-support',
+  post_comment:       'border-accent',
+}
 
 interface NotificationWithActor extends Notification {
   actor_name?: string
@@ -24,7 +38,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
     <button
       type="button"
       onClick={onPress}
-      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-transform active:scale-[0.98] ${isUnread ? 'border-l-[3px] border-accent bg-surface-2' : 'bg-surface'}`}
+      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-transform active:scale-[0.98] ${isUnread ? `border-l-[3px] ${unreadBorderByType[notification.type] ?? 'border-accent'} bg-surface-2` : 'bg-surface'}`}
     >
       {hideActor ? (
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">
