@@ -32,7 +32,7 @@ test('feed author tap opens other-user profile with back and returns to feed', a
   await page.goto('/feed')
   await page.waitForLoadState('networkidle')
 
-  await page.getByRole('button', { name: MOCK_FRIEND.display_name }).click()
+  await page.getByRole('button', { name: `@${MOCK_FRIEND.username}` }).click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
   await expect(page.getByRole('button', { name: 'back' })).toBeVisible()
   await expect(page.getByText(MOCK_FRIEND.display_name).first()).toBeVisible()
@@ -183,7 +183,7 @@ test('post detail commenter profile back restores post detail sheet (F-03)', asy
   await expect(page.getByLabel('Close post details').first()).toBeVisible()
   await expect(page.getByText('Nice walk!')).toBeVisible()
 
-  await page.getByRole('button', { name: MOCK_FRIEND.display_name }).last().click()
+  await page.getByRole('button', { name: `@${MOCK_FRIEND.username}` }).last().click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
 
   await page.getByRole('button', { name: 'back' }).click()
