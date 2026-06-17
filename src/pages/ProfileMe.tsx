@@ -113,10 +113,6 @@ export default function ProfileMe() {
           chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
         </p>
 
-        <p className="mt-4 max-w-xs text-sm leading-relaxed text-text-2">
-          {profile.bio ?? (generateBioMutation.isPending ? 'generating your bio...' : 'New here — no bridges yet.')}
-        </p>
-
         {categoriesWithBridges.length > 0 ? (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {categoriesWithBridges.slice(0, 4).map((category) => (
@@ -140,23 +136,9 @@ export default function ProfileMe() {
           <span className="text-sm">@{profile.username}</span>
         </div>
 
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            className="rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
-            onClick={() => {
-              setIsEditing(true)
-            }}
-          >
-            Edit profile
-          </button>
-          <Link
-            to="/add"
-            className="rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
-          >
-            Add someone
-          </Link>
-        </div>
+        <p className="mt-3 max-w-xs text-sm leading-relaxed text-text-2">
+          {profile.bio ?? (generateBioMutation.isPending ? 'generating your bio...' : 'New here — no bridges yet.')}
+        </p>
       </section>
 
       {bridgeCount > 0 ? (
