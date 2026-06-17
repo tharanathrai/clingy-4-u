@@ -2,12 +2,14 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { Pencil, X } from 'lucide-react'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
+import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
+import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
@@ -99,6 +101,13 @@ export default function PieceDetail() {
   const [toast, setToast] = useState<string | null>(null)
   const previousStatusRef = useRef<PieceDetailRow['status'] | null>(null)
 
+  // Inline edit state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editCategory, setEditCategory] = useState<CategorySlug | null>(null)
+  const [editPlannedDate, setEditPlannedDate] = useState('')
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false)
+
   const queryKey = queryKeys.pieceDetail(id, userId)
 
   const { data: pieceData, isPending, error } = useQuery({
@@ -164,6 +173,86 @@ export default function PieceDetail() {
       return () => window.clearTimeout(timeoutId)
     }
   }, [navigate, piece])
+
+  // Seed edit form when entering edit mode
+  useEffect(() => {
+    if (!isEditing || !piece) return
+    setEditTitle(piece.title)
+    setEditCategory((piece.category as CategorySlug) ?? null)
+    setEditPlannedDate(piece.planned_date ?? '')
+  }, [isEditing, piece])
+
+  // Auto-suggest category as title changes in edit mode
+  useEffect(() => {
+    if (!isEditing || !piece) return
+    const trimmed = editTitle.trim()
+    if (!trimmed || trimmed === piece.title) return
+    setIsSuggestingCategory(true)
+    const t = window.setTimeout(() => {
+      setEditCategory(categorizeTitle(trimmed))
+      setIsSuggestingCategory(false)
+    }, 500)
+    return () => window.clearTimeout(t)
+  }, [editTitle, isEditing, piece])
+
+  const proposeMutation = useMutation({
+    mutationFn: async () => {
+      if (!piece) throw new Error('No piece')
+      let accessToken = await getValidAccessToken()
+      if (!accessToken) throw new Error('Session expired')
+
+      const currentTitle = editTitle.trim()
+      const body: Record<string, unknown> = { gum_piece_id: piece.id, action: 'propose' }
+      if (currentTitle !== piece.title) body.title = currentTitle
+      if (editCategory && editCategory !== piece.category) body.category = editCategory
+      const currentDate = editPlannedDate || null
+      if (currentDate !== piece.planned_date) body.planned_date = currentDate
+
+      let response = await fetch(`${functionsBaseUrl}/edit-gum-piece`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: publishableKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      })
+      if (response.status === 401) {
+        accessToken = await getValidAccessToken(true)
+        if (accessToken) {
+          response = await fetch(`${functionsBaseUrl}/edit-gum-piece`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: publishableKey,
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify(body),
+          })
+        }
+      }
+
+      if (!response.ok) {
+        let errorCode: string | null = null
+        try {
+          const payload = (await response.json()) as { error?: string }
+          errorCode = payload.error ?? null
+        } catch { errorCode = null }
+        if (errorCode === 'no_changes') throw new Error('Nothing changed — update at least one field.')
+        if (errorCode === 'edit_already_pending') throw new Error('Someone already proposed a change. Accept or decline it first.')
+        if (errorCode === 'title_invalid') throw new Error('Title must be 1–60 characters.')
+        if (errorCode === 'planned_date_invalid') throw new Error('Date must be within the next year.')
+        throw new Error(errorCode ?? 'Something went wrong — try again.')
+      }
+    },
+    onSuccess: () => {
+      setIsEditing(false)
+      if (userId && id) invalidateGumPieceFlow(userId, queryClient, id)
+    },
+    onError: (err) => {
+      setToast(err instanceof Error ? err.message : 'Something went wrong — try again.')
+    },
+  })
 
   const editRespondMutation = useMutation({
     mutationFn: async (action: 'accept_edit' | 'decline_edit') => {
@@ -350,74 +439,127 @@ export default function PieceDetail() {
     <main className={pageShellScroll}>
       <div className="relative mb-2 flex items-center">
         <BackHeader onBack={handleBack} />
-        {(canEditPlaceholder || canProposeEdit) ? (
-          <Link
-            to={`/piece/${piece.id}/edit`}
+        {(canEditPlaceholder || canProposeEdit || isEditing) ? (
+          <button
+            type="button"
+            onClick={() => setIsEditing((v) => !v)}
             className="absolute right-0 inline-flex min-h-11 min-w-11 items-center justify-center text-text-3 hover:text-text-2"
-            aria-label={canEditPlaceholder ? 'Edit plan' : 'Suggest a change'}
+            aria-label={isEditing ? 'Cancel edit' : canEditPlaceholder ? 'Edit plan' : 'Suggest a change'}
           >
-            <Pencil size={18} strokeWidth={1.75} />
-          </Link>
+            {isEditing ? <X size={18} strokeWidth={1.75} /> : <Pencil size={18} strokeWidth={1.75} />}
+          </button>
         ) : null}
       </div>
 
       <div className="flex justify-center">
-        <GumBlob category={category} size={136} />
-      </div>
-      <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>
-      <div className="mt-3 flex justify-center">
-        <CategoryChip category={category} size="md" />
+        <GumBlob category={isEditing && editCategory ? editCategory : category} size={136} />
       </div>
 
-      {otherMembers.length > 0 ? (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span className="text-sm text-text-2">with</span>
-          {otherMembers.map((member) => (
-            <span key={member.user_id} className="flex items-center gap-1.5">
-              {member.avatar_url ? (
-                <img
-                  src={member.avatar_url}
-                  alt={member.display_name ?? ''}
-                  className="h-6 w-6 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
-                  {(member.display_name ?? '?').slice(0, 1).toUpperCase()}
-                </span>
-              )}
-              {member.username ? (
-                <Link
-                  to={`/profile/${member.username}`}
-                  className="text-sm font-medium text-text underline underline-offset-2"
-                >
-                  {member.display_name}
-                </Link>
-              ) : (
-                <span className="text-sm font-medium text-text">{member.display_name}</span>
-              )}
-              {member.role === 'invitee' && member.status !== 'accepted' ? (
-                <span className={`text-xs ${member.status === 'declined' ? 'text-playful' : 'text-text-3'}`}>
-                  ({member.status})
-                </span>
-              ) : null}
-            </span>
-          ))}
+      {isEditing ? (
+        <div className="mt-4 space-y-4">
+          {piece.status === 'active' ? (
+            <p className="text-center text-xs text-text-3">Others will need to accept your changes.</p>
+          ) : null}
+          <div className="rounded-md border border-white/10 bg-surface-2 p-3">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value.slice(0, 60))}
+              maxLength={60}
+              placeholder="what do you want to do together?"
+              className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-3"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+            />
+            <p className="mt-2 text-right text-xs text-text-3">{editTitle.length} / 60</p>
+          </div>
+          {editTitle.trim() ? (
+            <div className={`transition-opacity ${isSuggestingCategory ? 'opacity-70' : 'opacity-100'}`}>
+              <CategoryPicker selectedCategory={editCategory} onSelect={setEditCategory} />
+            </div>
+          ) : null}
+          <div>
+            <div className="flex items-baseline gap-2">
+              <label htmlFor="edit-planned-date" className="text-xs text-text-3">by when?</label>
+              <span className="text-xs text-text-3 opacity-60">optional</span>
+            </div>
+            <input
+              id="edit-planned-date"
+              type="date"
+              value={editPlannedDate}
+              min={new Date().toISOString().slice(0, 10)}
+              max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}
+              onChange={(e) => setEditPlannedDate(e.target.value)}
+              className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-sm text-text outline-none focus:border-white/20 [color-scheme:dark]"
+            />
+            {editPlannedDate ? (
+              <button
+                type="button"
+                onClick={() => setEditPlannedDate('')}
+                className="mt-1 text-xs text-text-3 underline underline-offset-2"
+              >
+                Clear date
+              </button>
+            ) : null}
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <>
+          <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>
+          <div className="mt-3 flex justify-center">
+            <CategoryChip category={category} size="md" />
+          </div>
 
-      <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
-      {piece.planned_date ? (
-        <p className="mt-1 text-center text-xs text-text-3">
-          by {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
-        </p>
-      ) : null}
+          {otherMembers.length > 0 ? (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <span className="text-sm text-text-2">with</span>
+              {otherMembers.map((member) => (
+                <span key={member.user_id} className="flex items-center gap-1.5">
+                  {member.avatar_url ? (
+                    <img
+                      src={member.avatar_url}
+                      alt={member.display_name ?? ''}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs text-text-2">
+                      {(member.display_name ?? '?').slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  {member.username ? (
+                    <Link
+                      to={`/profile/${member.username}`}
+                      className="text-sm font-medium text-text underline underline-offset-2"
+                    >
+                      {member.display_name}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-text">{member.display_name}</span>
+                  )}
+                  {member.role === 'invitee' && member.status !== 'accepted' ? (
+                    <span className={`text-xs ${member.status === 'declined' ? 'text-playful' : 'text-text-3'}`}>
+                      ({member.status})
+                    </span>
+                  ) : null}
+                </span>
+              ))}
+            </div>
+          ) : null}
 
-      <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-        <div
-          className={`h-full rounded-full transition-none ${fillClass}`}
-          style={{ width: `${remainingProgress}%` }}
-        />
-      </div>
+          <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
+          {piece.planned_date ? (
+            <p className="mt-1 text-center text-xs text-text-3">
+              by {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+            </p>
+          ) : null}
+
+          <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+            <div
+              className={`h-full rounded-full transition-none ${fillClass}`}
+              style={{ width: `${remainingProgress}%` }}
+            />
+          </div>
+        </>
+      )}
 
       {/* Pending edit proposal banner */}
       {hasPendingEdit && pendingEdit ? (
@@ -480,7 +622,29 @@ export default function PieceDetail() {
       ) : null}
 
       <section className="mt-10 space-y-3 pb-24">
-        {canAccept ? (
+        {isEditing ? (
+          <>
+            <button
+              type="button"
+              disabled={!editTitle.trim() || proposeMutation.isPending}
+              onClick={() => proposeMutation.mutate()}
+              className="btn-primary w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {proposeMutation.isPending
+                ? piece.status === 'active' ? 'Proposing...' : 'Saving...'
+                : piece.status === 'active' ? 'Propose change' : 'Save changes'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="w-full rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+            >
+              Cancel
+            </button>
+          </>
+        ) : null}
+
+        {!isEditing && canAccept ? (
           <>
             <button
               type="button"
@@ -501,7 +665,7 @@ export default function PieceDetail() {
           </>
         ) : null}
 
-        {canCancelPlaceholder ? (
+        {!isEditing && canCancelPlaceholder ? (
           <button
             type="button"
             onClick={() => respondMutation.mutate('turn_down')}
@@ -512,7 +676,7 @@ export default function PieceDetail() {
           </button>
         ) : null}
 
-        {canTurnDownActive ? (
+        {!isEditing && canTurnDownActive ? (
           <>
             <button
               type="button"

@@ -22,7 +22,6 @@ const ConnectionRequestsPage = lazy(
 const PieceNewPage = lazy(() => import('./pages/PieceNew.tsx'))
 const PieceDetailPage = lazy(() => import('./pages/PieceDetail.tsx'))
 const PieceConfirmPage = lazy(() => import('./pages/PieceConfirm.tsx'))
-const PieceEditPage = lazy(() => import('./pages/PieceEdit.tsx'))
 const SettingsPage = lazy(() => import('./pages/Settings.tsx'))
 
 function App() {
@@ -201,14 +200,6 @@ function App() {
                 element={
                   <AuthGuard>
                     <PieceConfirmPage />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/piece/:id/edit"
-                element={
-                  <AuthGuard>
-                    <PieceEditPage />
                   </AuthGuard>
                 }
               />
