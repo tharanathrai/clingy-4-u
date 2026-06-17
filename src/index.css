@@ -13,6 +13,131 @@
   --browser-bottom-inset: 0px;
   --app-safe-top: calc(env(safe-area-inset-top) + var(--browser-top-inset));
   --app-safe-bottom: calc(env(safe-area-inset-bottom) + var(--browser-bottom-inset));
+
+  /* ── Color tokens ─────────────────────────────────────────── */
+  --color-bg-deep: #0c0a12;
+  --color-bg: #12101a;
+  --color-surface: #1e1b2e;
+  --color-surface-2: #272438;
+  --color-surface-3: #322e47;
+
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-mid: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+
+  --color-text-primary: #f2eff8;
+  --color-text-secondary: #9b93b8;
+  --color-text-tertiary: #5c5478;
+  --color-text-on-color: rgba(255, 255, 255, 0.92);
+
+  --color-intimate: #cf8ee8;
+  --color-active: #7dd47a;
+  --color-playful: #f07868;
+  --color-explore: #6db8f0;
+  --color-recharge: #82c9a0;
+  --color-savor: #f0a84a;
+  --color-support: #e89aa8;
+
+  --tint-intimate: rgba(207, 142, 232, 0.15);
+  --tint-active: rgba(125, 212, 122, 0.15);
+  --tint-playful: rgba(240, 120, 104, 0.15);
+  --tint-explore: rgba(109, 184, 240, 0.15);
+  --tint-recharge: rgba(130, 201, 160, 0.15);
+  --tint-savor: rgba(240, 168, 74, 0.15);
+  --tint-support: rgba(232, 154, 168, 0.15);
+
+  --color-accent: #cf8ee8;
+  --color-accent-strong: #863bff;
+  --color-glow: rgba(207, 142, 232, 0.15);
+
+  --color-success: #7dd47a;
+  --color-warning: #f0a84a;
+  --color-error: #f07868;
+  --color-info: #6db8f0;
+
+  --surface-page: var(--color-bg);
+  --surface-card: var(--color-surface);
+  --surface-input: var(--color-surface-2);
+  --surface-hover: var(--color-surface-3);
+  --text-body: var(--color-text-primary);
+  --text-muted: var(--color-text-secondary);
+  --text-faint: var(--color-text-tertiary);
+  --border-default: var(--color-border);
+  --border-hover: var(--color-border-mid);
+  --border-active: var(--color-border-strong);
+
+  /* ── Typography tokens ────────────────────────────────────── */
+  --font-display: "Bagel Fat One", cursive;
+  --font-body: "DM Sans", sans-serif;
+
+  --text-hero: 48px;
+  --text-display: 32px;
+  --text-heading: 22px;
+  --text-body-lg: 16px;
+  --text-body: 14px;
+  --text-meta: 12px;
+  --text-label: 10px;
+
+  --lh-hero: 1;
+  --lh-display: 1.1;
+  --lh-heading: 1.2;
+  --lh-body-lg: 1.65;
+  --lh-body: 1.6;
+  --lh-meta: 1.5;
+  --lh-label: 1.4;
+
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --tracking-label: 0.08em;
+  --tracking-otp: 0.2em;
+
+  /* ── Spacing tokens ───────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --page-pad: 20px;
+  --device-width: 430px;
+  --content-max: 480px;
+
+  /* ── Radius tokens ────────────────────────────────────────── */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 9999px;
+  --radius-blob: 60% 40% 30% 70% / 60% 30% 70% 40%;
+
+  /* ── Shadow + gloss tokens ────────────────────────────────── */
+  --shadow-e1: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-e2: 0 4px 24px rgba(0, 0, 0, 0.3);
+  --shadow-e3: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-card: var(--shadow-e2);
+  --gloss-gum: inset 0 2px 3px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 14px rgba(0, 0, 0, 0.28);
+  --gloss-button: inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.18);
+  --shadow-glow: 0 0 40px rgba(207, 142, 232, 0.15);
+  --glow-accent: 0 8px 32px rgba(207, 142, 232, 0.35);
+
+  /* ── Motion tokens ────────────────────────────────────────── */
+  --ease-elastic: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+  --morph-a: 3s;
+  --morph-b: 3.7s;
+  --morph-c: 4.2s;
 }
 
 * {
