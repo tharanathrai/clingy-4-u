@@ -16,6 +16,9 @@ const unreadBorderByType: Record<NotificationType, string> = {
   connection_accepted:'border-explore',
   post_reaction:      'border-support',
   post_comment:       'border-accent',
+  plan_edit_proposed: 'border-savor',
+  plan_edit_accepted: 'border-active',
+  plan_edit_declined: 'border-playful',
 }
 
 interface NotificationWithActor extends Notification {
@@ -112,6 +115,15 @@ function getNotificationCopy(type: Notification['type'], name: string): string {
   }
   if (type === 'post_comment') {
     return `${name} commented on your post`
+  }
+  if (type === 'plan_edit_proposed') {
+    return `${name} proposed a change to a plan`
+  }
+  if (type === 'plan_edit_accepted') {
+    return 'Plan changes were accepted'
+  }
+  if (type === 'plan_edit_declined') {
+    return `${name} declined your proposed change`
   }
 
   return 'You have a new notification'

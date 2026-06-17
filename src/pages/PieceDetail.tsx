@@ -563,61 +563,81 @@ export default function PieceDetail() {
 
       {/* Pending edit proposal banner */}
       {hasPendingEdit && pendingEdit ? (
-        <div className="mt-5 rounded-xl border border-white/10 bg-surface p-4">
-          <p className="text-sm font-medium text-text">
-            {isPendingEditProposer ? 'You proposed a change' : `${proposerName} proposed a change`}
-          </p>
-          <ul className="mt-2 space-y-1">
-            {pendingEdit.title !== undefined ? (
-              <li className="text-xs text-text-2">
-                Title <span className="text-text-3 line-through">{piece.title}</span>{' '}
-                <span className="text-text">→ {pendingEdit.title}</span>
-              </li>
-            ) : null}
-            {pendingEdit.category !== undefined ? (
-              <li className="text-xs text-text-2">
-                Category <span className="text-text-3 line-through">{piece.category}</span>{' '}
-                <span className="text-text">→ {pendingEdit.category}</span>
-              </li>
-            ) : null}
-            {pendingEdit.planned_date !== undefined ? (
-              <li className="text-xs text-text-2">
-                Date{' '}
-                {pendingEdit.planned_date ? (
-                  <span className="text-text">
-                    → {format(new Date(pendingEdit.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
-                  </span>
-                ) : (
-                  <span className="text-text">→ cleared</span>
-                )}
-              </li>
-            ) : null}
-          </ul>
-
-          {isPendingEditProposer ? (
-            <p className="mt-3 text-xs text-text-3">Waiting for others to accept.</p>
-          ) : null}
-
-          {canRespondToEdit ? (
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => editRespondMutation.mutate('accept_edit')}
-                disabled={editBusyAction !== null}
-                className="btn-primary flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-              >
-                {editBusyAction === 'accept_edit' ? 'Accepting...' : 'Accept'}
-              </button>
-              <button
-                type="button"
-                onClick={() => editRespondMutation.mutate('decline_edit')}
-                disabled={editBusyAction !== null}
-                className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-50"
-              >
-                {editBusyAction === 'decline_edit' ? 'Declining...' : 'Decline'}
-              </button>
+        <div className={`mt-5 overflow-hidden rounded-xl bg-surface ${canRespondToEdit ? `border border-${fillClass.replace('bg-', '')}/40` : 'border border-white/10'}`}>
+          {/* Category-colored top strip */}
+          <div className={`h-0.5 w-full ${fillClass}`} />
+          <div className="p-4">
+            <div className="flex items-center gap-2">
+              <Pencil size={13} strokeWidth={2} className="shrink-0 text-text-3" />
+              <p className="text-sm font-medium text-text">
+                {isPendingEditProposer ? 'You proposed a change' : `${proposerName} wants to change this plan`}
+              </p>
             </div>
-          ) : null}
+
+            <div className="mt-3 space-y-2">
+              {pendingEdit.title !== undefined ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-12 shrink-0 text-text-3">title</span>
+                  <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">{piece.title}</span>
+                  <span className="text-text-3">→</span>
+                  <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>{pendingEdit.title}</span>
+                </div>
+              ) : null}
+              {pendingEdit.category !== undefined ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-12 shrink-0 text-text-3">vibe</span>
+                  <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">{piece.category}</span>
+                  <span className="text-text-3">→</span>
+                  <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>{pendingEdit.category}</span>
+                </div>
+              ) : null}
+              {pendingEdit.planned_date !== undefined ? (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="w-12 shrink-0 text-text-3">date</span>
+                  {piece.planned_date ? (
+                    <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">
+                      {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d')}
+                    </span>
+                  ) : (
+                    <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">none</span>
+                  )}
+                  <span className="text-text-3">→</span>
+                  {pendingEdit.planned_date ? (
+                    <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>
+                      {format(new Date(pendingEdit.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+                    </span>
+                  ) : (
+                    <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 italic">cleared</span>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {isPendingEditProposer ? (
+              <p className="mt-3 animate-pulse text-xs text-text-3">waiting for others to accept…</p>
+            ) : null}
+
+            {canRespondToEdit ? (
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => editRespondMutation.mutate('accept_edit')}
+                  disabled={editBusyAction !== null}
+                  className={`btn-primary flex-1 rounded-full px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 ${fillClass}`}
+                >
+                  {editBusyAction === 'accept_edit' ? 'Accepting…' : 'Accept change'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editRespondMutation.mutate('decline_edit')}
+                  disabled={editBusyAction !== null}
+                  className="flex-1 rounded-full bg-surface-2 px-4 py-2.5 text-sm font-medium text-text-2 disabled:opacity-50"
+                >
+                  {editBusyAction === 'decline_edit' ? 'Declining…' : 'Decline'}
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -644,7 +664,7 @@ export default function PieceDetail() {
           </>
         ) : null}
 
-        {!isEditing && canAccept ? (
+        {!isEditing && !hasPendingEdit && canAccept ? (
           <>
             <button
               type="button"
@@ -665,7 +685,7 @@ export default function PieceDetail() {
           </>
         ) : null}
 
-        {!isEditing && canCancelPlaceholder ? (
+        {!isEditing && !hasPendingEdit && canCancelPlaceholder ? (
           <button
             type="button"
             onClick={() => respondMutation.mutate('turn_down')}
@@ -676,7 +696,7 @@ export default function PieceDetail() {
           </button>
         ) : null}
 
-        {!isEditing && canTurnDownActive ? (
+        {!isEditing && !hasPendingEdit && canTurnDownActive ? (
           <>
             <button
               type="button"

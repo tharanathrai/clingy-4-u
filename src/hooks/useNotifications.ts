@@ -19,6 +19,9 @@ export type NotificationType =
   | 'post_reaction'
   | 'connection_request'
   | 'connection_accepted'
+  | 'plan_edit_proposed'
+  | 'plan_edit_accepted'
+  | 'plan_edit_declined'
 
 export interface Notification {
   id: string
@@ -235,7 +238,11 @@ async function enrichNotifications(
       n.type === 'invite_rejected' ||
       n.type === 'plan_turned_down' ||
       n.type === 'plan_expiring_soon' ||
-      n.type === 'plan_expired',  // included so expiry notifications show actor name
+      n.type === 'plan_expired' ||
+      n.type === 'member_declined' ||
+      n.type === 'plan_edit_proposed' ||
+      n.type === 'plan_edit_accepted' ||
+      n.type === 'plan_edit_declined',
     )
     .map((n) => n.reference_id)
 
