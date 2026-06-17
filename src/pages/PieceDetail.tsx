@@ -133,7 +133,7 @@ export default function PieceDetail() {
   }, [toast])
 
   const piece = pieceData?.piece ?? null
-  const members = pieceData?.members ?? []
+  const members = useMemo(() => pieceData?.members ?? [], [pieceData?.members])
   const myMember = pieceData?.myMember ?? null
 
   // Detect status changes for redirects

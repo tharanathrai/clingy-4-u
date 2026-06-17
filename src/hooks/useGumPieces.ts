@@ -68,9 +68,9 @@ async function fetchGumPieces(userId: string): Promise<GumPiece[]> {
     new Set((allMemberRows ?? []).map((m) => m.user_id as string)),
   )
 
-  let nameById = new Map<string, string>()
-  let usernameById = new Map<string, string>()
-  let avatarById = new Map<string, string | null>()
+  const nameById = new Map<string, string>()
+  const usernameById = new Map<string, string>()
+  const avatarById = new Map<string, string | null>()
 
   if (memberUserIds.length > 0) {
     const { data: userRows } = await supabase
