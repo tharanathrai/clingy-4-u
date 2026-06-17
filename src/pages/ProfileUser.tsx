@@ -114,7 +114,7 @@ export default function ProfileUser() {
         )}
         <h1 className="app-page-title mt-3">{profile.display_name}</h1>
         <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
-        <p className="mt-3 text-sm italic text-text-2">
+        <p className="mt-3 text-sm text-text-2">
           {profile.bio ?? 'New here — no bridges yet.'}
         </p>
 

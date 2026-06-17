@@ -24,7 +24,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
     <button
       type="button"
       onClick={onPress}
-      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-[3px] border-accent bg-surface-2' : 'bg-surface'}`}
+      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-transform active:scale-[0.98] ${isUnread ? 'border-l-[3px] border-accent bg-surface-2' : 'bg-surface'}`}
     >
       {hideActor ? (
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">

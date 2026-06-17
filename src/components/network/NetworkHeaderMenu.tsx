@@ -49,7 +49,7 @@ export function NetworkHeaderMenu({ pendingRequestCount }: NetworkHeaderMenuProp
       >
         <UserPlus size={18} strokeWidth={1.75} />
         {pendingRequestCount > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-playful px-1.5 py-0.5 text-[10px] leading-none text-white">
+          <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-accent px-1.5 py-0.5 text-[10px] leading-none text-white">
             {pendingRequestCount}
           </span>
         ) : null}
@@ -80,7 +80,7 @@ export function NetworkHeaderMenu({ pendingRequestCount }: NetworkHeaderMenuProp
           >
             <span>Requests</span>
             {pendingRequestCount > 0 ? (
-              <span className="rounded-full bg-playful px-2 py-0.5 text-[10px] leading-none text-white">
+              <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] leading-none text-white">
                 {pendingRequestCount}
               </span>
             ) : null}
