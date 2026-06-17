@@ -192,14 +192,11 @@ export default function PieceDetail() {
     return 'Confirmed'
   }, [creator, piece, recipient, userId])
 
-  const expiryProgress = useMemo(() => {
+  const remainingProgress = useMemo(() => {
     if (!piece) return 0
-    const start = new Date(piece.accepted_at ?? piece.created_at).getTime()
-    const end = new Date(piece.expires_at).getTime()
-    const now = Date.now()
-    if (end <= start) return 100
-    const elapsed = Math.max(0, Math.min(now - start, end - start))
-    return Math.round((elapsed / (end - start)) * 100)
+    const remainingMs = new Date(piece.expires_at).getTime() - Date.now()
+    const MAX_MS = 365 * 24 * 60 * 60 * 1000
+    return Math.round(Math.max(0, Math.min(remainingMs / MAX_MS, 1)) * 100)
   }, [piece])
 
   const fillClass = useMemo(() => {
@@ -211,8 +208,6 @@ export default function PieceDetail() {
     if (category === 'savor') return 'bg-savor'
     return 'bg-support'
   }, [category])
-
-  const remainingProgress = Math.max(0, 100 - expiryProgress)
   const busyAction = respondMutation.isPending
     ? (respondMutation.variables as 'accept' | 'turn_down' | null)
     : null
@@ -353,9 +348,6 @@ export default function PieceDetail() {
             >
               Mark as done
             </button>
-            <p className="text-center text-xs text-text-3">
-              you&apos;ll need to be with them to do this
-            </p>
             {!showTurnDownConfirm ? (
               <button
                 type="button"
