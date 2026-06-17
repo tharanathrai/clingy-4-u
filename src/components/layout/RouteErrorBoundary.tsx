@@ -35,7 +35,7 @@ function RouteErrorFallback({ onTryAgain, onGoHome }: RouteErrorFallbackProps) {
         </button>
         <button
           type="button"
-          className="rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+          className="btn-primary rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
           onClick={onGoHome}
         >
           Go home

@@ -226,7 +226,7 @@ export function UnwrapCeremony({
               type="button"
               onClick={() => void handlePostIt()}
               disabled={submitting || postBody.trim().length === 0 || postBody.length > 500}
-              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="btn-primary rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {submitting ? 'Saving...' : 'Post it'}
             </button>

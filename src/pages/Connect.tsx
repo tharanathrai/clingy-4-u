@@ -154,7 +154,7 @@ export default function Connect() {
           <button
             type="button"
             onClick={() => void handleSignIn()}
-            className="mt-8 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+            className="btn-primary mt-8 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
           >
             Sign in with Google
           </button>
@@ -178,7 +178,7 @@ export default function Connect() {
               {connectIssue.type === 'already_connected' && connectIssue.connectedUser?.username ? (
                 <Link
                   to={`/profile/${connectIssue.connectedUser.username}`}
-                  className="rounded-full bg-accent px-4 py-2 text-xs text-white"
+                  className="btn-primary rounded-full bg-accent px-4 py-2 text-xs text-white"
                 >
                   View profile
                 </Link>
@@ -219,7 +219,7 @@ export default function Connect() {
             <p className="mt-2 text-sm text-text-2">They&apos;ll get a notification to accept.</p>
             <Link
               to="/home"
-              className="mt-6 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+              className="btn-primary mt-6 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
               Go to your pocket
             </Link>
@@ -232,7 +232,7 @@ export default function Connect() {
             <button
               type="button"
               onClick={retrySubmit}
-              className="mt-4 rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-white"
+              className="btn-primary mt-4 rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-white"
             >
               Send request
             </button>

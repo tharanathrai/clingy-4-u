@@ -121,7 +121,7 @@ export default function ProfileUser() {
         {!isConnected ? (
           <Link
             to="/add"
-            className="mt-4 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white"
+            className="btn-primary mt-4 rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white"
           >
             Add {profile.display_name}
           </Link>

@@ -93,7 +93,7 @@ export default function ProfileMe() {
         </p>
         <Link
           to="/welcome"
-          className="mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
+          className="btn-primary mt-8 rounded-full bg-accent px-7 py-3.5 text-center text-sm font-medium text-white"
         >
           Finish onboarding
         </Link>
@@ -111,7 +111,7 @@ export default function ProfileMe() {
         <p className="mt-1 text-sm text-text-2">
           chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
         </p>
-        <p className="mt-3 max-w-xs text-sm italic text-text-2">
+        <p className="mt-3 max-w-xs text-sm text-text-2">
           {profile.bio ?? (generateBioMutation.isPending ? 'generating your bio...' : 'New here — no bridges yet.')}
         </p>
         {categoriesWithBridges.length > 0 ? (

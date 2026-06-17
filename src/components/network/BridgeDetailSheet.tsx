@@ -108,7 +108,7 @@ export function BridgeDetailSheet({
               returnTo: '/network',
               selectUserId: otherUser.id,
             }}
-            className="inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
+            className="btn-primary inline-flex min-h-11 items-center justify-center rounded-full bg-accent px-4 py-3 text-sm font-medium text-white"
           >
             Make plan
           </Link>

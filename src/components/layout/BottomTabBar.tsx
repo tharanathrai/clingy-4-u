@@ -85,7 +85,7 @@ export function BottomTabBar() {
                   className={isActive ? 'text-accent' : 'text-text-3'}
                 />
                 {tab.hasBadge && unreadCount > 0 ? (
-                  <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-playful" />
+                  <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-accent" />
                 ) : null}
               </span>
               <span

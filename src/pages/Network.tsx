@@ -139,7 +139,7 @@ export default function Network() {
   return (
     <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
       <header className="safe-content-top absolute inset-x-0 top-0 z-20 flex items-start justify-between px-5">
-        <h1 className="app-page-title">your network</h1>
+        <h1 className="app-page-title">your bridges</h1>
         <div className="relative flex flex-col items-center gap-2">
           <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
           <RecenterGraphButton onRecenter={handleRecenter} disabled={graphActionsDisabled} />
@@ -205,7 +205,7 @@ export default function Network() {
               </p>
               <Link
                 to="/add"
-                className="mt-5 inline-flex rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
+                className="btn-primary mt-5 inline-flex rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
               >
                 Add someone
               </Link>

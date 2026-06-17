@@ -32,7 +32,7 @@ export function SharedBridgesSection({
           <p className="text-sm text-text-2">No bridges yet. Make a plan.</p>
           <button
             type="button"
-            className="mt-4 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
+            className="btn-primary mt-4 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
             onClick={() => {
               navigate('/piece/new', {
                 state: profileNewGumReturnState(otherUser.username, otherUser.id),

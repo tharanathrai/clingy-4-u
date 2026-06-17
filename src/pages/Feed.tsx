@@ -152,7 +152,7 @@ export default function Feed() {
   return (
     <Layout>
       <main>
-        <h1 className="app-page-title">feed</h1>
+        <h1 className="app-page-title">the feed</h1>
 
         {loading ? (
           <section className="mt-8 space-y-3">

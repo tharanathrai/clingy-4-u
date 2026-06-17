@@ -132,7 +132,7 @@ export default function Home() {
             </p>
             <Link
               to="/add"
-              className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
               Add someone
             </Link>
@@ -146,7 +146,7 @@ export default function Home() {
             <p className="mt-2 text-sm text-text-2">Who do you want to do something with?</p>
             <Link
               to="/piece/new"
-              className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
               New plan
             </Link>
@@ -198,7 +198,7 @@ export default function Home() {
               type="button"
               onClick={handleNewGum}
               disabled={pocketFull}
-              className="new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
+              className="btn-primary new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
             >
               new gum
             </button>

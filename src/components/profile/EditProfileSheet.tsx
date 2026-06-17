@@ -263,7 +263,7 @@ export function EditProfileSheet({
           </button>
           <button
             type="button"
-            className="flex-1 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-primary flex-1 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white disabled:opacity-50"
             onClick={() => {
               void handleSave()
             }}

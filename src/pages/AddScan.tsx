@@ -370,7 +370,7 @@ export default function AddScan() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="mt-5 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
+              className="btn-primary mt-5 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
               Choose image
             </button>
@@ -407,7 +407,7 @@ export default function AddScan() {
       {validatedUser && !successUser && !scanIssue ? (
         <button
           type="button"
-          className="mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-primary mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
           onClick={() => void sendRequest()}
           disabled={submitting}
         >
@@ -429,7 +429,7 @@ export default function AddScan() {
           {scanIssue.type === 'already_connected' && scanIssue.connectedUser?.username ? (
             <Link
               to={`/profile/${scanIssue.connectedUser.username}`}
-              className="rounded-full bg-accent px-4 py-2 text-xs text-white"
+              className="btn-primary rounded-full bg-accent px-4 py-2 text-xs text-white"
             >
               View profile
             </Link>

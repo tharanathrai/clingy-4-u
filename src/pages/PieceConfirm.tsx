@@ -278,7 +278,7 @@ export default function PieceConfirm() {
           <button
             type="button"
             onClick={() => void handleStartOver()}
-            className="mt-4 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+            className="btn-primary mt-4 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
           >
             Try again
           </button>

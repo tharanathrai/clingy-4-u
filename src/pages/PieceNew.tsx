@@ -330,7 +330,7 @@ export default function PieceNew() {
               <p className="mt-2 text-sm text-text-2">Add someone first before making a plan.</p>
               <Link
                 to="/add"
-                className="mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+                className="btn-primary mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
               >
                 Add someone
               </Link>
@@ -449,7 +449,7 @@ export default function PieceNew() {
         type="button"
         disabled={!canSubmit}
         onClick={() => void handleSubmit()}
-        className="mt-8 w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-primary mt-8 w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         {createPieceMutation.isPending ? 'wrapping...' : 'wrap it'}
       </button>

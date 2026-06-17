@@ -152,7 +152,7 @@ export default function Welcome() {
 
           <button
             type="button"
-            className="mt-auto rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn-primary mt-auto rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
             disabled={!isDisplayNameValid}
             onClick={() => setStep(2)}
           >
@@ -202,7 +202,7 @@ export default function Welcome() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!isUsernamePatternValid || usernameAvailable !== true}
               onClick={() => setStep(3)}
             >
@@ -245,7 +245,7 @@ export default function Welcome() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="btn-primary flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => void handleComplete()}
               disabled={submitting || !canComplete}
             >

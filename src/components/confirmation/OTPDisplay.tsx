@@ -167,7 +167,7 @@ export function OTPDisplay({
           <button
             type="button"
             onClick={() => void onStartOver()}
-            className="mt-6 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
+            className="btn-primary mt-6 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white"
           >
             Start over
           </button>
@@ -176,7 +176,7 @@ export function OTPDisplay({
             type="button"
             onClick={() => void handleConfirm()}
             disabled={hasConfirmed || submitting || secondsLeft <= 0}
-            className="mt-6 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary mt-6 w-full rounded-full bg-accent px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {hasConfirmed
               ? "You're confirmed"

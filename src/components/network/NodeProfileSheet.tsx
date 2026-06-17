@@ -159,7 +159,7 @@ export function NodeProfileSheet({
                   onCreatePlan(otherUser.id)
                 }
               }}
-              className="w-full rounded-full bg-accent px-4 py-3 text-sm font-medium text-white transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+              className="btn-primary w-full rounded-full bg-accent px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
               disabled={!otherUser?.id}
             >
               Make plan

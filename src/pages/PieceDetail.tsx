@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
+import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -269,7 +270,9 @@ export default function PieceDetail() {
     <main className={pageShellScroll}>
       <BackHeader onBack={handleBack} className="mb-2" />
 
-      <div className={`mx-auto h-24 w-24 gum-morph-base gum-morph-37 ${fillClass}`} />
+      <div className="flex justify-center">
+        <GumBlob category={category} size={96} />
+      </div>
       <h1 className="mt-4 text-center font-display text-3xl text-text">{piece.title}</h1>
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
@@ -311,7 +314,7 @@ export default function PieceDetail() {
               type="button"
               onClick={() => respondMutation.mutate('accept')}
               disabled={busyAction !== null}
-              className="w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busyAction === 'accept' ? 'Accepting...' : 'Accept'}
             </button>
@@ -342,7 +345,7 @@ export default function PieceDetail() {
             <button
               type="button"
               onClick={() => void navigate(`/piece/${piece.id}/confirm`)}
-              className="w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+              className="btn-primary w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
               Mark as done
             </button>

@@ -314,7 +314,7 @@ export function ConnectionRequestSheet({
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
-                className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={busyAction !== null}
                 onClick={() => void handleRespond('accept')}
               >

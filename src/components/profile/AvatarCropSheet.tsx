@@ -166,7 +166,7 @@ export function AvatarCropSheet({ imageSrc, isOpen, onClose, onConfirm }: Avatar
           </button>
           <button
             type="button"
-            className="flex-1 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:scale-[1.03] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary flex-1 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               void handleConfirm()
             }}
