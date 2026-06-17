@@ -423,6 +423,10 @@ body.modal-scroll-lock .post-detail-viewport {
   }
 }
 
+.gum-morph-base {
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .gum-morph-base {
     will-change: border-radius;
