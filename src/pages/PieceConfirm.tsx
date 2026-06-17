@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
@@ -12,6 +13,7 @@ import {
 } from '../hooks/useConfirmationSession.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { buildDraftPostBody } from '../lib/draftPostBody.ts'
+import { queryKeys } from '../lib/queryKeys.ts'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge } from '../types/index.ts'
 
@@ -31,6 +33,7 @@ export default function PieceConfirm() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [flowState, setFlowState] = useState<FlowState>('loading')
   const [piece, setPiece] = useState<GumPiece | null>(null)
   const [fallbackSession, setFallbackSession] = useState<ConfirmationSession | null>(null)
@@ -246,12 +249,11 @@ export default function PieceConfirm() {
         activityTitle={bridge.activity_title || piece.title}
         draftPostId={draftPostId}
         suggestedPostBody={suggestedPostBody}
-        onComplete={(toast) =>
-          navigate('/home', {
-            replace: true,
-            state: toast ? { toast } : undefined,
-          })
-        }
+        onComplete={(toast) => {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.gumPieces(userId) })
+          if (id) void queryClient.invalidateQueries({ queryKey: queryKeys.pieceDetail(id, userId) })
+          navigate('/home', { replace: true, state: toast ? { toast } : undefined })
+        }}
       />
     )
   }

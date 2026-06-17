@@ -129,23 +129,23 @@ export function PostDetailSheet({
       return
     }
 
+    const prevHasReacted = hasReacted
+    const prevReactionCount = reactionCount
     const nextHasReacted = !hasReacted
-    const nextReactionCount = Math.max(
-      0,
-      reactionCount + (nextHasReacted ? 1 : -1),
-    )
+    const nextReactionCount = Math.max(0, reactionCount + (nextHasReacted ? 1 : -1))
+
     setOptimisticHasReacted(nextHasReacted)
     setOptimisticReactionCount(nextReactionCount)
-    onPostMetricsChange?.({
-      postId,
-      reactionCount: nextReactionCount,
-      commentCount,
-      hasReacted: nextHasReacted,
-    })
+    onPostMetricsChange?.({ postId, reactionCount: nextReactionCount, commentCount, hasReacted: nextHasReacted })
 
-    await supabase.functions.invoke('toggle-reaction', {
+    const { error: fnError } = await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
     })
+    if (fnError) {
+      setOptimisticHasReacted(prevHasReacted)
+      setOptimisticReactionCount(prevReactionCount)
+      onPostMetricsChange?.({ postId, reactionCount: prevReactionCount, commentCount, hasReacted: prevHasReacted })
+    }
   }
 
   const handleSubmitComment = async () => {
@@ -214,6 +214,8 @@ export function PostDetailSheet({
       setOptimisticComments((current) =>
         current.filter((comment) => comment.id !== tempCommentId),
       )
+      setOptimisticCommentCount(null)
+      onPostMetricsChange?.({ postId, reactionCount, commentCount: comments.length, hasReacted })
       setSubmittingComment(false)
       return
     }

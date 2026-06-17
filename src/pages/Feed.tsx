@@ -236,17 +236,15 @@ export default function Feed() {
           setSelectedPostId(null)
         }}
         onPostMetricsChange={(next) => {
-          setLocalPosts((current) =>
-            current.map((post) =>
+          const applyMetrics = (list: FeedPost[]) =>
+            list.map((post) =>
               post.id === next.postId
-                ? {
-                    ...post,
-                    reactionCount: next.reactionCount,
-                    commentCount: next.commentCount,
-                    hasReacted: next.hasReacted,
-                  }
+                ? { ...post, reactionCount: next.reactionCount, commentCount: next.commentCount, hasReacted: next.hasReacted }
                 : post,
-            ),
+            )
+          setLocalPosts((current) => applyMetrics(current))
+          queryClient.setQueryData<FeedPost[]>(queryKeys.feed(userId), (current) =>
+            current ? applyMetrics(current) : current,
           )
         }}
       />
