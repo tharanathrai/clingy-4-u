@@ -19,7 +19,7 @@ export interface CommentWithUser extends Comment {
   user: User
 }
 
-interface PostQueryResult {
+export interface PostQueryResult {
   post: PostWithDetails
   reactionCount: number
   hasReacted: boolean

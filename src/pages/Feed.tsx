@@ -6,6 +6,7 @@ import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
 import { useFeed, type FeedPost } from '../hooks/useFeed.ts'
+import type { PostQueryResult } from '../hooks/usePost.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -115,7 +116,9 @@ export default function Feed() {
     },
     onMutate: async (postId) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.feed(userId) })
+      await queryClient.cancelQueries({ queryKey: queryKeys.post(postId, userId) })
       const previous = queryClient.getQueryData<FeedPost[]>(queryKeys.feed(userId))
+      const previousPost = queryClient.getQueryData<PostQueryResult>(queryKeys.post(postId, userId))
       const applyToggle = (list: FeedPost[]) =>
         list.map((post) => {
           if (post.id !== postId) return post
@@ -130,12 +133,23 @@ export default function Feed() {
         current ? applyToggle(current) : current,
       )
       setLocalPosts((current) => applyToggle(current))
-      return { previous }
+      if (previousPost) {
+        const nextHasReacted = !previousPost.hasReacted
+        queryClient.setQueryData<PostQueryResult>(queryKeys.post(postId, userId), {
+          ...previousPost,
+          hasReacted: nextHasReacted,
+          reactionCount: Math.max(0, previousPost.reactionCount + (nextHasReacted ? 1 : -1)),
+        })
+      }
+      return { previous, previousPost }
     },
-    onError: (_err, _postId, context) => {
+    onError: (_err, postId, context) => {
       if (context?.previous) {
         queryClient.setQueryData(queryKeys.feed(userId), context.previous)
         setLocalPosts(context.previous)
+      }
+      if (context?.previousPost) {
+        queryClient.setQueryData<PostQueryResult>(queryKeys.post(postId, userId), context.previousPost)
       }
     },
   })

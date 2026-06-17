@@ -1,13 +1,15 @@
 import { Send, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../hooks/useAuth.ts'
-import { type CommentWithUser, usePost } from '../../hooks/usePost.ts'
+import { type CommentWithUser, type PostQueryResult, usePost } from '../../hooks/usePost.ts'
 import {
   canNavigateToProfile,
   navigateToProfile,
 } from '../../lib/navigationContext.ts'
 import { supabase } from '../../lib/supabase.ts'
+import { queryKeys } from '../../lib/queryKeys.ts'
 import { CommentItem } from './CommentItem.tsx'
 import { FeedPostCard } from './FeedPostCard.tsx'
 
@@ -31,6 +33,7 @@ export function PostDetailSheet({
 }: PostDetailSheetProps) {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [commentBody, setCommentBody] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
   const { post, reactionCount: serverReactionCount, hasReacted: serverHasReacted, comments, loading, error } =
@@ -137,6 +140,9 @@ export function PostDetailSheet({
     setOptimisticHasReacted(nextHasReacted)
     setOptimisticReactionCount(nextReactionCount)
     onPostMetricsChange?.({ postId, reactionCount: nextReactionCount, commentCount, hasReacted: nextHasReacted })
+    queryClient.setQueryData<PostQueryResult>(queryKeys.post(postId, user?.id ?? null), (current) =>
+      current ? { ...current, hasReacted: nextHasReacted, reactionCount: nextReactionCount } : current,
+    )
 
     const { error: fnError } = await supabase.functions.invoke('toggle-reaction', {
       body: { post_id: postId },
@@ -145,6 +151,9 @@ export function PostDetailSheet({
       setOptimisticHasReacted(prevHasReacted)
       setOptimisticReactionCount(prevReactionCount)
       onPostMetricsChange?.({ postId, reactionCount: prevReactionCount, commentCount, hasReacted: prevHasReacted })
+      queryClient.setQueryData<PostQueryResult>(queryKeys.post(postId, user?.id ?? null), (current) =>
+        current ? { ...current, hasReacted: prevHasReacted, reactionCount: prevReactionCount } : current,
+      )
     }
   }
 
