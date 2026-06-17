@@ -25,6 +25,7 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
   const accentClass = accentClassByCategory[category]
   const morphSeed = idModulo(piece.id, 3)
   const isPlaceholder = piece.status === 'placeholder'
+  const hasPendingEdit = Boolean(piece.pending_edit)
 
   const otherMembers = piece.members.filter((m) => m.user_id !== currentUserId)
   const withText = buildWithText(otherMembers)
@@ -53,6 +54,12 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
             {isPlaceholder ? (
               <span className="rounded-full bg-tint-intimate px-2 py-0.5 text-[10px] text-accent">
                 awaiting
+              </span>
+            ) : null}
+            {hasPendingEdit ? (
+              <span className="flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-savor">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-savor" />
+                change pending
               </span>
             ) : null}
           </div>

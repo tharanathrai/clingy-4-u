@@ -14,7 +14,7 @@ import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
-import { invalidateGumPieceFlow } from '../lib/invalidate.ts'
+import { invalidateGumPieceFlow, invalidateGumPieces } from '../lib/invalidate.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
 import type { GumPieceMember, PendingEdit } from '../types/index.ts'
@@ -125,13 +125,19 @@ export default function PieceDetail() {
         event: '*',
         table: 'gum_pieces',
         filter: `id=eq.${id}`,
-        callback: () => { debouncedInvalidateQueries(queryClient, queryKey) },
+        callback: () => {
+          debouncedInvalidateQueries(queryClient, queryKey)
+          invalidateGumPieces(userId, queryClient)
+        },
       },
       {
         event: '*',
         table: 'gum_piece_members',
         filter: `gum_piece_id=eq.${id}`,
-        callback: () => { debouncedInvalidateQueries(queryClient, queryKey) },
+        callback: () => {
+          debouncedInvalidateQueries(queryClient, queryKey)
+          invalidateGumPieces(userId, queryClient)
+        },
       },
     ])
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -467,7 +473,6 @@ export default function PieceDetail() {
               maxLength={60}
               placeholder="what do you want to do together?"
               className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-3"
-              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
             <p className="mt-2 text-right text-xs text-text-3">{editTitle.length} / 60</p>

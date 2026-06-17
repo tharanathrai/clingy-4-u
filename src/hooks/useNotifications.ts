@@ -205,7 +205,7 @@ export function useNotifications(): UseNotificationsResult {
     },
   })
 
-  const notifications = data ?? []
+  const notifications = useMemo(() => data ?? [], [data])
 
   const unreadCount = useMemo(
     () => notifications.reduce((count, n) => (n.read ? count : count + 1), 0),

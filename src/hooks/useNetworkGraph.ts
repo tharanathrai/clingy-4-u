@@ -126,9 +126,9 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient, userId])
 
-  const connections = data?.connections ?? []
-  const usersById = data?.usersById ?? {}
-  const bridges = data?.bridges ?? []
+  const connections = useMemo(() => data?.connections ?? [], [data])
+  const usersById = useMemo(() => data?.usersById ?? {}, [data])
+  const bridges = useMemo(() => data?.bridges ?? [], [data])
 
   const nodes = useMemo<NetworkGraphNode[]>(() => {
     if (!userId) return []

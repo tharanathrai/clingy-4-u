@@ -6,7 +6,7 @@ import { queryKeys } from '../lib/queryKeys.ts'
 import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
-import type { GumPieceMember } from '../types/index.ts'
+import type { GumPieceMember, PendingEdit } from '../types/index.ts'
 
 export interface GumPiece {
   id: string
@@ -21,6 +21,7 @@ export interface GumPiece {
   expires_at: string
   confirmed_at: string | null
   planned_date: string | null
+  pending_edit: PendingEdit | null
   members: GumPieceMember[]
 }
 
