@@ -130,7 +130,8 @@ describe('Feed profile navigation', () => {
     const user = userEvent.setup()
     renderFeed({ pathname: '/feed' })
 
-    await user.click(screen.getByRole('button', { name: /Test User/i }))
+    const ownCard = screen.getByText('My own post').closest('article')!
+    await user.click(within(ownCard).getByText('@testuser'))
 
     expect(mockNavigate).not.toHaveBeenCalled()
   })

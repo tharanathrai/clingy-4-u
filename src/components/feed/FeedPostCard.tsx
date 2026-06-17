@@ -70,17 +70,32 @@ export function FeedPostCard({
               </span>
             )}
           </button>
-          <button
-            type="button"
-            onClick={onOpenDetail}
-            className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
-          >
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-text">{post.author.display_name}</p>
-              <p className="truncate text-xs text-text-3">@{post.author.username}</p>
+              <button
+                type="button"
+                onClick={onOpenDetail}
+                className="max-w-full truncate text-left text-sm font-medium text-text"
+              >
+                {post.author.display_name}
+              </button>
+              <button
+                type="button"
+                onClick={onAuthorPress}
+                disabled={!onAuthorPress}
+                className="block truncate text-xs text-text-3 disabled:cursor-default"
+              >
+                @{post.author.username}
+              </button>
             </div>
-            <p className="shrink-0 text-xs text-text-3">{timestamp}</p>
-          </button>
+            <button
+              type="button"
+              onClick={onOpenDetail}
+              className="shrink-0 text-xs text-text-3"
+            >
+              {timestamp}
+            </button>
+          </div>
         </div>
 
         <button
