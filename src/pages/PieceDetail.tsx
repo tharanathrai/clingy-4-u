@@ -279,6 +279,7 @@ export default function PieceDetail() {
       </div>
       {partner ? (
         <div className="mt-4 flex items-center justify-center gap-2">
+          <span className="text-sm text-text-2">with</span>
           {partner.avatar_url ? (
             <img
               src={partner.avatar_url}
@@ -290,8 +291,7 @@ export default function PieceDetail() {
               {partner.display_name.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <span className="text-sm text-text-2">with</span>
-          <Link to={`/profile/${partner.username}`} className="text-sm text-text underline underline-offset-2">
+          <Link to={`/profile/${partner.username}`} className="text-sm font-medium text-text underline underline-offset-2">
             {partner.display_name}
           </Link>
         </div>
@@ -320,7 +320,7 @@ export default function PieceDetail() {
               type="button"
               onClick={() => respondMutation.mutate('turn_down')}
               disabled={busyAction !== null}
-              className="w-full rounded-full border border-playful/40 bg-transparent px-7 py-3.5 text-sm font-medium text-playful disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busyAction === 'turn_down' ? 'Passing...' : 'Pass'}
             </button>
@@ -332,7 +332,7 @@ export default function PieceDetail() {
             type="button"
             onClick={() => respondMutation.mutate('turn_down')}
             disabled={busyAction !== null}
-            className="w-full rounded-full border border-playful/40 bg-transparent px-7 py-3.5 text-sm font-medium text-playful disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busyAction === 'turn_down' ? 'Cancelling...' : 'Cancel'}
           </button>
@@ -354,7 +354,7 @@ export default function PieceDetail() {
               <button
                 type="button"
                 onClick={() => setShowTurnDownConfirm(true)}
-                className="w-full rounded-full border border-playful/40 bg-transparent px-7 py-3.5 text-sm font-medium text-playful"
+                className="w-full rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
               >
                 Turn down
               </button>
@@ -366,14 +366,14 @@ export default function PieceDetail() {
                     type="button"
                     onClick={() => respondMutation.mutate('turn_down')}
                     disabled={busyAction !== null}
-                    className="flex-1 rounded-full border border-playful/40 px-4 py-2 text-sm text-playful disabled:opacity-50"
+                    className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm font-medium text-text-2 disabled:opacity-50"
                   >
-                    Confirm turn down
+                    Confirm
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowTurnDownConfirm(false)}
-                    className="flex-1 rounded-full bg-surface-2 px-4 py-2 text-sm text-text-2"
+                    className="btn-primary flex-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-white"
                   >
                     Keep it
                   </button>
