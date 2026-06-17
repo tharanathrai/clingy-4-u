@@ -133,15 +133,9 @@ export default function PieceEdit() {
       if (userId && id) {
         invalidateGumPieceFlow(userId, queryClient, id)
       }
-      // Also invalidate the piece-edit query
       void queryClient.invalidateQueries({ queryKey: ['piece-edit', id, userId] })
       void queryClient.invalidateQueries({ queryKey })
-
-      if (piece?.status === 'placeholder') {
-        navigate(`/piece/${id}`, { replace: true, state: { toast: 'Plan updated.' } })
-      } else {
-        navigate(`/piece/${id}`, { replace: true, state: { toast: 'Change proposed — waiting for others to accept.' } })
-      }
+      navigate(-1)
     },
     onError: (err) => {
       setToast(err instanceof Error ? err.message : 'Something went wrong — try again.')

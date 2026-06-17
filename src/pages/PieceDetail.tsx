@@ -1,7 +1,8 @@
 import { format, formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil } from 'lucide-react'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
@@ -93,11 +94,9 @@ export default function PieceDetail() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
   const navigate = useNavigate()
-  const location = useLocation()
   const queryClient = useQueryClient()
   const [showTurnDownConfirm, setShowTurnDownConfirm] = useState(false)
-  const locationState = location.state as { toast?: string } | null
-  const [toast, setToast] = useState<string | null>(locationState?.toast ?? null)
+  const [toast, setToast] = useState<string | null>(null)
   const previousStatusRef = useRef<PieceDetailRow['status'] | null>(null)
 
   const queryKey = queryKeys.pieceDetail(id, userId)
@@ -349,7 +348,18 @@ export default function PieceDetail() {
 
   return (
     <main className={pageShellScroll}>
-      <BackHeader onBack={handleBack} className="mb-2" />
+      <div className="relative mb-2 flex items-center">
+        <BackHeader onBack={handleBack} />
+        {(canEditPlaceholder || canProposeEdit) ? (
+          <Link
+            to={`/piece/${piece.id}/edit`}
+            className="absolute right-0 inline-flex min-h-11 min-w-11 items-center justify-center text-text-3 hover:text-text-2"
+            aria-label={canEditPlaceholder ? 'Edit plan' : 'Suggest a change'}
+          >
+            <Pencil size={18} strokeWidth={1.75} />
+          </Link>
+        ) : null}
+      </div>
 
       <div className="flex justify-center">
         <GumBlob category={category} size={136} />
@@ -408,18 +418,6 @@ export default function PieceDetail() {
           style={{ width: `${remainingProgress}%` }}
         />
       </div>
-
-      {/* Edit entry points */}
-      {(canEditPlaceholder || canProposeEdit) ? (
-        <div className="mt-4 flex justify-center">
-          <Link
-            to={`/piece/${piece.id}/edit`}
-            className="text-sm text-text-3 underline underline-offset-2 hover:text-text-2"
-          >
-            {canEditPlaceholder ? 'Edit plan' : 'Suggest a change'}
-          </Link>
-        </div>
-      ) : null}
 
       {/* Pending edit proposal banner */}
       {hasPendingEdit && pendingEdit ? (
