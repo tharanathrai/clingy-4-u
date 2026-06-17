@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
+import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { ProfileMeHeader, ProfileMeHeaderSkeleton } from '../components/profile/ProfileMeHeader.tsx'
@@ -104,45 +105,56 @@ export default function ProfileMe() {
     <main className={pageShellTab}>
       <ProfileMeHeader />
 
-      <section className="mt-2 flex flex-col items-center text-center">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.display_name}
-            className="h-20 w-20 rounded-full border-2 border-white object-cover"
-          />
-        ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-surface-2 text-2xl text-text">
-            {profile.display_name.slice(0, 1).toUpperCase()}
-          </div>
-        )}
-        <h2 className="mt-3 font-display text-2xl text-text">{profile.display_name}</h2>
-        <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
-        <p className="mt-3 text-sm italic text-text-2">
-          {profile.bio ?? (generateBioMutation.isPending ? 'Generating your bio...' : 'New here — no bridges yet.')}
-        </p>
-        <button
-          type="button"
-          className="mt-4 rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
-          onClick={() => {
-            setIsEditing(true)
-          }}
-        >
-          Edit profile
-        </button>
-      </section>
-
-      <section className="mt-8 flex flex-col items-center">
+      <section className="mt-4 flex flex-col items-center text-center">
         <Gumball categoryBreakdown={categoryBreakdown} size={160} />
-        <p className="mt-4 text-center text-sm text-text-2">
+        <h2 className="mt-5 font-display text-3xl text-text">{profile.display_name}</h2>
+        <p className="mt-1 text-sm text-text-2">
           chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
         </p>
-        <Link
-          to="/add"
-          className="mt-3 rounded-full bg-surface-2 px-4 py-2 text-xs font-medium text-text-2"
-        >
-          Add someone
-        </Link>
+        <p className="mt-3 max-w-xs text-sm italic text-text-2">
+          {profile.bio ?? (generateBioMutation.isPending ? 'generating your bio...' : 'New here — no bridges yet.')}
+        </p>
+        {categoriesWithBridges.length > 0 ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {categoriesWithBridges.slice(0, 4).map((category) => (
+              <CategoryChip key={category} category={category} size="sm" />
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="mt-6 flex flex-col items-center gap-3">
+        <div className="flex items-center gap-3">
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.display_name}
+              className="h-10 w-10 rounded-full border border-white/20 object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-surface-2 text-sm text-text">
+              {profile.display_name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <p className="text-sm text-text-3">@{profile.username}</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
+            onClick={() => {
+              setIsEditing(true)
+            }}
+          >
+            Edit profile
+          </button>
+          <Link
+            to="/add"
+            className="rounded-full bg-surface-2 px-5 py-2.5 text-sm text-text-2"
+          >
+            Add someone
+          </Link>
+        </div>
       </section>
 
       {bridgeCount > 0 ? (

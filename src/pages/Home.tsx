@@ -142,8 +142,8 @@ export default function Home() {
         {!loading && !loadingConnections && !error && connectionsCount > 0 && sortedPieces.length === 0 ? (
           <section className="mt-8 rounded-lg bg-surface p-6 text-center">
             <EmptyStateIllustration />
-            <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
-            <p className="mt-2 text-sm text-text-2">Make a plan with someone you love.</p>
+            <h2 className="font-display text-2xl text-text">Nothing brewing yet.</h2>
+            <p className="mt-2 text-sm text-text-2">Who do you want to do something with?</p>
             <Link
               to="/piece/new"
               className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"

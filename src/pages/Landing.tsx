@@ -36,6 +36,10 @@ export default function Landing() {
   return (
     <main className={pageShellCentered}>
       <section className="w-full text-center">
+        <div className="relative mx-auto mb-7 h-[120px] w-[120px]" aria-hidden>
+          <span className="pointer-events-none absolute inset-0 scale-[2] rounded-full bg-intimate/15 blur-2xl" />
+          <div className="relative h-[120px] w-[120px] bg-intimate gum-morph-base gum-morph-37" />
+        </div>
         <h1 className="font-display text-5xl text-text">clingy 4 u</h1>
         <p className="mt-4 font-body text-base text-text-2">
           Make plans together, then turn them into bridges.

@@ -106,7 +106,7 @@ export default function Notifications() {
     <Layout>
       <main>
         <div className="flex items-center justify-between gap-3">
-          <h1 className="app-page-title">notifications</h1>
+          <h1 className="app-page-title">caught up?</h1>
           {unreadCount > 0 ? (
             <button
               type="button"

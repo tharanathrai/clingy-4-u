@@ -24,7 +24,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
     <button
       type="button"
       onClick={onPress}
-      className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-2 border-accent bg-surface-2' : 'bg-surface'}`}
+      className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left transition-opacity active:opacity-90 ${isUnread ? 'border-l-[3px] border-accent bg-surface-2' : 'bg-surface'}`}
     >
       {hideActor ? (
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-accent">
@@ -45,7 +45,7 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-text">{copy}</p>
+        <p className={`text-sm text-text ${isUnread ? 'font-medium' : ''}`}>{copy}</p>
         <p className="mt-1 text-xs text-text-3">{timestamp}</p>
       </div>
     </button>
