@@ -41,7 +41,7 @@ export default function Landing() {
           <GumBlob category="intimate" size={120} />
         </div>
         <h1 className="font-display text-5xl text-text">clingy 4 u</h1>
-        <p className="mt-4 font-body text-base text-text-2">
+        <p className="mt-5 font-body text-lg leading-snug text-text-2">
           Make plans together, then turn them into bridges.
         </p>
 

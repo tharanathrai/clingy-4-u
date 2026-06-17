@@ -52,7 +52,7 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
           <div className="mt-2 flex items-center gap-2">
             <p className={`text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>{leftText}</p>
             {isPlaceholder ? (
-              <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px] text-text-3">
+              <span className="rounded-full bg-tint-intimate px-2 py-0.5 text-[10px] text-accent">
                 awaiting
               </span>
             ) : null}

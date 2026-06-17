@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Camera, RefreshCcw } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
@@ -190,6 +191,8 @@ export default function Add() {
 
   const remainingSeconds = Math.ceil(remainingMs / 1000)
 
+  const ringDeg = remainingFraction * 360
+
   return (
     <main className={`${pageShellPinnedFooter} pb-tab-clearance`}>
       <BackHeader
@@ -202,66 +205,66 @@ export default function Add() {
         }}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto text-center">
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
         <h1 className="app-page-title">add someone</h1>
-        <p className="mt-3 max-w-xs text-sm text-text-2">
-          Show this to someone you want to connect with. It refreshes every 60 seconds.
+        <p className="mt-2 text-sm text-text-2">
+          Show this to someone nearby.
         </p>
 
-        <div className="relative mt-6 flex h-64 w-64 shrink-0 items-center justify-center rounded-full bg-surface">
-          <svg
-            aria-hidden
-            className="absolute inset-2 h-[calc(100%-16px)] w-[calc(100%-16px)]"
-            viewBox="0 0 100 100"
-            style={{ transform: 'rotate(-90deg)' }}
-          >
-            <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(207,142,232,0.12)" strokeWidth="3" />
-            <circle
-              cx="50" cy="50" r="45"
-              fill="none"
-              stroke="#cf8ee8"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray={`${remainingFraction * 283} 283`}
-            />
-          </svg>
-          <div className="relative z-10 rounded-lg bg-white p-3">
+        {/* QR card — gradient border is the countdown ring */}
+        <div
+          className="mt-8 shrink-0"
+          style={{
+            padding: '3px',
+            borderRadius: '20px',
+            background: `conic-gradient(from -90deg, #cf8ee8 ${ringDeg}deg, rgba(207,142,232,0.12) ${ringDeg}deg 360deg)`,
+          }}
+        >
+          <div className="bg-white p-5" style={{ borderRadius: '17px' }}>
             {loading ? (
-              <div className="flex h-48 w-48 items-center justify-center text-sm text-black/60">
+              <div className="flex h-[220px] w-[220px] items-center justify-center text-sm text-black/40">
                 Loading...
               </div>
             ) : token ? (
-              <QRCodeSVG value={qrValue} size={192} />
+              <QRCodeSVG value={qrValue} size={220} />
             ) : (
-              <div className="flex h-48 w-48 items-center justify-center text-sm text-black/60">
-                Failed to generate code.
+              <div className="flex h-[220px] w-[220px] items-center justify-center text-sm text-black/40">
+                Couldn&apos;t load code
               </div>
             )}
           </div>
         </div>
 
-        <p className="mt-4 text-sm text-text-2">{remainingSeconds}s</p>
-        {errorMessage ? <p className="mt-2 text-sm text-playful">{errorMessage}</p> : null}
+        {/* Countdown + inline refresh */}
+        <div className="mt-5 flex items-center gap-2">
+          <span className="font-display text-3xl text-text">{remainingSeconds}</span>
+          <span className="text-sm text-text-3">s</span>
+          <button
+            type="button"
+            onClick={() => {
+              clearCachedToken()
+              void fetchToken({ force: true, showLoading: false })
+            }}
+            className="ml-2 flex items-center gap-1.5 text-sm text-text-3 transition-colors active:text-text-2"
+          >
+            <RefreshCcw size={14} strokeWidth={1.75} />
+            refresh
+          </button>
+        </div>
+
+        {errorMessage ? (
+          <p className="mt-3 text-sm text-playful">{errorMessage}</p>
+        ) : null}
       </div>
 
-      <div className="mt-auto flex w-full shrink-0 flex-col gap-3 pt-4">
-        <button
-          type="button"
-          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          onClick={() => {
-            clearCachedToken()
-            void fetchToken({ force: true, showLoading: false })
-          }}
-        >
-          Refresh now
-        </button>
-        <Link
-          to="/add/scan"
-          className="rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-        >
-          Switch to scan
-        </Link>
-      </div>
+      {/* Single bottom action — scan mode */}
+      <Link
+        to="/add/scan"
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
+      >
+        <Camera size={16} strokeWidth={1.75} />
+        Scan their code instead
+      </Link>
     </main>
   )
 }
