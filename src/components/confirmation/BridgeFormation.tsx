@@ -14,7 +14,6 @@ interface BridgeFormationProps {
 export function BridgeFormation({
   bridge,
   activityTitle,
-  draftPostId,
   suggestedPostBody,
   onComplete,
 }: BridgeFormationProps) {
