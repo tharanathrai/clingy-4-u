@@ -120,18 +120,6 @@ Deno.serve(async (request) => {
         }
       }
 
-      // If caller not yet in confirmed_member_ids, add them
-      if (!canonicalSession.confirmed_member_ids.includes(userId)) {
-        const updatedIds = [...canonicalSession.confirmed_member_ids, userId]
-        const { error: updateError } = await serviceClient
-          .from('confirmation_sessions')
-          .update({ confirmed_member_ids: updatedIds })
-          .eq('id', canonicalSession.id)
-        if (updateError) {
-          return jsonResponse(500, { error: updateError.message })
-        }
-      }
-
       return jsonResponse(200, {
         session_id: canonicalSession.id,
         otp_code: canonicalSession.otp_code,
@@ -152,7 +140,7 @@ Deno.serve(async (request) => {
         gum_piece_id: gumPieceId,
         otp_code: otpCode,
         initiator_id: userId,
-        confirmed_member_ids: [userId],
+        confirmed_member_ids: [],
         expires_at: expiresAt,
       })
       .select('id, otp_code, expires_at, initiator_id, confirmed_member_ids, created_at')

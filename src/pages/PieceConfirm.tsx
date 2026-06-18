@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { X } from 'lucide-react'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
-import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
 import { OTPDisplay, type AcceptedMember } from '../components/confirmation/OTPDisplay.tsx'
-import { UnwrapCeremony } from '../components/confirmation/UnwrapCeremony.tsx'
+import { BridgeFormation } from '../components/confirmation/BridgeFormation.tsx'
+import { iconButtonClassName } from '../lib/iconButton.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import {
   type ConfirmationSession,
@@ -226,7 +227,7 @@ export default function PieceConfirm() {
 
   if (flowState === 'bridge_formed' && bridge) {
     return (
-      <UnwrapCeremony
+      <BridgeFormation
         bridge={bridge}
         activityTitle={bridge.activity_title || piece.title}
         draftPostId={draftPostId}
@@ -242,9 +243,16 @@ export default function PieceConfirm() {
 
   return (
     <main className={pageShellScroll}>
-      {activeSession ? null : (
-        <BackHeader to={`/piece/${id}`} className="mb-2" />
-      )}
+      <div className="mb-2">
+        <button
+          type="button"
+          onClick={() => navigate('/home', { replace: true })}
+          className={iconButtonClassName}
+          aria-label="Not ready"
+        >
+          <X size={18} strokeWidth={1.75} />
+        </button>
+      </div>
 
       <h1 className="mt-2 text-center font-display text-3xl text-text">
         {piece.title}
@@ -282,6 +290,7 @@ export default function PieceConfirm() {
             }
             currentUserId={userId!}
             sessionId={activeSession.id}
+            category={category}
             onBridgeFormed={(nextBridge, nextDraftPostId, nextDraftPostBody) => {
               setDraftPostId(nextDraftPostId)
               setSuggestedPostBody(

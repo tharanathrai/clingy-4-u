@@ -727,7 +727,7 @@ export default function PieceDetail() {
               onClick={() => void navigate(`/piece/${piece.id}/confirm`)}
               className="btn-primary w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
             >
-              Mark as done
+              Make a memory
             </button>
             {!showTurnDownConfirm ? (
               <button

@@ -373,6 +373,54 @@ body.modal-scroll-lock .post-detail-viewport {
   color: #f2eff8;
 }
 
+/* ── Press-and-hold gum blob ───────────────────────────── */
+
+.hold-blob-ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.hold-blob-ring svg {
+  position: absolute;
+  inset: -12px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.hold-blob-ring-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 4;
+}
+
+.hold-blob-ring-progress {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 80ms linear;
+}
+
+@keyframes hold-blob-confirmed {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  70%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+
+.hold-blob-confirmed {
+  animation: hold-blob-confirmed 350ms cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+.hold-blob-pressing {
+  transform: scale(0.93);
+  transition: transform 100ms ease;
+}
+
 .unwrap-scene {
   position: relative;
   width: 280px;
