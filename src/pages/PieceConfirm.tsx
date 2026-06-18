@@ -225,6 +225,12 @@ export default function PieceConfirm() {
 
   if (!user || !piece) return <Navigate to="/home" replace />
 
+  const handleComplete = (toast?: string) => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.gumPieces(userId) })
+    if (id) void queryClient.invalidateQueries({ queryKey: queryKeys.pieceDetail(id, userId) })
+    navigate('/home', { replace: true, state: toast ? { toast } : undefined })
+  }
+
   if (flowState === 'bridge_formed' && bridge) {
     return (
       <BridgeFormation
@@ -232,11 +238,41 @@ export default function PieceConfirm() {
         activityTitle={bridge.activity_title || piece.title}
         draftPostId={draftPostId}
         suggestedPostBody={suggestedPostBody}
-        onComplete={(toast) => {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.gumPieces(userId) })
-          if (id) void queryClient.invalidateQueries({ queryKey: queryKeys.pieceDetail(id, userId) })
-          navigate('/home', { replace: true, state: toast ? { toast } : undefined })
+        members={acceptedMembers}
+        onComplete={handleComplete}
+      />
+    )
+  }
+
+  if (activeSession && flowState === 'waiting') {
+    return (
+      <OTPDisplay
+        code={activeSession.otp_code}
+        expiresAt={activeSession.expires_at}
+        confirmedMemberIds={activeSession.confirmed_member_ids ?? []}
+        acceptedMembers={
+          acceptedMembers.length > 0
+            ? acceptedMembers
+            : [{ id: userId!, name: currentUserName }, { id: '__partner__', name: partnerName }]
+        }
+        currentUserId={userId!}
+        sessionId={activeSession.id}
+        category={category}
+        activityTitle={piece.title}
+        onBridgeFormed={(nextBridge, nextDraftPostId, nextDraftPostBody) => {
+          setDraftPostId(nextDraftPostId)
+          setSuggestedPostBody(
+            nextDraftPostBody ??
+              (piece
+                ? buildFallbackDraftBody(acceptedMembers, userId!, piece.title, piece.category)
+                : null),
+          )
+          setBridge(nextBridge)
+          setFlowState('bridge_formed')
         }}
+        onSessionExpired={() => setFlowState('expired')}
+        onStartOver={handleStartOver}
+        onNotReady={() => navigate('/home', { replace: true })}
       />
     )
   }
@@ -254,13 +290,10 @@ export default function PieceConfirm() {
         </button>
       </div>
 
-      <h1 className="mt-2 text-center font-display text-3xl text-text">
-        {piece.title}
-      </h1>
+      <h1 className="mt-2 text-center font-display text-3xl text-text">{piece.title}</h1>
       <div className="mt-3 flex justify-center">
         <CategoryChip category={category} size="md" />
       </div>
-      <p className="mt-3 text-center text-sm text-text-2">confirming with {partnerName}</p>
 
       {error ? <p className="mt-6 text-center text-sm text-playful">{error}</p> : null}
 
@@ -275,39 +308,6 @@ export default function PieceConfirm() {
             Try again
           </button>
         </section>
-      ) : null}
-
-      {activeSession && flowState === 'waiting' ? (
-        <div className="mt-6">
-          <OTPDisplay
-            code={activeSession.otp_code}
-            expiresAt={activeSession.expires_at}
-            confirmedMemberIds={activeSession.confirmed_member_ids ?? []}
-            acceptedMembers={
-              acceptedMembers.length > 0
-                ? acceptedMembers
-                : [{ id: userId!, name: currentUserName }, { id: '__partner__', name: partnerName }]
-            }
-            currentUserId={userId!}
-            sessionId={activeSession.id}
-            category={category}
-            onBridgeFormed={(nextBridge, nextDraftPostId, nextDraftPostBody) => {
-              setDraftPostId(nextDraftPostId)
-              setSuggestedPostBody(
-                nextDraftPostBody ??
-                  (piece
-                    ? buildFallbackDraftBody(acceptedMembers, userId!, piece.title, piece.category)
-                    : null),
-              )
-              setBridge(nextBridge)
-              setFlowState('bridge_formed')
-            }}
-            onSessionExpired={() => {
-              setFlowState('expired')
-            }}
-            onStartOver={handleStartOver}
-          />
-        </div>
       ) : null}
     </main>
   )

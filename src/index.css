@@ -421,6 +421,66 @@ body.modal-scroll-lock .post-detail-viewport {
   transition: transform 100ms ease;
 }
 
+/* ── Confirm Ceremony & Bridge Formation animations ─────── */
+
+@keyframes ripple-out {
+  0%   { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+@keyframes check-pop {
+  0%   { transform: scale(0) rotate(-30deg); opacity: 0; }
+  65%  { transform: scale(1.3) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes chip-bloom {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+@keyframes particle-pop {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--pdx), var(--pdy)) scale(0.15); opacity: 0; }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%       { opacity: 0.75; transform: scale(1.07); }
+}
+
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0; }
+  50%       { opacity: 1; }
+}
+
+@keyframes formed-reveal {
+  0%   { transform: translateY(16px) scale(0.94); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes formed-title-anim {
+  0%   { transform: translateY(10px) scale(0.96); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes avatar-settle {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  55%  { transform: translate(-50%, -50%) scale(1.14); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes sheet-up {
+  0%   { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes backdrop-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 .unwrap-scene {
   position: relative;
   width: 280px;
