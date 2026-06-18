@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
@@ -198,9 +199,10 @@ export default function Home() {
               type="button"
               onClick={handleNewGum}
               disabled={pocketFull || loadingConnections}
-              className="btn-primary new-gum-blob bg-accent px-6 py-3 font-display text-lg text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-55"
+              aria-label="new gum"
+              className="new-gum-fab disabled:cursor-not-allowed disabled:opacity-55"
             >
-              new gum
+              <Plus size={26} strokeWidth={2.25} />
             </button>
           </div>
         </div>
