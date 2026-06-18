@@ -9,6 +9,7 @@ import type { Bridge } from '../../types/index.ts'
 export interface AcceptedMember {
   id: string
   name: string
+  avatarUrl?: string
 }
 
 interface OTPDisplayProps {
@@ -71,21 +72,28 @@ export function OTPDisplay({
   stageRef.current = stage
 
   const isMeConf = localConfirmed || confirmedMemberIds.includes(currentUserId)
-  const allConfirmed = acceptedMembers.length > 0 &&
-    acceptedMembers.every(m => m.id === currentUserId ? isMeConf : confirmedMemberIds.includes(m.id))
+  const allConfirmed =
+    acceptedMembers.length > 0 &&
+    acceptedMembers.every(m =>
+      m.id === currentUserId ? isMeConf : confirmedMemberIds.includes(m.id),
+    )
   const confCount = acceptedMembers.filter(m =>
-    m.id === currentUserId ? isMeConf : confirmedMemberIds.includes(m.id)
+    m.id === currentUserId ? isMeConf : confirmedMemberIds.includes(m.id),
   ).length
 
-  const otherNames = useMemo(() =>
-    acceptedMembers.filter(m => m.id !== currentUserId).map(m => m.name).join(', '),
-  [acceptedMembers, currentUserId])
+  const otherNames = useMemo(
+    () =>
+      acceptedMembers
+        .filter(m => m.id !== currentUserId)
+        .map(m => m.name)
+        .join(', '),
+    [acceptedMembers, currentUserId],
+  )
 
   // Session expiry timer
   useEffect(() => {
     const timer = window.setInterval(() => {
-      const delta = new Date(expiresAt).getTime() - Date.now()
-      if (delta <= 0) {
+      if (new Date(expiresAt).getTime() - Date.now() <= 0) {
         window.clearInterval(timer)
         if (stageRef.current !== 'formed') {
           setStage('expired')
@@ -103,9 +111,7 @@ export function OTPDisplay({
     setStage('allConfirmed')
     setParticles(true)
     setRippleKey(k => k + 1)
-    allConfirmedTimerRef.current = setTimeout(() => {
-      setStage('formed')
-    }, 1700)
+    allConfirmedTimerRef.current = setTimeout(() => setStage('formed'), 1700)
   }, [allConfirmed])
 
   useEffect(() => {
@@ -157,13 +163,22 @@ export function OTPDisplay({
     }
 
     if (payload?.bridge_formed && payload.bridges && payload.bridges.length > 0) {
-      onBridgeFormed(payload.bridges[0], payload.draft_post_id ?? null, payload.draft_post_body ?? null)
+      onBridgeFormed(
+        payload.bridges[0],
+        payload.draft_post_id ?? null,
+        payload.draft_post_body ?? null,
+      )
     } else {
       setLocalConfirmed(true)
-      setStage('waiting')
+      if (stageRef.current !== 'allConfirmed' && stageRef.current !== 'formed') {
+        setStage('waiting')
+      }
       setRippleKey(k => k + 1)
       setBlooming(b => new Set([...b, currentUserId]))
-      setTimeout(() => setBlooming(b => { const n = new Set(b); n.delete(currentUserId); return n }), 600)
+      setTimeout(
+        () => setBlooming(b => { const n = new Set(b); n.delete(currentUserId); return n }),
+        600,
+      )
     }
 
     setSubmitting(false)
@@ -176,42 +191,48 @@ export function OTPDisplay({
     if (stageRef.current === 'holding') setStage('idle')
   }, [])
 
-  const startHold = useCallback((e: React.PointerEvent) => {
-    if (isMeConf || submitting || stage === 'expired' || stage === 'allConfirmed' || stage === 'formed') return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    holdStartRef.current = Date.now()
-    setStage('holding')
-    setHoldProgress(0)
+  const startHold = useCallback(
+    (e: React.PointerEvent) => {
+      if (
+        isMeConf || submitting ||
+        stage === 'expired' || stage === 'allConfirmed' || stage === 'formed'
+      ) return
+      e.currentTarget.setPointerCapture(e.pointerId)
+      holdStartRef.current = Date.now()
+      setStage('holding')
+      setHoldProgress(0)
 
-    holdTimerRef.current = setInterval(() => {
-      const elapsed = Date.now() - (holdStartRef.current ?? Date.now())
-      const p = Math.min(elapsed / HOLD_DURATION_MS, 1)
-      setHoldProgress(p)
-      if (p >= 1) {
-        clearInterval(holdTimerRef.current!)
-        holdTimerRef.current = null
-        void handleConfirm()
-      }
-    }, 30)
-  }, [isMeConf, submitting, stage, handleConfirm])
+      holdTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - (holdStartRef.current ?? Date.now())
+        const p = Math.min(elapsed / HOLD_DURATION_MS, 1)
+        setHoldProgress(p)
+        if (p >= 1) {
+          clearInterval(holdTimerRef.current!)
+          holdTimerRef.current = null
+          void handleConfirm()
+        }
+      }, 30)
+    },
+    [isMeConf, submitting, stage, handleConfirm],
+  )
 
   const isAllConf = stage === 'allConfirmed' || stage === 'formed'
   const isHolding = stage === 'holding'
 
   const blobScale =
-    isHolding   ? 1 + holdProgress * 0.30 :
-    isAllConf   ? 1.52 :
-    isMeConf    ? 1.07 : 1.0
+    isHolding ? 1 + holdProgress * 0.30 :
+    isAllConf ? 1.52 :
+    isMeConf  ? 1.07 : 1.0
 
   const glowOpacity =
-    isHolding   ? 0.18 + holdProgress * 0.52 :
-    isAllConf   ? 0.80 :
-    isMeConf    ? 0.30 : 0.07
+    isHolding ? 0.18 + holdProgress * 0.52 :
+    isAllConf ? 0.80 :
+    isMeConf  ? 0.30 : 0.07
 
   const glowSize =
-    isHolding   ? 250 + holdProgress * 130 :
-    isAllConf   ? 460 :
-    isMeConf    ? 300 : 210
+    isHolding ? 250 + holdProgress * 130 :
+    isAllConf ? 420 :
+    isMeConf  ? 280 : 200
 
   const stageLabel: Record<Stage, string> = {
     idle:         'press & hold together',
@@ -225,10 +246,19 @@ export function OTPDisplay({
   const strokeDashoffset = RING_CIRC * (1 - holdProgress)
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'var(--color-bg)', overflow: 'hidden' }}>
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'var(--color-bg)',
+      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+    }}>
 
-      {/* Header */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, padding: '14px 12px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Header — X only, no "confirm" label */}
+      <div style={{
+        padding: '14px 12px 0',
+        display: 'flex', alignItems: 'center',
+        flexShrink: 0, position: 'relative', zIndex: 10,
+      }}>
         <button
           type="button"
           onClick={onNotReady}
@@ -237,82 +267,92 @@ export function OTPDisplay({
         >
           <X size={18} strokeWidth={1.75} />
         </button>
-        <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>confirm</span>
       </div>
 
-      {/* Plan title */}
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, zIndex: 5, padding: '0 28px', textAlign: 'center' }}>
-        <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
-          you&apos;re confirming
-        </p>
-        <h1 style={{
-          margin: '9px 0 0',
-          fontFamily: 'var(--font-display)',
-          fontWeight: 400,
-          fontSize: 30,
-          lineHeight: 1.05,
-          color: isAllConf ? catHex : 'var(--color-text-primary)',
-          transition: 'color 0.8s ease',
-        }}>
-          {activityTitle}
-        </h1>
-        {otherNames ? (
-          <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-            with {otherNames}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Centre hold zone */}
+      {/* Main content — flex column, vertically compressed */}
       <div style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        display: 'grid', placeItems: 'center', zIndex: 2,
+        flex: 1,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '20px 28px 0',
+        position: 'relative', zIndex: 2,
+        overflow: 'hidden',
       }}>
-        {/* Ambient glow */}
-        <div style={{
-          position: 'absolute',
-          width: glowSize, height: glowSize,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, ${catHex}55 0%, transparent 68%)`,
-          opacity: glowOpacity,
-          transition: 'width 0.55s ease, height 0.55s ease, opacity 0.4s ease',
-          pointerEvents: 'none',
-        }} />
 
-        {/* Hold-breathing overlay */}
-        {isHolding && (
+        {/* Plan title */}
+        <div style={{ textAlign: 'center', marginBottom: 24, flexShrink: 0 }}>
+          <p style={{
+            margin: 0, fontSize: 11, letterSpacing: '0.16em',
+            textTransform: 'uppercase', color: 'var(--color-text-tertiary)',
+          }}>
+            you&apos;re experiencing
+          </p>
+          <h1 style={{
+            margin: '8px 0 0',
+            fontFamily: 'var(--font-display)', fontWeight: 400,
+            fontSize: 28, lineHeight: 1.05,
+            color: isAllConf ? catHex : 'var(--color-text-primary)',
+            transition: 'color 0.8s ease',
+          }}>
+            {activityTitle}
+          </h1>
+          {otherNames ? (
+            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              with {otherNames}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Hold zone: glow + rings + blob */}
+        <div style={{
+          position: 'relative', width: 220, height: 220,
+          display: 'grid', placeItems: 'center',
+          flexShrink: 0,
+        }}>
+          {/* Ambient glow */}
           <div style={{
             position: 'absolute',
-            width: glowSize * 0.85, height: glowSize * 0.85,
+            width: glowSize, height: glowSize,
             borderRadius: '50%',
-            background: `radial-gradient(circle, ${catHex}33 0%, transparent 65%)`,
-            animation: 'glow-breathe 1.1s ease-in-out infinite',
+            background: `radial-gradient(circle, ${catHex}55 0%, transparent 68%)`,
+            opacity: glowOpacity,
+            transition: 'width 0.55s ease, height 0.55s ease, opacity 0.4s ease',
             pointerEvents: 'none',
           }} />
-        )}
 
-        {/* Ripple rings */}
-        {[0, 1, 2].map(i => (
-          <div key={`${rippleKey}-${i}`} style={{
-            position: 'absolute',
-            width: 144, height: 144, borderRadius: '50%',
-            border: `1.5px solid ${catHex}`,
-            pointerEvents: 'none', zIndex: 1, opacity: 0,
-            animation: rippleKey > 0 ? `ripple-out 1.1s ease-out ${i * 160}ms` : 'none',
-          }} />
-        ))}
+          {/* Hold-breathing overlay */}
+          {isHolding && (
+            <div style={{
+              position: 'absolute',
+              width: glowSize * 0.85, height: glowSize * 0.85,
+              borderRadius: '50%',
+              background: `radial-gradient(circle, ${catHex}33 0%, transparent 65%)`,
+              animation: 'glow-breathe 1.1s ease-in-out infinite',
+              pointerEvents: 'none',
+            }} />
+          )}
 
-        {/* Progress ring + blob */}
-        <div style={{ position: 'relative', width: 220, height: 220, display: 'grid', placeItems: 'center', zIndex: 2 }}>
-          <svg viewBox="0 0 220 220" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+          {/* Ripple rings */}
+          {[0, 1, 2].map(i => (
+            <div key={`${rippleKey}-${i}`} style={{
+              position: 'absolute',
+              width: 144, height: 144, borderRadius: '50%',
+              border: `1.5px solid ${catHex}`,
+              pointerEvents: 'none', zIndex: 1, opacity: 0,
+              animation: rippleKey > 0 ? `ripple-out 1.1s ease-out ${i * 160}ms` : 'none',
+            }} />
+          ))}
+
+          {/* Progress ring SVG */}
+          <svg
+            viewBox="0 0 220 220"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }}
+          >
             <circle cx="110" cy="110" r={RING_R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
             {!isAllConf && holdProgress > 0 && (
               <circle
                 cx="110" cy="110" r={RING_R} fill="none"
                 stroke={catHex} strokeWidth="3.5"
-                strokeDasharray={RING_CIRC}
-                strokeDashoffset={strokeDashoffset}
+                strokeDasharray={RING_CIRC} strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 style={{ transition: 'stroke-dashoffset 0.05s linear' }}
               />
@@ -357,81 +397,79 @@ export function OTPDisplay({
           {/* Particle burst */}
           {particles && <ParticleBurst />}
         </div>
-      </div>
 
-      {/* Status label */}
-      <div style={{ position: 'absolute', top: 'calc(50% + 150px)', left: 0, right: 0, zIndex: 5, padding: '0 28px', textAlign: 'center' }}>
-        {error ? (
-          <p style={{ margin: 0, fontSize: 15, color: 'var(--color-playful, #f07868)' }}>{error}</p>
-        ) : (
-          <p style={{
-            margin: 0,
-            fontWeight: isAllConf ? 600 : 400,
-            fontSize: 17,
-            color: isAllConf ? catHex : stage === 'holding' ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-            lineHeight: 1.2,
-            transition: 'color 0.55s ease',
-          }}>
-            {submitting ? 'Confirming…' : stageLabel[stage]}
-          </p>
-        )}
+        {/* Status label */}
+        <div style={{ marginTop: 20, textAlign: 'center', flexShrink: 0 }}>
+          {error ? (
+            <p style={{ margin: 0, fontSize: 15, color: 'var(--color-playful, #f07868)' }}>{error}</p>
+          ) : (
+            <p style={{
+              margin: 0,
+              fontWeight: isAllConf ? 600 : 400,
+              fontSize: 17,
+              color: isAllConf ? catHex : isHolding ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+              lineHeight: 1.2,
+              transition: 'color 0.55s ease',
+            }}>
+              {submitting ? 'Confirming…' : stageLabel[stage]}
+            </p>
+          )}
 
-        {!isAllConf && stage !== 'expired' && (
-          <p style={{ margin: '7px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)' }}>
-            {confCount} of {acceptedMembers.length} here
-          </p>
-        )}
+          {!isAllConf && stage !== 'expired' && (
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)' }}>
+              {confCount} of {acceptedMembers.length} here
+            </p>
+          )}
 
-        {stage === 'formed' && (
-          <p style={{ margin: '7px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)', animation: 'formed-reveal 0.5s ease-out 120ms both' }}>
-            hold tight…
-          </p>
-        )}
+          {stage === 'formed' && (
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--color-text-tertiary)', animation: 'formed-reveal 0.5s ease-out 120ms both' }}>
+              hold tight…
+            </p>
+          )}
 
-        {stage === 'expired' && (
-          <button
-            type="button"
-            onClick={() => void onStartOver()}
-            style={{
-              marginTop: 20,
-              padding: '12px 32px',
-              borderRadius: 999,
-              border: 'none',
-              background: 'var(--color-accent)',
-              color: '#fff',
-              fontSize: 15,
-              fontFamily: 'var(--font-body)',
-              cursor: 'pointer',
-            }}
-          >
-            Start over
-          </button>
-        )}
-      </div>
+          {stage === 'expired' && (
+            <button
+              type="button"
+              onClick={() => void onStartOver()}
+              style={{
+                marginTop: 20,
+                padding: '12px 32px', borderRadius: 999,
+                border: 'none', background: 'var(--color-accent)',
+                color: '#fff', fontSize: 15, fontFamily: 'var(--font-body)', cursor: 'pointer',
+              }}
+            >
+              Start over
+            </button>
+          )}
+        </div>
 
-      {/* Participant row */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 5,
-        padding: '0 36px 54px',
-        display: 'flex', justifyContent: 'center',
-        gap: acceptedMembers.length > 3 ? 16 : 26,
-        opacity: stage === 'formed' ? 0 : 1,
-        transition: 'opacity 0.55s ease',
-      }}>
-        {acceptedMembers.map(p => {
-          const isMe = p.id === currentUserId
-          const confirmed = isMe ? isMeConf : confirmedMemberIds.includes(p.id)
-          const isBloom = blooming.has(p.id)
-          return (
-            <ParticipantChip
-              key={p.id}
-              name={p.name}
-              confirmed={confirmed}
-              blooming={isBloom}
-              catHex={catHex}
-            />
-          )
-        })}
+        {/* Spacer pushes chips toward bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Participant chips */}
+        <div style={{
+          paddingBottom: 56,
+          display: 'flex', justifyContent: 'center',
+          gap: acceptedMembers.length > 3 ? 16 : 26,
+          flexShrink: 0,
+          opacity: stage === 'formed' ? 0 : 1,
+          transition: 'opacity 0.55s ease',
+        }}>
+          {acceptedMembers.map(p => {
+            const isMe = p.id === currentUserId
+            const confirmed = isMe ? isMeConf : confirmedMemberIds.includes(p.id)
+            return (
+              <ParticipantChip
+                key={p.id}
+                name={p.name}
+                avatarUrl={p.avatarUrl}
+                confirmed={confirmed}
+                blooming={blooming.has(p.id)}
+                catHex={catHex}
+              />
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -439,12 +477,13 @@ export function OTPDisplay({
 
 interface ParticipantChipProps {
   name: string
+  avatarUrl?: string
   confirmed: boolean
   blooming: boolean
   catHex: string
 }
 
-function ParticipantChip({ name, confirmed, blooming, catHex }: ParticipantChipProps) {
+function ParticipantChip({ name, avatarUrl, confirmed, blooming, catHex }: ParticipantChipProps) {
   const initial = name.trim().slice(0, 1).toUpperCase() || '?'
   return (
     <div style={{
@@ -465,12 +504,14 @@ function ParticipantChip({ name, confirmed, blooming, catHex }: ParticipantChipP
         )}
         <div style={{
           width: 46, height: 46, borderRadius: '50%',
+          overflow: 'hidden',
           backgroundColor: 'var(--color-surface-2)',
           display: 'grid', placeItems: 'center',
-          fontSize: 18, color: 'var(--color-text-primary)',
-          fontWeight: 500,
+          fontSize: 18, color: 'var(--color-text-primary)', fontWeight: 500,
         }}>
-          {initial}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : initial}
         </div>
         {confirmed && (
           <div style={{
@@ -522,19 +563,21 @@ function ParticleBurst() {
   return (
     <>
       {pts.map(p => (
-        <div key={p.id} style={{
-          position: 'absolute', top: '50%', left: '50%',
-          width: p.size, height: p.size,
-          marginLeft: -p.size / 2, marginTop: -p.size / 2,
-          borderRadius: '50%',
-          background: HEX[p.cat],
-          '--pdx': `${p.dx}px`,
-          '--pdy': `${p.dy}px`,
-          animation: `particle-pop 0.9s cubic-bezier(0,0,0.2,1) ${p.delay}ms forwards`,
-          pointerEvents: 'none', zIndex: 20,
-        } as React.CSSProperties} />
+        <div
+          key={p.id}
+          style={{
+            position: 'absolute', top: '50%', left: '50%',
+            width: p.size, height: p.size,
+            marginLeft: -p.size / 2, marginTop: -p.size / 2,
+            borderRadius: '50%',
+            background: HEX[p.cat],
+            '--pdx': `${p.dx}px`,
+            '--pdy': `${p.dy}px`,
+            animation: `particle-pop 0.9s cubic-bezier(0,0,0.2,1) ${p.delay}ms forwards`,
+            pointerEvents: 'none', zIndex: 20,
+          } as React.CSSProperties}
+        />
       ))}
     </>
   )
 }
-

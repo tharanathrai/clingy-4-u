@@ -143,12 +143,13 @@ export default function PieceConfirm() {
     if (memberIds.length > 0) {
       const { data: userRows } = await supabase
         .from('users')
-        .select('id, display_name')
+        .select('id, display_name, avatar_url')
         .in('id', memberIds)
 
       const members: AcceptedMember[] = (userRows ?? []).map((u) => ({
         id: u.id as string,
         name: (u.display_name as string) ?? 'Unknown',
+        avatarUrl: (u.avatar_url as string | null) ?? undefined,
       }))
       setAcceptedMembers(members)
     }

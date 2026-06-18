@@ -6,6 +6,7 @@ import { GumBlob } from '../gum/GumBlob.tsx'
 import type { Bridge } from '../../types/index.ts'
 import type { AcceptedMember } from './OTPDisplay.tsx'
 
+
 interface BridgeFormationProps {
   bridge: Bridge
   activityTitle: string
@@ -36,7 +37,7 @@ function layoutNodes(members: AcceptedMember[]) {
   const n = members.length
   return members.map((m, i) => {
     const a = -Math.PI / 2 + (i / n) * Math.PI * 2
-    return { ...m, x: C + Math.cos(a) * RAD, y: C + Math.sin(a) * RAD }
+    return { ...m, x: C + Math.cos(a) * RAD, y: C + Math.sin(a) * RAD, avatarUrl: m.avatarUrl }
   })
 }
 
@@ -152,19 +153,21 @@ export function BridgeFormation({
   }
 
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'var(--color-bg)', overflow: 'hidden' }}>
+    <div style={{
+      position: 'absolute', inset: 0,
+      background: 'var(--color-bg)', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+    }}>
 
       {/* Plan title */}
-      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, zIndex: 5, padding: '0 28px', textAlign: 'center' }}>
+      <div style={{ padding: '52px 28px 0', textAlign: 'center', flexShrink: 0, zIndex: 5 }}>
         <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
           your new bridge
         </p>
         <h1 style={{
-          margin: '9px 0 0',
-          fontFamily: 'var(--font-display)',
-          fontWeight: 400,
-          fontSize: 30,
-          lineHeight: 1.05,
+          margin: '8px 0 0',
+          fontFamily: 'var(--font-display)', fontWeight: 400,
+          fontSize: 28, lineHeight: 1.05,
           color: formed ? catHex : 'var(--color-text-primary)',
           transition: 'color 0.7s ease',
         }}>
@@ -172,12 +175,8 @@ export function BridgeFormation({
         </h1>
       </div>
 
-      {/* Hub scene */}
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 2,
-      }}>
+      {/* Hub scene — centered in remaining space */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         <div style={{ position: 'relative', width: SZ, height: SZ }}>
           {/* Ambient glow */}
           <div style={{
@@ -219,12 +218,15 @@ export function BridgeFormation({
               }}>
                 <div style={{
                   width: 52, height: 52, borderRadius: '50%',
+                  overflow: 'hidden',
                   backgroundColor: 'var(--color-surface-2)',
                   border: `2px solid ${catHex}55`,
                   display: 'grid', placeItems: 'center',
                   fontSize: 18, color: 'var(--color-text-primary)', fontWeight: 500,
                 }}>
-                  {initial}
+                  {n.avatarUrl ? (
+                    <img src={n.avatarUrl} alt={n.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : initial}
                 </div>
               </div>
             )
@@ -233,7 +235,7 @@ export function BridgeFormation({
       </div>
 
       {/* Status text */}
-      <div style={{ position: 'absolute', top: 'calc(50% + 178px)', left: 0, right: 0, zIndex: 5, textAlign: 'center' }}>
+      <div style={{ padding: '16px 28px 32px', textAlign: 'center', flexShrink: 0, zIndex: 5 }}>
         {!formed ? (
           <p style={{ margin: 0, fontSize: 16, color: 'var(--color-text-secondary)' }}>stretching your bridge…</p>
         ) : (
@@ -272,12 +274,15 @@ export function BridgeFormation({
                     <div key={m.id} style={{ marginLeft: i ? -10 : 0 }}>
                       <div style={{
                         width: 40, height: 40, borderRadius: '50%',
+                        overflow: 'hidden',
                         backgroundColor: 'var(--color-surface-2)',
                         border: `2px solid ${catHex}66`,
                         display: 'grid', placeItems: 'center',
                         fontSize: 14, color: 'var(--color-text-primary)', fontWeight: 500,
                       }}>
-                        {initial}
+                        {m.avatarUrl ? (
+                          <img src={m.avatarUrl} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : initial}
                       </div>
                     </div>
                   )

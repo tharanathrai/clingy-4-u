@@ -131,22 +131,18 @@ Deno.serve(async (request) => {
       return jsonResponse(403, { error: 'forbidden' })
     }
 
-    // Add this user to confirmed_member_ids if not already present
-    const currentConfirmed = session.confirmed_member_ids ?? []
-    const updatedConfirmed = currentConfirmed.includes(userId)
-      ? currentConfirmed
-      : [...currentConfirmed, userId]
+    // Atomically append userId to confirmed_member_ids to avoid race conditions
+    // when two members submit simultaneously. The DB function uses a single UPDATE
+    // statement (row-level lock) so concurrent calls cannot overwrite each other.
+    const { data: confirmedIds, error: updateSessionError } = await serviceClient
+      .rpc('append_confirmed_member', {
+        p_session_id: sessionId,
+        p_user_id: userId,
+      }) as { data: string[] | null; error: Error | null }
 
-    const { data: updatedSession, error: updateSessionError } = await serviceClient
-      .from('confirmation_sessions')
-      .update({ confirmed_member_ids: updatedConfirmed })
-      .eq('id', session.id)
-      .select('id, gum_piece_id, otp_code, initiator_id, confirmed_member_ids, expires_at')
-      .single<ConfirmationSessionRow>()
-
-    if (updateSessionError || !updatedSession) {
+    if (updateSessionError || !confirmedIds) {
       return jsonResponse(500, {
-        error: updateSessionError?.message ?? 'Failed to update confirmation state.',
+        error: (updateSessionError as Error | null)?.message ?? 'Failed to update confirmation state.',
       })
     }
 
@@ -162,7 +158,6 @@ Deno.serve(async (request) => {
     }
 
     const acceptedMemberIds = (acceptedMembers ?? []).map((m: { user_id: string }) => m.user_id)
-    const confirmedIds = updatedSession.confirmed_member_ids ?? []
     const sessionStillValid = new Date(updatedSession.expires_at).getTime() > Date.now()
 
     // Bridge forms when all accepted members have confirmed and session is still valid
