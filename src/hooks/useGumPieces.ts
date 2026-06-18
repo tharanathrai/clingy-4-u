@@ -123,7 +123,9 @@ export function useGumPieces(): UseGumPiecesResult {
     queryKey: qk,
     queryFn: () => fetchGumPieces(userId!),
     enabled: !authLoading && userId !== null,
-    staleTime: Infinity,
+    staleTime: 60 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
   })
 
   useEffect(() => {

@@ -369,6 +369,19 @@ export default function PieceDetail() {
     return 'bg-support'
   }, [category])
 
+  const pendingFillClass = useMemo(() => {
+    const cat = piece?.pending_edit?.category
+      ? toCategorySlug(piece.pending_edit.category)
+      : category
+    if (cat === 'intimate') return 'bg-intimate'
+    if (cat === 'active') return 'bg-active'
+    if (cat === 'playful') return 'bg-playful'
+    if (cat === 'explore') return 'bg-explore'
+    if (cat === 'recharge') return 'bg-recharge'
+    if (cat === 'savor') return 'bg-savor'
+    return 'bg-support'
+  }, [piece?.pending_edit?.category, category])
+
   const busyAction = respondMutation.isPending
     ? (respondMutation.variables as 'accept' | 'turn_down' | null)
     : null
@@ -591,7 +604,7 @@ export default function PieceDetail() {
                   <span className="w-12 shrink-0 text-text-3">title</span>
                   <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">{piece.title}</span>
                   <span className="text-text-3">→</span>
-                  <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>{pendingEdit.title}</span>
+                  <span className={`rounded px-2 py-0.5 ${pendingFillClass} bg-opacity-20 text-text`}>{pendingEdit.title}</span>
                 </div>
               ) : null}
               {pendingEdit.category !== undefined ? (
@@ -599,7 +612,7 @@ export default function PieceDetail() {
                   <span className="w-12 shrink-0 text-text-3">vibe</span>
                   <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">{piece.category}</span>
                   <span className="text-text-3">→</span>
-                  <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>{pendingEdit.category}</span>
+                  <span className={`rounded px-2 py-0.5 ${pendingFillClass} bg-opacity-20 text-text`}>{pendingEdit.category}</span>
                 </div>
               ) : null}
               {pendingEdit.planned_date !== undefined ? (
@@ -614,7 +627,7 @@ export default function PieceDetail() {
                   )}
                   <span className="text-text-3">→</span>
                   {pendingEdit.planned_date ? (
-                    <span className={`rounded px-2 py-0.5 ${fillClass} bg-opacity-20 text-text`}>
+                    <span className={`rounded px-2 py-0.5 ${pendingFillClass} bg-opacity-20 text-text`}>
                       {format(new Date(pendingEdit.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
                     </span>
                   ) : (

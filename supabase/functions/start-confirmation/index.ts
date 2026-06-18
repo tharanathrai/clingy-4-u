@@ -195,12 +195,22 @@ Deno.serve(async (request) => {
 
     // Notify other accepted members only when this user initiated the canonical session
     if (canonicalSession.initiator_id === userId) {
-      const { data: otherMembers } = await serviceClient
-        .from('gum_piece_members')
-        .select('user_id')
-        .eq('gum_piece_id', gumPieceId)
-        .eq('status', 'accepted')
-        .neq('user_id', userId)
+      const [otherMembersResult, actorResult] = await Promise.all([
+        serviceClient
+          .from('gum_piece_members')
+          .select('user_id')
+          .eq('gum_piece_id', gumPieceId)
+          .eq('status', 'accepted')
+          .neq('user_id', userId),
+        serviceClient
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('id', userId)
+          .maybeSingle(),
+      ])
+      const otherMembers = otherMembersResult.data
+      const actorName = actorResult.data?.display_name ?? null
+      const actorAvatarUrl = actorResult.data?.avatar_url ?? null
 
       if ((otherMembers ?? []).length > 0) {
         await serviceClient.from('notifications').insert(
@@ -208,6 +218,8 @@ Deno.serve(async (request) => {
             user_id: m.user_id,
             type: 'confirmation_started',
             reference_id: gumPieceId,
+            actor_name: actorName,
+            actor_avatar_url: actorAvatarUrl,
           })),
         )
       }

@@ -216,12 +216,22 @@ async function handlePropose(params: {
   }
 
   // Notify all other accepted members
-  const { data: otherMembers } = await serviceClient
-    .from('gum_piece_members')
-    .select('user_id')
-    .eq('gum_piece_id', piece.id)
-    .eq('status', 'accepted')
-    .neq('user_id', userId)
+  const [otherMembersResult, actorResult] = await Promise.all([
+    serviceClient
+      .from('gum_piece_members')
+      .select('user_id')
+      .eq('gum_piece_id', piece.id)
+      .eq('status', 'accepted')
+      .neq('user_id', userId),
+    serviceClient
+      .from('users')
+      .select('display_name, avatar_url')
+      .eq('id', userId)
+      .maybeSingle(),
+  ])
+  const otherMembers = otherMembersResult.data
+  const actorName = actorResult.data?.display_name ?? null
+  const actorAvatarUrl = actorResult.data?.avatar_url ?? null
 
   if ((otherMembers ?? []).length > 0) {
     const notifications = (otherMembers ?? []).map((m: { user_id: string }) => ({
@@ -229,6 +239,8 @@ async function handlePropose(params: {
       type: 'plan_edit_proposed',
       reference_id: piece.id,
       read: false,
+      actor_name: actorName,
+      actor_avatar_url: actorAvatarUrl,
     }))
     await serviceClient.from('notifications').insert(notifications)
   }

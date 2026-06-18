@@ -72,7 +72,7 @@ Deno.serve(async (request) => {
     const userId = authData.user.id
 
     // Fetch piece and caller's membership row in parallel
-    const [pieceResult, memberResult] = await Promise.all([
+    const [pieceResult, memberResult, actorResult] = await Promise.all([
       serviceClient
         .from('gum_pieces')
         .select('id, creator_id, title, status, planned_date')
@@ -84,6 +84,11 @@ Deno.serve(async (request) => {
         .eq('gum_piece_id', gumPieceId)
         .eq('user_id', userId)
         .maybeSingle<MemberRow>(),
+      serviceClient
+        .from('users')
+        .select('display_name, avatar_url')
+        .eq('id', userId)
+        .maybeSingle(),
     ])
 
     if (pieceResult.error) {
@@ -101,6 +106,8 @@ Deno.serve(async (request) => {
 
     const piece = pieceResult.data
     const myMember = memberResult.data
+    const actorName = actorResult.data?.display_name ?? null
+    const actorAvatarUrl = actorResult.data?.avatar_url ?? null
 
     if (action === 'accept') {
       if (piece.status !== 'placeholder' && piece.status !== 'active') {
@@ -179,6 +186,8 @@ Deno.serve(async (request) => {
           type: 'invite_accepted',
           reference_id: gumPieceId,
           read: false,
+          actor_name: actorName,
+          actor_avatar_url: actorAvatarUrl,
         })
 
       if (notificationError) {
@@ -219,6 +228,8 @@ Deno.serve(async (request) => {
           type: 'plan_turned_down',
           reference_id: gumPieceId,
           read: false,
+          actor_name: actorName,
+          actor_avatar_url: actorAvatarUrl,
         }))
         const { error: notifyError } = await serviceClient.from('notifications').insert(notifications)
         if (notifyError) {
@@ -291,6 +302,8 @@ Deno.serve(async (request) => {
         type: notificationType,
         reference_id: gumPieceId,
         read: false,
+        actor_name: actorName,
+        actor_avatar_url: actorAvatarUrl,
       })
 
     if (notificationError) {
