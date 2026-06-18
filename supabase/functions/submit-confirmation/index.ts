@@ -158,7 +158,7 @@ Deno.serve(async (request) => {
     }
 
     const acceptedMemberIds = (acceptedMembers ?? []).map((m: { user_id: string }) => m.user_id)
-    const sessionStillValid = new Date(updatedSession.expires_at).getTime() > Date.now()
+    const sessionStillValid = new Date(session.expires_at).getTime() > Date.now()
 
     // Bridge forms when all accepted members have confirmed and session is still valid
     const allConfirmed =

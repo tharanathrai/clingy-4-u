@@ -269,17 +269,19 @@ export function OTPDisplay({
         </button>
       </div>
 
-      {/* Main content — flex column, vertically compressed */}
+      {/* Main content — all sections grouped and centered as a unit */}
       <div style={{
         flex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '20px 28px 0',
+        justifyContent: 'center',
+        padding: '12px 28px 24px',
         position: 'relative', zIndex: 2,
         overflow: 'hidden',
+        gap: 0,
       }}>
 
         {/* Plan title */}
-        <div style={{ textAlign: 'center', marginBottom: 24, flexShrink: 0 }}>
+        <div style={{ textAlign: 'center', marginBottom: 20, flexShrink: 0 }}>
           <p style={{
             margin: 0, fontSize: 11, letterSpacing: '0.16em',
             textTransform: 'uppercase', color: 'var(--color-text-tertiary)',
@@ -443,12 +445,9 @@ export function OTPDisplay({
           )}
         </div>
 
-        {/* Spacer pushes chips toward bottom */}
-        <div style={{ flex: 1 }} />
-
-        {/* Participant chips */}
+        {/* Participant chips — directly below status, not pinned to bottom */}
         <div style={{
-          paddingBottom: 56,
+          marginTop: 32,
           display: 'flex', justifyContent: 'center',
           gap: acceptedMembers.length > 3 ? 16 : 26,
           flexShrink: 0,
