@@ -1,5 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.ts'
 import type { Bridge, Connection, User } from '../types/index.ts'
 import { useAuth } from './useAuth.ts'
@@ -124,8 +125,20 @@ export function useNetworkGraph(): UseNetworkGraphResult {
   useEffect(() => {
     if (!userId) return
     const invalidate = () => { debouncedInvalidateQueries(queryClient, qk) }
+
+    // Skip network refetch when only snooze flags changed — status unchanged
+    // means the connection topology didn't change (REPLICA IDENTITY FULL provides old row)
+    const onConnectionChange = (
+      payload: RealtimePostgresChangesPayload<{ status: string }>,
+    ) => {
+      const oldStatus = (payload.old as { status?: string }).status
+      const newStatus = (payload.new as { status?: string }).status
+      if (oldStatus !== undefined && oldStatus === newStatus) return
+      invalidate()
+    }
+
     return subscribePostgresChannel(`network-graph-rt-${userId}`, [
-      { event: '*', table: 'connections', callback: invalidate },
+      { event: '*', table: 'connections', callback: onConnectionChange },
       { event: '*', table: 'bridges', callback: invalidate },
     ])
   // eslint-disable-next-line react-hooks/exhaustive-deps
