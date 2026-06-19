@@ -1,5 +1,5 @@
 import { Share2 } from 'lucide-react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   buildSocialShareSnapshot,
   canShareGraphFiles,
@@ -8,20 +8,13 @@ import {
 import type { SocialShareCardOptions } from '../../lib/socialShareCard.ts'
 
 interface GraphShareButtonProps {
-  graphRef: RefObject<HTMLCanvasElement | null>
   disabled?: boolean
-  prepareForSnapshot?: () => Promise<() => void>
   shareCardOptions: SocialShareCardOptions
 }
 
 type ToastMessage = 'shared' | 'saved' | 'error' | null
 
-export function GraphShareButton({
-  graphRef,
-  disabled = false,
-  prepareForSnapshot,
-  shareCardOptions,
-}: GraphShareButtonProps) {
+export function GraphShareButton({ disabled = false, shareCardOptions }: GraphShareButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState<ToastMessage>(null)
@@ -29,20 +22,14 @@ export function GraphShareButton({
   const canShare = canShareGraphFiles()
 
   useEffect(() => {
-    if (!menuOpen) {
-      return
-    }
+    if (!menuOpen) return
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false)
-      }
+      if (!rootRef.current?.contains(event.target as Node)) setMenuOpen(false)
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMenuOpen(false)
-      }
+      if (event.key === 'Escape') setMenuOpen(false)
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -61,33 +48,18 @@ export function GraphShareButton({
   }
 
   const buildSnapshot = async () => {
-    if (!graphRef.current) {
-      return null
-    }
-
-    const restoreSnapshot = prepareForSnapshot ? await prepareForSnapshot() : undefined
-
     try {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 100)
-      })
-
-      return buildSocialShareSnapshot(graphRef.current, shareCardOptions)
+      return await buildSocialShareSnapshot(shareCardOptions)
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.warn('Graph snapshot capture failed', error)
+        console.warn('Share card build failed', error)
       }
       return null
-    } finally {
-      restoreSnapshot?.()
     }
   }
 
   const handleSave = async () => {
-    if (busy) {
-      return
-    }
-
+    if (busy) return
     setBusy(true)
     setMenuOpen(false)
 
@@ -109,10 +81,7 @@ export function GraphShareButton({
   }
 
   const handleShare = async () => {
-    if (busy || !canShare) {
-      return
-    }
-
+    if (busy || !canShare) return
     setBusy(true)
     setMenuOpen(false)
 
@@ -133,9 +102,7 @@ export function GraphShareButton({
       })
       showToast('shared')
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return
-      }
+      if (error instanceof DOMException && error.name === 'AbortError') return
       await handleSave()
     } finally {
       setBusy(false)

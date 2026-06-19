@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
@@ -7,7 +7,6 @@ import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
 import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
-import { prepareGraphSnapshotCapture } from '../lib/networkSnapshotPrep.ts'
 import { getNetworkShareStats } from '../lib/networkShareStats.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
 import { usePendingRequestCount } from '../hooks/usePendingRequestCount.ts'
@@ -31,28 +30,18 @@ export default function Network() {
     loading: true,
     error: null as string | null,
   })
-  const [snapshotExportMode, setSnapshotExportMode] = useState(false)
-  const exportRecenterRef = useRef<(() => void) | null>(null)
 
-  const shareCardOptions = useMemo(
-    () => getNetworkShareStats(nodes, edges),
-    [edges, nodes],
-  )
-
+  const shareCardOptions = useMemo(() => getNetworkShareStats(nodes, edges), [edges, nodes])
 
   useEffect(() => {
     const state = location.state as { selectUserId?: string } | null
-    if (!state?.selectUserId) {
-      return
-    }
+    if (!state?.selectUserId) return
 
     setSelectedBridge(null)
     setSelectedUserId(state.selectUserId)
     const restoredUser =
       networkUserCache.get(state.selectUserId) ?? usersById[state.selectUserId] ?? null
-    if (restoredUser) {
-      setSelectedUser(restoredUser)
-    }
+    if (restoredUser) setSelectedUser(restoredUser)
     window.history.replaceState({}, document.title)
   }, [location.state, usersById])
 
@@ -62,16 +51,13 @@ export default function Network() {
       return
     }
 
-    const cachedUser =
-      networkUserCache.get(selectedUserId) ?? usersById[selectedUserId] ?? null
+    const cachedUser = networkUserCache.get(selectedUserId) ?? usersById[selectedUserId] ?? null
     if (cachedUser) {
       setSelectedUser(cachedUser)
       return
     }
 
-    if (selectedUser?.id === selectedUserId) {
-      return
-    }
+    if (selectedUser?.id === selectedUserId) return
   }, [selectedUser?.id, selectedUserId, usersById])
 
   const handleRecenter = () => {
@@ -80,61 +66,7 @@ export default function Network() {
     setRecenterTrigger((value) => value + 1)
   }
 
-  const prepareGraphSnapshot = useCallback(async (): Promise<() => void> => {
-    return prepareGraphSnapshotCapture(
-      {
-        selectedUserId,
-        selectedBridge,
-        selectedUser,
-      },
-      {
-        clearSelection: () => {
-          setSelectedBridge(null)
-          setSelectedUserId(null)
-          setSelectedUser(null)
-        },
-        restoreSelection: (state) => {
-          if (state.selectedUserId) {
-            setSelectedUserId(state.selectedUserId)
-            if (state.selectedUser) {
-              setSelectedUser(state.selectedUser)
-            }
-          }
-          if (state.selectedBridge) {
-            setSelectedBridge(state.selectedBridge)
-          }
-        },
-        waitForPaint: async () => {
-          await new Promise<void>((resolve) => {
-            window.requestAnimationFrame(() => {
-              window.requestAnimationFrame(() => resolve())
-            })
-          })
-          await new Promise((resolve) => {
-            window.setTimeout(resolve, 120)
-          })
-        },
-        enterExportMode: async () => {
-          setSnapshotExportMode(true)
-          await new Promise<void>((resolve) => {
-            window.requestAnimationFrame(() => {
-              window.requestAnimationFrame(() => resolve())
-            })
-          })
-          exportRecenterRef.current?.()
-          await new Promise((resolve) => {
-            window.setTimeout(resolve, 160)
-          })
-        },
-        exitExportMode: () => {
-          setSnapshotExportMode(false)
-        },
-      },
-    )
-  }, [selectedBridge, selectedUser, selectedUserId])
-
-  const graphActionsDisabled =
-    graphState.loading || !!graphState.error || !graphState.hasConnections
+  const graphActionsDisabled = graphState.loading || !!graphState.error || !graphState.hasConnections
 
   return (
     <div className="safe-screen-height relative mx-auto w-full max-w-md overflow-hidden bg-bg text-text">
@@ -143,9 +75,7 @@ export default function Network() {
         <div className="flex items-center gap-2 pt-1">
           <RecenterGraphButton onRecenter={handleRecenter} disabled={graphActionsDisabled} />
           <GraphShareButton
-            graphRef={graphCanvasRef}
-            disabled={graphActionsDisabled || !graphState.canvasReady}
-            prepareForSnapshot={prepareGraphSnapshot}
+            disabled={graphActionsDisabled}
             shareCardOptions={shareCardOptions}
           />
           <NetworkHeaderMenu pendingRequestCount={pendingRequestCount} />
@@ -169,14 +99,10 @@ export default function Network() {
           </div>
         ) : null}
         <NetworkGraph
-          exportMode={snapshotExportMode}
-          onRegisterExportRecenter={(recenter) => {
-            exportRecenterRef.current = recenter
-          }}
+          exportMode={false}
+          onRegisterExportRecenter={() => {}}
           onNodeSelect={(userId, user) => {
-            if (!userId) {
-              return
-            }
+            if (!userId) return
             setSelectedUserId(userId)
             if (user) {
               networkUserCache.set(userId, user)
@@ -212,7 +138,6 @@ export default function Network() {
             </div>
           </section>
         ) : null}
-
       </main>
 
       {selectedBridge ? (

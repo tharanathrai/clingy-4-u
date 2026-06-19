@@ -1,21 +1,16 @@
 import { CATEGORIES, type CategorySlug } from './constants.ts'
 import type { NetworkGraphEdge, NetworkGraphNode } from '../hooks/useNetworkGraph.ts'
+import type { SocialShareCardOptions, ShareCardPerson } from './socialShareCard.ts'
 
 const CATEGORY_ORDER = Object.keys(CATEGORIES) as CategorySlug[]
 
 const ACCENT_COLOR = CATEGORIES.intimate.color_hex
 
-export interface NetworkShareStats {
-  peopleCount: number
-  bridgeCount: number
-  glowColor: string
-}
+export type { SocialShareCardOptions }
 
 export const getFirstName = (displayName: string): string => {
   const trimmed = displayName.trim()
-  if (!trimmed) {
-    return '?'
-  }
+  if (!trimmed) return '?'
   return trimmed.split(/\s+/)[0] ?? trimmed
 }
 
@@ -26,16 +21,12 @@ export const formatShareStatLine = (peopleCount: number, bridgeCount: number): s
 }
 
 export const getDominantBridgeCategoryColor = (edges: NetworkGraphEdge[]): string => {
-  if (edges.length === 0) {
-    return ACCENT_COLOR
-  }
+  if (edges.length === 0) return ACCENT_COLOR
 
   const counts: Partial<Record<CategorySlug, number>> = {}
   for (const edge of edges) {
     const slug = edge.bridge.category as CategorySlug
-    if (!(slug in CATEGORIES)) {
-      continue
-    }
+    if (!(slug in CATEGORIES)) continue
     counts[slug] = (counts[slug] ?? 0) + 1
   }
 
@@ -52,15 +43,66 @@ export const getDominantBridgeCategoryColor = (edges: NetworkGraphEdge[]): strin
   return CATEGORIES[bestSlug].color_hex
 }
 
+const getDominantCategory = (edges: NetworkGraphEdge[]): CategorySlug => {
+  if (edges.length === 0) return 'explore'
+
+  const counts: Partial<Record<CategorySlug, number>> = {}
+  for (const edge of edges) {
+    const slug = edge.bridge.category as CategorySlug
+    if (!(slug in CATEGORIES)) continue
+    counts[slug] = (counts[slug] ?? 0) + 1
+  }
+
+  let best: CategorySlug = CATEGORY_ORDER[0]
+  let bestCount = -1
+  for (const slug of CATEGORY_ORDER) {
+    const count = counts[slug] ?? 0
+    if (count > bestCount) {
+      bestCount = count
+      best = slug
+    }
+  }
+  return best
+}
+
 export const getNetworkShareStats = (
   nodes: NetworkGraphNode[],
   edges: NetworkGraphEdge[],
-): NetworkShareStats => {
-  const peopleCount = nodes.filter((node) => !node.isSelf && node.bridgeCount > 0).length
-  const bridgeCount = edges.length
-  const glowColor = getDominantBridgeCategoryColor(edges)
+): SocialShareCardOptions => {
+  const selfNode = nodes.find((n) => n.isSelf)
+  const userName = getFirstName(selfNode?.user.display_name ?? '')
+  const userAvatarUrl = selfNode?.user.avatar_url ?? null
 
-  return { peopleCount, bridgeCount, glowColor }
+  const now = new Date()
+  const date = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+
+  const people: ShareCardPerson[] = nodes
+    .filter((n) => !n.isSelf && n.bridgeCount > 0)
+    .map((n) => {
+      const personEdges = edges.filter((e) => e.source === n.id || e.target === n.id)
+      const topCat = getDominantCategory(personEdges)
+      return {
+        name: getFirstName(n.user.display_name),
+        avatarUrl: n.user.avatar_url,
+        topCat,
+        sharedCount: n.bridgeCount,
+      }
+    })
+    .sort((a, b) => b.sharedCount - a.sharedCount)
+
+  const topCat = getDominantCategory(edges)
+  const peopleCount = people.length
+  const bridgeCount = edges.length
+
+  return {
+    userName,
+    userAvatarUrl,
+    date,
+    peopleCount,
+    bridgeCount,
+    topCat,
+    people,
+  }
 }
 
 export const getExportLabelNodeIds = (nodes: NetworkGraphNode[], limit = 5): Set<string> => {

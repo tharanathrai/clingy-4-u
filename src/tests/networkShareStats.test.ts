@@ -34,15 +34,20 @@ const node = (
   bridgeCount,
 })
 
-const bridgeEdge = (id: string, category: string): NetworkGraphEdge => ({
+const bridgeEdge = (
+  id: string,
+  category: string,
+  source = 'viewer',
+  target = 'friend',
+): NetworkGraphEdge => ({
   id,
-  source: 'viewer',
-  target: 'friend',
+  source,
+  target,
   bridge: {
     id,
     gum_piece_id: id,
-    user_a_id: 'viewer',
-    user_b_id: 'friend',
+    user_a_id: source,
+    user_b_id: target,
     category,
     color_hex: '#000000',
     activity_title: 'Test',
@@ -93,20 +98,39 @@ describe('getDominantBridgeCategoryColor', () => {
 })
 
 describe('getNetworkShareStats', () => {
-  it('counts bridged people and total bridges', () => {
+  it('counts bridged people and total bridges, picks topCat, extracts user info', () => {
     const nodes = [
-      node('viewer', 'You', 0, true),
+      node('viewer', 'You Person', 0, true),
       node('a', 'Alex Kim', 2),
       node('b', 'Sam Lee', 0),
       node('c', 'Jordan', 1),
     ]
-    const edges = [bridgeEdge('1', 'intimate'), bridgeEdge('2', 'active'), bridgeEdge('3', 'active')]
+    const edges = [
+      bridgeEdge('1', 'intimate', 'viewer', 'a'),
+      bridgeEdge('2', 'active', 'viewer', 'a'),
+      bridgeEdge('3', 'active', 'viewer', 'c'),
+    ]
 
-    expect(getNetworkShareStats(nodes, edges)).toEqual({
-      peopleCount: 2,
-      bridgeCount: 3,
-      glowColor: '#7DD47A',
-    })
+    const result = getNetworkShareStats(nodes, edges)
+
+    expect(result.peopleCount).toBe(2)
+    expect(result.bridgeCount).toBe(3)
+    expect(result.topCat).toBe('active')
+    expect(result.userName).toBe('You')
+    expect(result.userAvatarUrl).toBeNull()
+    expect(result.people).toHaveLength(2)
+    // highest bridgeCount first
+    expect(result.people[0].name).toBe('Alex')
+    expect(result.people[0].sharedCount).toBe(2)
+  })
+
+  it('returns explore as topCat when there are no edges', () => {
+    const nodes = [node('viewer', 'You', 0, true)]
+    const result = getNetworkShareStats(nodes, [])
+
+    expect(result.topCat).toBe('explore')
+    expect(result.bridgeCount).toBe(0)
+    expect(result.people).toHaveLength(0)
   })
 })
 

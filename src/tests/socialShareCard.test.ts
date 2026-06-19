@@ -1,26 +1,29 @@
-/**
- * Tests for social share card composer (spec 016-social-share-export)
- */
-
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   SOCIAL_SHARE_HEIGHT,
   SOCIAL_SHARE_WIDTH,
   composeSocialShareCard,
-  getSocialShareFooterHeight,
-  getSocialShareGraphHeight,
 } from '../lib/socialShareCard.ts'
+import type { SocialShareCardOptions } from '../lib/socialShareCard.ts'
+
+const baseOptions: SocialShareCardOptions = {
+  userName: 'Robin',
+  userAvatarUrl: null,
+  date: 'June 2026',
+  peopleCount: 2,
+  bridgeCount: 3,
+  topCat: 'active',
+  people: [
+    { name: 'Sam', avatarUrl: null, topCat: 'recharge', sharedCount: 2 },
+    { name: 'Mara', avatarUrl: null, topCat: 'playful', sharedCount: 1 },
+  ],
+}
 
 describe('social share card layout constants', () => {
-  it('uses a 4:5 portrait export size', () => {
+  it('uses a 1:1 square export size', () => {
     expect(SOCIAL_SHARE_WIDTH).toBe(1080)
-    expect(SOCIAL_SHARE_HEIGHT).toBe(1350)
-    expect(SOCIAL_SHARE_WIDTH / SOCIAL_SHARE_HEIGHT).toBeCloseTo(0.8, 2)
-  })
-
-  it('reserves roughly eighteen percent for the footer band', () => {
-    expect(getSocialShareFooterHeight()).toBe(243)
-    expect(getSocialShareGraphHeight()).toBe(1107)
+    expect(SOCIAL_SHARE_HEIGHT).toBe(1080)
+    expect(SOCIAL_SHARE_WIDTH / SOCIAL_SHARE_HEIGHT).toBe(1)
   })
 })
 
@@ -55,9 +58,11 @@ describe('composeSocialShareCard', () => {
 
     getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
       function (this: HTMLCanvasElement) {
-        if (this.width === 200 && this.height === 100) {
+        // Small pattern canvas (180×180)
+        if (this.width === 180 && this.height === 180) {
           return {
             drawImage: vi.fn(),
+            createPattern: vi.fn(() => ({})),
           } as unknown as CanvasRenderingContext2D
         }
 
@@ -66,22 +71,28 @@ describe('composeSocialShareCard', () => {
           strokeStyle: '',
           lineWidth: 0,
           font: '',
-          textAlign: 'left',
-          textBaseline: 'alphabetic',
+          textAlign: 'left' as CanvasTextAlign,
+          textBaseline: 'alphabetic' as CanvasTextBaseline,
           globalAlpha: 1,
+          lineCap: 'butt' as CanvasLineCap,
           fillRect: vi.fn(),
           stroke: vi.fn(),
           beginPath: vi.fn(),
           moveTo: vi.fn(),
           lineTo: vi.fn(),
+          quadraticCurveTo: vi.fn(),
+          closePath: vi.fn(),
+          arc: vi.fn(),
+          clip: vi.fn(),
+          fill: vi.fn(),
           fillText: vi.fn(),
-          createRadialGradient: vi.fn(() => ({
-            addColorStop: vi.fn(),
-          })),
+          measureText: vi.fn(() => ({ width: 80 })),
+          createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+          createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
           createPattern: vi.fn(() => ({})),
+          drawImage: vi.fn(),
           save: vi.fn(),
           restore: vi.fn(),
-          drawImage: vi.fn(),
         } as unknown as CanvasRenderingContext2D
       },
     )
@@ -95,16 +106,8 @@ describe('composeSocialShareCard', () => {
     vi.restoreAllMocks()
   })
 
-  it('returns a composed PNG at social card dimensions', async () => {
-    const graphBitmap = document.createElement('canvas')
-    graphBitmap.width = 200
-    graphBitmap.height = 100
-
-    const result = await composeSocialShareCard(graphBitmap, {
-      peopleCount: 2,
-      bridgeCount: 3,
-      glowColor: '#7DD47A',
-    })
+  it('returns a composed PNG from options alone', async () => {
+    const result = await composeSocialShareCard(baseOptions)
 
     expect(result).not.toBeNull()
     expect(result?.blob.type).toBe('image/png')
@@ -113,14 +116,19 @@ describe('composeSocialShareCard', () => {
 
   it('returns null when the composer canvas context is unavailable', async () => {
     getContextSpy.mockReturnValue(null)
-    const graphBitmap = document.createElement('canvas')
 
-    await expect(
-      composeSocialShareCard(graphBitmap, {
-        peopleCount: 0,
-        bridgeCount: 0,
-        glowColor: '#CF8EE8',
-      }),
-    ).resolves.toBeNull()
+    await expect(composeSocialShareCard(baseOptions)).resolves.toBeNull()
+  })
+
+  it('handles empty people array without throwing', async () => {
+    const result = await composeSocialShareCard({
+      ...baseOptions,
+      peopleCount: 0,
+      bridgeCount: 0,
+      topCat: 'explore',
+      people: [],
+    })
+
+    expect(result).not.toBeNull()
   })
 })

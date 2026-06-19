@@ -3,18 +3,25 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { createRef } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
+import type { SocialShareCardOptions } from '../lib/socialShareCard.ts'
 
 const buildSocialShareSnapshot = vi.fn()
 const canShareGraphFiles = vi.fn()
 
-const shareCardOptions = {
+const shareCardOptions: SocialShareCardOptions = {
+  userName: 'Robin',
+  userAvatarUrl: null,
+  date: 'June 2026',
   peopleCount: 2,
   bridgeCount: 3,
-  glowColor: '#CF8EE8',
+  topCat: 'active',
+  people: [
+    { name: 'Sam', avatarUrl: null, topCat: 'recharge', sharedCount: 2 },
+    { name: 'Mara', avatarUrl: null, topCat: 'playful', sharedCount: 1 },
+  ],
 }
 
 vi.mock('../lib/graphSnapshot.ts', () => ({
@@ -34,13 +41,8 @@ describe('GraphShareButton', () => {
     vi.useRealTimers()
   })
 
-  it('downloads an image when canvas ref is ready and nothing is selected', async () => {
+  it('downloads an image when snapshot succeeds', async () => {
     const user = userEvent.setup()
-    const canvas = document.createElement('canvas')
-    canvas.width = 100
-    canvas.height = 100
-    const graphRef = createRef<HTMLCanvasElement>()
-    graphRef.current = canvas
 
     buildSocialShareSnapshot.mockResolvedValue({
       blob: new Blob(['png'], { type: 'image/png' }),
@@ -49,19 +51,13 @@ describe('GraphShareButton', () => {
 
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
 
-    render(
-      <GraphShareButton
-        graphRef={graphRef}
-        prepareForSnapshot={async () => () => {}}
-        shareCardOptions={shareCardOptions}
-      />,
-    )
+    render(<GraphShareButton shareCardOptions={shareCardOptions} />)
 
     await user.click(screen.getByRole('button', { name: 'Share network graph' }))
     await user.click(screen.getByRole('menuitem', { name: 'Save image' }))
 
     await waitFor(() => {
-      expect(buildSocialShareSnapshot).toHaveBeenCalledWith(canvas, shareCardOptions)
+      expect(buildSocialShareSnapshot).toHaveBeenCalledWith(shareCardOptions)
     })
     expect(clickSpy).toHaveBeenCalled()
 
@@ -70,40 +66,28 @@ describe('GraphShareButton', () => {
 
   it('shows an error toast when snapshot capture fails', async () => {
     const user = userEvent.setup()
-    const canvas = document.createElement('canvas')
-    const graphRef = createRef<HTMLCanvasElement>()
-    graphRef.current = canvas
 
     buildSocialShareSnapshot.mockResolvedValue(null)
 
-    render(
-      <GraphShareButton
-        graphRef={graphRef}
-        prepareForSnapshot={async () => () => {}}
-        shareCardOptions={shareCardOptions}
-      />,
-    )
+    render(<GraphShareButton shareCardOptions={shareCardOptions} />)
 
     await user.click(screen.getByRole('button', { name: 'Share network graph' }))
     await user.click(screen.getByRole('menuitem', { name: 'Save image' }))
 
-    expect(
-      await screen.findByText("Couldn't save image — try again"),
-    ).toBeInTheDocument()
+    expect(await screen.findByText("Couldn't save image — try again")).toBeInTheDocument()
   })
 
-  it('shows an error toast when canvas ref is missing', async () => {
+  it('shows an error toast when snapshot build throws', async () => {
     const user = userEvent.setup()
-    const graphRef = createRef<HTMLCanvasElement>()
 
-    render(<GraphShareButton graphRef={graphRef} shareCardOptions={shareCardOptions} />)
+    buildSocialShareSnapshot.mockRejectedValue(new Error('canvas error'))
+
+    render(<GraphShareButton shareCardOptions={shareCardOptions} />)
 
     await user.click(screen.getByRole('button', { name: 'Share network graph' }))
     await user.click(screen.getByRole('menuitem', { name: 'Save image' }))
 
-    expect(
-      await screen.findByText("Couldn't save image — try again"),
-    ).toBeInTheDocument()
-    expect(buildSocialShareSnapshot).not.toHaveBeenCalled()
+    expect(await screen.findByText("Couldn't save image — try again")).toBeInTheDocument()
+    expect(buildSocialShareSnapshot).toHaveBeenCalledWith(shareCardOptions)
   })
 })
