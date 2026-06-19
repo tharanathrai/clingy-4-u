@@ -119,9 +119,7 @@ async function fetchProfile(
     throw new Error(connectionError.message)
   }
 
-  const connected = Boolean(connectionData)
-
-  if (!connected) {
+  if (!connectionData) {
     return {
       profile: resolvedProfile,
       bridgeCount: profileBridges.length,

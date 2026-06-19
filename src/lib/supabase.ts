@@ -430,7 +430,20 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      snooze_friend: {
+        Args: { other_user_id: string }
+        Returns: void
+      }
+      unsnooze_friend: {
+        Args: { other_user_id: string }
+        Returns: void
+      }
+      remove_friend: {
+        Args: { other_user_id: string }
+        Returns: void
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
