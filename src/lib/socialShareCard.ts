@@ -7,10 +7,11 @@ const BG = '#080612'
 const S = 3 // scale: 360 viewBox → 1080 canvas
 const CX = 180 * S // 540 — centre X
 const CY = 190 * S // 570 — centre Y
-const YOU_R = 25 * S // 75 — centre avatar radius
+const YOU_R = 20 * S // 60 — centre avatar radius
 const BAND_Y_MIN = 150 * S // 450
 const BAND_Y_MAX = 250 * S // 750
-const GAP = 6 * S // 18
+const GAP = 10 * S // 30 — inter-node gap
+const MIN_ORBIT_D = 80 * S // 240 — minimum centre-to-centre distance for any friend node
 const PAD = 30 * S // 90 — edge padding
 
 const ARCHETYPE: Record<CategorySlug, string> = {
@@ -120,7 +121,7 @@ function computeLayout(people: ShareCardPerson[], userName: string): NodeLayout[
       let dx = a.x - CX
       let dy = a.y - CY
       let d = Math.hypot(dx, dy) || 0.01
-      const minC = a.r + YOU_R + GAP
+      const minC = Math.max(a.r + YOU_R + GAP, MIN_ORBIT_D)
       if (d < minC) {
         const push = minC - d
         a.x += (dx / d) * push
