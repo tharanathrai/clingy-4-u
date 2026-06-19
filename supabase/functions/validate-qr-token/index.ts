@@ -19,7 +19,7 @@ interface ScannedUser {
 
 interface ExistingConnection {
   id: string
-  status: 'pending' | 'active'
+  status: 'pending' | 'active' | 'removed'
   requested_by: string
 }
 
@@ -127,11 +127,15 @@ Deno.serve(async (request) => {
         })
       }
 
-      return jsonResponse(400, {
-        error: "You're already connected with this person.",
-        error_code: 'already_connected',
-        user: scannedUser as ScannedUser,
-      })
+      if (existingConnection.status === 'active') {
+        return jsonResponse(400, {
+          error: "You're already connected with this person.",
+          error_code: 'already_connected',
+          user: scannedUser as ScannedUser,
+        })
+      }
+
+      // status === 'removed': allow re-friending — fall through but use UPDATE below
     }
 
     if (body.preview === true) {
@@ -151,20 +155,46 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: consumeTokenError.message })
     }
 
-    const { data: createdConnection, error: createConnectionError } = await serviceClient
-      .from('connections')
-      .insert({
-        user_a_id: userA,
-        user_b_id: userB,
-        status: 'pending',
-        requested_by: authData.user.id,
-      })
-      .select('id')
-      .single()
+    let connectionId: string
 
-    if (createConnectionError || !createdConnection) {
-      return jsonResponse(500, { error: createConnectionError?.message ?? 'Failed to connect.' })
+    if (existingConnection?.status === 'removed') {
+      // Reuse the existing row — reset to pending and clear snooze flags
+      const { data: updatedConnection, error: updateConnectionError } = await serviceClient
+        .from('connections')
+        .update({
+          status: 'pending',
+          requested_by: authData.user.id,
+          accepted_at: null,
+          snoozed_by_a: false,
+          snoozed_by_b: false,
+        })
+        .eq('id', existingConnection.id)
+        .select('id')
+        .single()
+
+      if (updateConnectionError || !updatedConnection) {
+        return jsonResponse(500, { error: updateConnectionError?.message ?? 'Failed to reconnect.' })
+      }
+      connectionId = updatedConnection.id
+    } else {
+      const { data: createdConnection, error: createConnectionError } = await serviceClient
+        .from('connections')
+        .insert({
+          user_a_id: userA,
+          user_b_id: userB,
+          status: 'pending',
+          requested_by: authData.user.id,
+        })
+        .select('id')
+        .single()
+
+      if (createConnectionError || !createdConnection) {
+        return jsonResponse(500, { error: createConnectionError?.message ?? 'Failed to connect.' })
+      }
+      connectionId = createdConnection.id
     }
+
+    const createdConnection = { id: connectionId }
 
     const { error: notificationError } = await serviceClient.from('notifications').insert({
       user_id: tokenRow.user_id,
