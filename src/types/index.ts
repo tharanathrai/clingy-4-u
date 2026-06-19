@@ -1,4 +1,4 @@
-export type ConnectionStatus = 'pending' | 'active'
+export type ConnectionStatus = 'pending' | 'active' | 'removed'
 
 export type GumPieceStatus =
   | 'placeholder'

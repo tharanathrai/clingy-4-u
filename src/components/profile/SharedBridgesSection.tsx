@@ -28,7 +28,7 @@ export function SharedBridgesSection({
     return (
       <section className="mt-8">
         <h2 className="font-display text-xl text-text">your bridges together</h2>
-        <div className="mt-3 rounded-lg border border-white/10 bg-surface p-5">
+        <div className="mt-3 flex flex-col items-center rounded-lg border border-white/10 bg-surface p-5 text-center">
           <p className="text-sm text-text-2">No bridges yet. Make a plan.</p>
           <button
             type="button"

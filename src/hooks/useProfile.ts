@@ -19,6 +19,7 @@ interface UseProfileResult {
   categoryBreakdown: Record<CategorySlug, number>
   sharedBridges: Bridge[]
   isConnected: boolean
+  isSnoozed: boolean
   loading: boolean
   error: string | null
   refetch: () => void
@@ -31,6 +32,7 @@ interface ProfileData {
   categoryBreakdown: Record<CategorySlug, number>
   sharedBridges: Bridge[]
   isConnected: boolean
+  isSnoozed: boolean
 }
 
 const createEmptyCategoryBreakdown = (): Record<CategorySlug, number> => ({
@@ -100,12 +102,13 @@ async function fetchProfile(
       categoryBreakdown: breakdown,
       sharedBridges: [],
       isConnected: viewerId === resolvedProfile.id,
+      isSnoozed: false,
     }
   }
 
   const { data: connectionData, error: connectionError } = await supabase
     .from('connections')
-    .select('id')
+    .select('id, user_a_id, snoozed_by_a, snoozed_by_b')
     .eq('status', 'active')
     .or(
       `and(user_a_id.eq.${viewerId},user_b_id.eq.${resolvedProfile.id}),and(user_a_id.eq.${resolvedProfile.id},user_b_id.eq.${viewerId})`,
@@ -126,8 +129,13 @@ async function fetchProfile(
       categoryBreakdown: breakdown,
       sharedBridges: [],
       isConnected: false,
+      isSnoozed: false,
     }
   }
+
+  const isSnoozed = connectionData.user_a_id === viewerId
+    ? connectionData.snoozed_by_a
+    : connectionData.snoozed_by_b
 
   const { data: sharedBridgesData, error: sharedBridgesError } = await supabase
     .from('bridges')
@@ -148,6 +156,7 @@ async function fetchProfile(
     categoryBreakdown: breakdown,
     sharedBridges: (sharedBridgesData ?? []) as Bridge[],
     isConnected: true,
+    isSnoozed,
   }
 }
 
@@ -184,6 +193,7 @@ export function useProfile({
     categoryBreakdown: data?.categoryBreakdown ?? createEmptyCategoryBreakdown(),
     sharedBridges: data?.sharedBridges ?? [],
     isConnected: data?.isConnected ?? false,
+    isSnoozed: data?.isSnoozed ?? false,
     loading: isInitialQueryLoading(authLoading, viewerId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: () => {

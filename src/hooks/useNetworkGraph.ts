@@ -96,10 +96,15 @@ async function fetchNetworkGraph(userId: string): Promise<NetworkGraphData> {
     }
   }
 
+  const activeUserIds = new Set(networkUserIds)
+  const filteredBridges = ((bridgeRows ?? []) as Bridge[]).filter(
+    (b) => activeUserIds.has(b.user_a_id) && activeUserIds.has(b.user_b_id),
+  )
+
   return {
     connections: activeConnections,
     usersById: mappedUsers,
-    bridges: (bridgeRows ?? []) as Bridge[],
+    bridges: filteredBridges,
   }
 }
 

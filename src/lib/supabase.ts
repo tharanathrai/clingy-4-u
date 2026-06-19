@@ -43,28 +43,34 @@ export interface Database {
           id: string
           user_a_id: string
           user_b_id: string
-          status: 'pending' | 'active'
+          status: 'pending' | 'active' | 'removed'
           requested_by: string
           created_at: string
           accepted_at: string | null
+          snoozed_by_a: boolean
+          snoozed_by_b: boolean
         }
         Insert: {
           id?: string
           user_a_id: string
           user_b_id: string
-          status: 'pending' | 'active'
+          status: 'pending' | 'active' | 'removed'
           requested_by: string
           created_at?: string
           accepted_at?: string | null
+          snoozed_by_a?: boolean
+          snoozed_by_b?: boolean
         }
         Update: {
           id?: string
           user_a_id?: string
           user_b_id?: string
-          status?: 'pending' | 'active'
+          status?: 'pending' | 'active' | 'removed'
           requested_by?: string
           created_at?: string
           accepted_at?: string | null
+          snoozed_by_a?: boolean
+          snoozed_by_b?: boolean
         }
         Relationships: []
       }

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow.tsx'
+import { FriendshipMenu } from '../components/profile/FriendshipMenu.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { SharedBridgesSection } from '../components/profile/SharedBridgesSection.tsx'
 import { pageShellTab } from '../components/layout/pageShell.ts'
@@ -25,6 +26,7 @@ export default function ProfileUser() {
     bridgeCount,
     sharedBridges,
     isConnected,
+    isSnoozed,
     loading,
     error,
     refetch,
@@ -99,19 +101,38 @@ export default function ProfileUser() {
 
   return (
     <main className={pageShellTab}>
-      <BackHeader onBack={handleBack} className="mb-4" />
-      <section className="flex flex-col items-center text-center">
-        {profile.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.display_name}
-            className="h-20 w-20 rounded-full border-2 border-white object-cover"
+      <div className="mb-4 flex items-center justify-between">
+        <BackHeader onBack={handleBack} />
+        {isConnected ? (
+          <FriendshipMenu
+            otherUserId={profile.id}
+            otherUsername={profile.username}
+            otherUserName={profile.display_name}
+            isSnoozed={isSnoozed}
+            onActionDone={refetch}
+            onRemoved={() => navigate('/home')}
           />
-        ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-surface-2 text-2xl text-text">
-            {profile.display_name.slice(0, 1).toUpperCase()}
-          </div>
-        )}
+        ) : null}
+      </div>
+      <section className="flex flex-col items-center text-center">
+        <div className="relative">
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.display_name}
+              className="h-20 w-20 rounded-full border-2 border-white object-cover"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-surface-2 text-2xl text-text">
+              {profile.display_name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          {isSnoozed ? (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-bg bg-surface-2 text-[9px] font-bold leading-none text-text-2">
+              Zz
+            </span>
+          ) : null}
+        </div>
         <h1 className="app-page-title mt-3">{profile.display_name}</h1>
         <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
         <p className="mt-3 text-sm text-text-2">

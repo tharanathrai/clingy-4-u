@@ -27,12 +27,14 @@ interface UseFeedResult {
 interface ConnectionRow {
   user_a_id: string
   user_b_id: string
+  snoozed_by_a: boolean
+  snoozed_by_b: boolean
 }
 
 async function fetchFeed(userId: string): Promise<FeedPost[]> {
   const { data: connectionsData, error: connectionsError } = await supabase
     .from('connections')
-    .select('user_a_id, user_b_id')
+    .select('user_a_id, user_b_id, snoozed_by_a, snoozed_by_b')
     .eq('status', 'active')
     .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
 
@@ -47,6 +49,12 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
         c.user_a_id === userId ? c.user_b_id : c.user_a_id,
       ),
     ),
+  )
+
+  const snoozedUserIds = new Set(
+    connections
+      .filter((c) => c.user_a_id === userId ? c.snoozed_by_a : c.snoozed_by_b)
+      .map((c) => c.user_a_id === userId ? c.user_b_id : c.user_a_id),
   )
 
   const { data: ownPostsData, error: ownPostsError } = await supabase
@@ -157,6 +165,13 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
       const bridge = bridgesById.get(post.bridge_id)
       if (!author || !bridge) {
         return null
+      }
+
+      // Snoozed friend: hide their posts unless current user is also in the bridge
+      if (post.author_id !== userId && snoozedUserIds.has(post.author_id)) {
+        if (bridge.user_a_id !== userId && bridge.user_b_id !== userId) {
+          return null
+        }
       }
 
       const otherParticipantId =
