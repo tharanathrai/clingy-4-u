@@ -34,10 +34,10 @@ test('feed author tap opens other-user profile with back and returns to feed', a
 
   await page.getByRole('button', { name: `@${MOCK_FRIEND.username}` }).click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
-  await expect(page.getByRole('button', { name: 'back' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
   await expect(page.getByText(MOCK_FRIEND.display_name).first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'back' }).click()
+  await page.getByRole('button', { name: 'Back' }).click()
   await expect(page).toHaveURL('/feed')
 })
 
@@ -55,9 +55,9 @@ test('network View profile with returnTo returns to network on back', async ({ p
   await viewProfile.click()
 
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
-  await expect(page.getByRole('button', { name: 'back' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'back' }).click()
+  await page.getByRole('button', { name: 'Back' }).click()
   await expect(page).toHaveURL('/network')
 })
 
@@ -71,8 +71,8 @@ test('cold open other-user profile falls back to home on back', async ({ page })
   await page.goto(`/profile/${MOCK_FRIEND.username}`)
   await page.waitForLoadState('networkidle')
 
-  await expect(page.getByRole('button', { name: 'back' })).toBeVisible()
-  await page.getByRole('button', { name: 'back' }).click()
+  await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
+  await page.getByRole('button', { name: 'Back' }).click()
   await expect(page).toHaveURL('/home')
 })
 
@@ -95,11 +95,11 @@ test('profile new gum back returns to profile when returnTo is set (C-02)', asyn
   await page.goto(`/profile/${MOCK_FRIEND.username}`)
   await page.waitForLoadState('networkidle')
 
-  await page.getByRole('button', { name: 'New gum' }).click()
+  await page.getByRole('button', { name: 'New plan' }).click()
   await expect(page).toHaveURL('/piece/new')
   await expect(page.getByText('Sam Friend')).toBeVisible()
 
-  const backLink = page.getByRole('link', { name: 'back' })
+  const backLink = page.getByRole('link', { name: 'Back' })
   await expect(backLink).toHaveAttribute('href', `/profile/${MOCK_FRIEND.username}`)
   await backLink.click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
@@ -186,7 +186,7 @@ test('post detail commenter profile back restores post detail sheet (F-03)', asy
   await page.getByRole('button', { name: `@${MOCK_FRIEND.username}` }).last().click()
   await expect(page).toHaveURL(`/profile/${MOCK_FRIEND.username}`)
 
-  await page.getByRole('button', { name: 'back' }).click()
+  await page.getByRole('button', { name: 'Back' }).click()
   await expect(page).toHaveURL('/feed')
   await expect(page.getByLabel('Close post details').first()).toBeVisible()
   await expect(page.getByText('Nice walk!')).toBeVisible()
@@ -198,6 +198,6 @@ test('own profile at /profile/me does not show back header', async ({ page }) =>
   await page.goto('/profile/me')
   await page.waitForLoadState('networkidle')
 
-  await expect(page.getByRole('button', { name: 'back' })).not.toBeVisible()
+  await expect(page.getByRole('button', { name: 'Back' })).not.toBeVisible()
   await expect(page.getByText('Test User')).toBeVisible()
 })
