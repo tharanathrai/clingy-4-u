@@ -18,7 +18,7 @@ import { getExportLabelNodeIds, getFirstName } from '../../lib/networkShareStats
 import { getMajorityBridgeColor, getPairLinkDistance } from '../../lib/networkPairSummary.ts'
 import { syncGraphCanvasRef } from '../../lib/syncGraphCanvasRef.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
-import { FullScreenSpinner } from '../Spinner'
+import { Spinner } from '../Spinner'
 
 type GraphLinkKind = 'chalk' | 'bridge'
 
@@ -653,7 +653,11 @@ export function NetworkGraph({
   const hasConnections = nodes.some((node) => !node.isSelf)
 
   if (loading) {
-    return <FullScreenSpinner />
+    return (
+      <div ref={graphContainerRef} className="safe-screen-height mx-auto flex w-full max-w-md items-center justify-center bg-bg">
+        <Spinner size={32} />
+      </div>
+    )
   }
 
   if (!hasConnections) {
