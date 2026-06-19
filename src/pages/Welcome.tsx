@@ -101,7 +101,7 @@ export default function Welcome() {
 
       markProfileReady(user.id, queryClient)
       navigate(
-        /^\/connect(\?|$)/.test(returnTo ?? '') ? returnTo : '/add',
+        returnTo && /^\/connect(\?|$)/.test(returnTo) ? returnTo : '/add',
         { replace: true, state: returnTo ? undefined : { fromOnboarding: true } },
       )
     } catch {
@@ -142,7 +142,7 @@ export default function Welcome() {
         <section className="flex min-h-0 flex-1 flex-col">
           <h1 className="font-display text-4xl">Add your name</h1>
           <p className="mt-2 text-sm text-text-2">This is how people will see you.</p>
-          {/^\/connect(\?|$)/.test(returnTo ?? '') ? (
+          {returnTo && /^\/connect(\?|$)/.test(returnTo) ? (
             <p className="mt-3 text-sm text-accent">You&apos;re one step away from connecting.</p>
           ) : null}
           <label className="mt-8 text-sm text-text-2" htmlFor="display-name">
