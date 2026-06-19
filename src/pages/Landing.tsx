@@ -20,7 +20,7 @@ interface BlobState {
   svy: number
 }
 
-const SEED: BlobState[] = [
+const SEED: Omit<BlobState, 'sx' | 'sy' | 'svx' | 'svy'>[] = [
   { id: 0, cat: 'intimate', size: 92, x: 96,  y: 250, vx:  0.16, vy:  0.11 },
   { id: 1, cat: 'playful',  size: 72, x: 290, y: 210, vx: -0.13, vy:  0.15 },
   { id: 2, cat: 'explore',  size: 60, x: 320, y: 410, vx: -0.14, vy: -0.10 },
