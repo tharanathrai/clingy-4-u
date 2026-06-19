@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const mockUseAuth = vi.fn()
 const mockUseProfile = vi.fn()
@@ -29,11 +30,17 @@ vi.mock('react-router-dom', async (importOriginal) => {
 
 import ProfileUser from '../pages/ProfileUser.tsx'
 
+function makeClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
+}
+
 function renderProfile(initialEntries: string[] = ['/profile/jordan']) {
   return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <ProfileUser />
-    </MemoryRouter>,
+    <QueryClientProvider client={makeClient()}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <ProfileUser />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -124,16 +131,18 @@ describe('ProfileUser back navigation', () => {
   it('navigates to returnTo with restorePostId when provided in location state', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter
-        initialEntries={[
-          {
-            pathname: '/profile/jordan',
-            state: { returnTo: '/feed', restorePostId: 'post-1' },
-          },
-        ]}
-      >
-        <ProfileUser />
-      </MemoryRouter>,
+      <QueryClientProvider client={makeClient()}>
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: '/profile/jordan',
+              state: { returnTo: '/feed', restorePostId: 'post-1' },
+            },
+          ]}
+        >
+          <ProfileUser />
+        </MemoryRouter>
+      </QueryClientProvider>,
     )
 
     await user.click(screen.getByRole('button', { name: 'back' }))
@@ -146,16 +155,18 @@ describe('ProfileUser back navigation', () => {
   it('navigates to returnTo with selectUserId when provided in location state', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter
-        initialEntries={[
-          {
-            pathname: '/profile/jordan',
-            state: { returnTo: '/network', selectUserId: 'user-2' },
-          },
-        ]}
-      >
-        <ProfileUser />
-      </MemoryRouter>,
+      <QueryClientProvider client={makeClient()}>
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: '/profile/jordan',
+              state: { returnTo: '/network', selectUserId: 'user-2' },
+            },
+          ]}
+        >
+          <ProfileUser />
+        </MemoryRouter>
+      </QueryClientProvider>,
     )
 
     await user.click(screen.getByRole('button', { name: 'back' }))
