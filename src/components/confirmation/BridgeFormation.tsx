@@ -107,6 +107,11 @@ export function BridgeFormation({
   stageRef.current = stage
 
   useEffect(() => {
+    document.body.classList.add('modal-scroll-lock')
+    return () => { document.body.classList.remove('modal-scroll-lock') }
+  }, [])
+
+  useEffect(() => {
     setPostBody(suggestedPostBody ?? activityTitle)
   }, [activityTitle, suggestedPostBody])
 

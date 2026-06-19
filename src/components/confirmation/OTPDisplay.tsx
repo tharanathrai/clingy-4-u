@@ -71,6 +71,11 @@ export function OTPDisplay({
   const stageRef = useRef<Stage>('idle')
   stageRef.current = stage
 
+  useEffect(() => {
+    document.body.classList.add('modal-scroll-lock')
+    return () => { document.body.classList.remove('modal-scroll-lock') }
+  }, [])
+
   const isMeConf = localConfirmed || confirmedMemberIds.includes(currentUserId)
   const allConfirmed =
     acceptedMembers.length > 0 &&
@@ -274,7 +279,8 @@ export function OTPDisplay({
         flex: 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px 28px 24px',
+        padding: '12px 28px 0',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
         position: 'relative', zIndex: 2,
         overflow: 'hidden',
         gap: 0,
