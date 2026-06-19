@@ -98,13 +98,13 @@ export function BridgeFormation({
   const [postBody, setPostBody] = useState(suggestedPostBody ?? activityTitle)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [, setTick] = useState(0)
+  const [t, setT] = useState(0)
 
-  const timeRef = useRef(0)
   const startRef = useRef<number | null>(null)
   const scheduledRef = useRef(false)
   const stageRef = useRef<'forming' | 'modal'>('forming')
-  stageRef.current = stage
+
+  useEffect(() => { stageRef.current = stage }, [stage])
 
   useEffect(() => {
     document.body.classList.add('modal-scroll-lock')
@@ -120,7 +120,6 @@ export function BridgeFormation({
     scheduledRef.current = false
 
     const id = setInterval(() => {
-      timeRef.current = performance.now()
       if (stageRef.current === 'forming') {
         if (startRef.current === null) startRef.current = performance.now()
         const el = performance.now() - startRef.current
@@ -130,14 +129,13 @@ export function BridgeFormation({
           setTimeout(() => { if (stageRef.current === 'forming') setStage('modal') }, 700)
         }
       }
-      setTick(t => t + 1)
+      setT(performance.now())
     }, 16)
 
     return () => clearInterval(id)
   }, [nodes, totalFormMs])
 
   const formed = prog.length > 0 && prog.every(p => p >= 1)
-  const t = timeRef.current
 
   const handlePost = async () => {
     if (submitting || postBody.trim().length === 0 || postBody.length > 500) return

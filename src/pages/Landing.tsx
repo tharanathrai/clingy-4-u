@@ -58,7 +58,7 @@ export default function Landing() {
 
   const onDown = (e: React.PointerEvent, id: number) => {
     e.preventDefault()
-    try { (e.currentTarget as Element).setPointerCapture(e.pointerId) } catch (_) {}
+    try { (e.currentTarget as Element).setPointerCapture(e.pointerId) } catch { /* not all environments support pointer capture */ }
     const b = blobsRef.current.find(x => x.id === id)!
     const r = stageRef.current!.getBoundingClientRect()
     const x = e.clientX - r.left

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Camera, RefreshCcw, Share2 } from 'lucide-react'
+import { Camera, RefreshCcw } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
@@ -273,22 +273,6 @@ export default function Add() {
           <Camera size={16} strokeWidth={1.75} />
           Scan their code instead
         </Link>
-        {false && typeof navigator.share === 'function' && token ? (
-          <button
-            type="button"
-            onClick={() => {
-              void navigator.share({
-                title: 'Connect with me on Sticky Bridges',
-                text: 'Tap the link to send me a connection request.',
-                url: qrValue,
-              }).catch(() => undefined)
-            }}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-          >
-            <Share2 size={16} strokeWidth={1.75} />
-            Share link instead
-          </button>
-        ) : null}
       </div>
     </main>
   )

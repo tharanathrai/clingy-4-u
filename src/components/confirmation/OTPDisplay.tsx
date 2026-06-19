@@ -69,7 +69,8 @@ export function OTPDisplay({
   const holdStartRef = useRef<number | null>(null)
   const allConfirmedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const stageRef = useRef<Stage>('idle')
-  stageRef.current = stage
+
+  useEffect(() => { stageRef.current = stage }, [stage])
 
   useEffect(() => {
     document.body.classList.add('modal-scroll-lock')
