@@ -145,22 +145,33 @@ export default function Connect() {
   if (!userId) {
     return (
       <main className={pageShellJourneyScroll}>
-        <BackHeader to="/" />
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto text-center">
-          <h1 className="app-page-title">connect</h1>
-          <p className="mt-3 max-w-xs text-sm text-text-2">
-            Sign in first so we can send your connection request.
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 text-center">
+          <span className="font-display text-4xl text-text">clingy</span>
+          <p className="mt-1 text-sm text-text-3">stay close to the people that matter</p>
+
+          <div className="my-8 flex h-16 w-16 items-center justify-center rounded-full bg-surface-2">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-accent">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </div>
+
+          <h2 className="text-lg font-medium text-text">You&apos;ve been invited to connect</h2>
+          <p className="mt-2 max-w-xs text-sm text-text-2">
+            Sign in to send your connection request. Takes about 30 seconds.
           </p>
-          <p className="mt-4 max-w-xs text-xs text-text-3">
-            The QR code expires in 60 s. If it expires during sign-in, ask your friend to show you a fresh code.
-          </p>
+
           <button
             type="button"
             onClick={() => void handleSignIn()}
-            className="btn-primary mt-4 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
+            className="btn-primary mt-6 w-full max-w-xs rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
           >
-            Sign in with Google
+            Continue with Google
           </button>
+
+          <p className="mt-4 max-w-xs text-xs text-text-3">
+            This link expires in 60 s. If it expires, ask your friend for a fresh code.
+          </p>
         </div>
       </main>
     )

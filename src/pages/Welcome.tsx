@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -10,8 +10,10 @@ import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const { user, loading } = useAuth()
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? null
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [displayName, setDisplayName] = useState('')
@@ -98,7 +100,10 @@ export default function Welcome() {
       }
 
       markProfileReady(user.id, queryClient)
-      navigate('/add', { replace: true, state: { fromOnboarding: true } })
+      navigate(
+        /^\/connect(\?|$)/.test(returnTo ?? '') ? returnTo : '/add',
+        { replace: true, state: returnTo ? undefined : { fromOnboarding: true } },
+      )
     } catch {
       setErrorMessage('Something went wrong - try again.')
       setSubmitting(false)
@@ -137,6 +142,9 @@ export default function Welcome() {
         <section className="flex min-h-0 flex-1 flex-col">
           <h1 className="font-display text-4xl">Add your name</h1>
           <p className="mt-2 text-sm text-text-2">This is how people will see you.</p>
+          {/^\/connect(\?|$)/.test(returnTo ?? '') ? (
+            <p className="mt-3 text-sm text-accent">You&apos;re one step away from connecting.</p>
+          ) : null}
           <label className="mt-8 text-sm text-text-2" htmlFor="display-name">
             Display name
           </label>

@@ -13,6 +13,9 @@ export default function AuthCallback() {
     let cancelled = false
 
     const handleCallback = async () => {
+      const storedReturnTo = sessionStorage.getItem(postAuthReturnToKey)
+      sessionStorage.removeItem(postAuthReturnToKey)
+
       try {
         const { data: authData, error: authError } = await supabase.auth.getUser()
 
@@ -37,14 +40,12 @@ export default function AuthCallback() {
         }
 
         if (!cancelled) {
-          const storedReturnTo = sessionStorage.getItem(postAuthReturnToKey)
-          if (storedReturnTo) {
-            sessionStorage.removeItem(postAuthReturnToKey)
-          }
-
           navigate(
             resolvePostAuthPath(Boolean(profile), storedReturnTo),
-            { replace: true },
+            {
+              replace: true,
+              state: !profile && storedReturnTo ? { returnTo: storedReturnTo } : undefined,
+            },
           )
         }
       } catch (error) {
