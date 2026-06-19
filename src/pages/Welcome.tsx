@@ -20,7 +20,6 @@ export default function Welcome() {
     sessionStorage.getItem(postAuthReturnToKey),
   )
 
-  const [step, setStep] = useState<1 | 2 | 3>(1)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null)
@@ -125,146 +124,88 @@ export default function Welcome() {
     return <Navigate to="/" replace />
   }
 
+  const showConnectHint = Boolean(returnTo && /^\/connect(\?|$)/.test(returnTo))
+
   return (
     <main className={pageShellPinnedFooter}>
-      <header className="mb-6 shrink-0">
-        <div className="flex items-center justify-center gap-2">
-          {[1, 2, 3].map((dot) => (
-            <span
-              key={dot}
-              className={`h-2.5 w-2.5 rounded-full ${
-                step === dot ? 'bg-accent' : 'bg-text-3'
-              }`}
-            />
-          ))}
-        </div>
-        <p className="mt-2 text-center text-xs text-text-3">Step {step} of 3</p>
-      </header>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <h1 className="mt-2 font-display text-4xl">Set up your profile</h1>
+        <p className="mt-2 text-sm text-text-2">
+          {showConnectHint
+            ? 'One step away from connecting — just your name and a username.'
+            : 'Just your name and a username to get started.'}
+        </p>
 
-      {step === 1 ? (
-        <section className="flex min-h-0 flex-1 flex-col">
-          <h1 className="font-display text-4xl">Add your name</h1>
-          <p className="mt-2 text-sm text-text-2">This is how people will see you.</p>
-          {returnTo && /^\/connect(\?|$)/.test(returnTo) ? (
-            <p className="mt-3 text-sm text-accent">You&apos;re one step away from connecting.</p>
-          ) : null}
-          <label className="mt-8 text-sm text-text-2" htmlFor="display-name">
-            Display name
-          </label>
-          <input
-            id="display-name"
-            value={displayName}
-            maxLength={50}
-            onChange={(event) => setDisplayName(event.target.value)}
-            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
-            placeholder="Your name"
+        <div className="mt-7 flex flex-col items-center">
+          <ProfileAvatarField
+            displayName={displayName.trim() || 'You'}
+            imageUrl={null}
+            fallbackInitial={initial}
+            size="lg"
+            onImageReady={(blob) => {
+              setAvatarBlob(blob)
+              setErrorMessage(null)
+            }}
           />
-          <p className="mt-2 text-xs text-text-3">{displayName.length}/50</p>
+          <p className="mt-2 text-xs text-text-3">Tap to add a photo (optional)</p>
+        </div>
 
-          <button
-            type="button"
-            className="btn-primary mt-auto rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={!isDisplayNameValid}
-            onClick={() => setStep(2)}
-          >
-            Continue
-          </button>
-        </section>
-      ) : null}
+        <label className="mt-8 text-sm text-text-2" htmlFor="display-name">
+          Display name
+        </label>
+        <input
+          id="display-name"
+          value={displayName}
+          maxLength={50}
+          onChange={(event) => setDisplayName(event.target.value)}
+          className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+          placeholder="Your name"
+        />
+        <p className="mt-1.5 text-xs text-text-3">{displayName.length}/50</p>
 
-      {step === 2 ? (
-        <section className="flex min-h-0 flex-1 flex-col">
-          <h1 className="font-display text-4xl">Pick a username</h1>
-          <p className="mt-2 text-sm text-text-2">
+        <label className="mt-5 text-sm text-text-2" htmlFor="username">
+          Username
+        </label>
+        <input
+          id="username"
+          value={username}
+          maxLength={30}
+          onChange={(event) => setUsername(event.target.value.toLowerCase())}
+          className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
+          placeholder="username"
+        />
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <p className="text-xs text-text-3">
             Lowercase letters, numbers, and underscores only.
           </p>
-          <label className="mt-8 text-sm text-text-2" htmlFor="username">
-            Username
-          </label>
-          <input
-            id="username"
-            value={username}
-            maxLength={30}
-            onChange={(event) => setUsername(event.target.value.toLowerCase())}
-            className="mt-2 w-full rounded-md border border-white/10 bg-surface-2 px-4 py-3 text-text outline-none focus:border-white/20"
-            placeholder="username"
-          />
-          <p className="mt-2 text-xs text-text-3">{sanitizedUsername.length}/30</p>
-          {!isUsernamePatternValid && sanitizedUsername.length > 0 ? (
-            <p className="mt-2 text-sm text-playful">Use lowercase letters, numbers, or _.</p>
-          ) : null}
-          {usernameChecking ? (
-            <p className="mt-2 text-sm text-text-2">Checking availability...</p>
-          ) : null}
-          {usernameAvailable === true ? (
-            <p className="mt-2 text-sm text-active">Username is available.</p>
-          ) : null}
-          {usernameAvailable === false ? (
-            <p className="mt-2 text-sm text-playful">That username is taken.</p>
-          ) : null}
+          <p className="shrink-0 text-xs text-text-3">{sanitizedUsername.length}/30</p>
+        </div>
+        {!isUsernamePatternValid && sanitizedUsername.length > 0 ? (
+          <p className="mt-1.5 text-sm text-playful">Use lowercase letters, numbers, or _.</p>
+        ) : null}
+        {usernameChecking ? (
+          <p className="mt-1.5 text-sm text-text-2">Checking availability...</p>
+        ) : null}
+        {usernameAvailable === true ? (
+          <p className="mt-1.5 text-sm text-active">Username is available.</p>
+        ) : null}
+        {usernameAvailable === false ? (
+          <p className="mt-1.5 text-sm text-playful">That username is taken.</p>
+        ) : null}
 
-          <div className="mt-auto flex gap-3 pt-4">
-            <button
-              type="button"
-              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-              onClick={() => setStep(1)}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className="btn-primary flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!isUsernamePatternValid || usernameAvailable !== true}
-              onClick={() => setStep(3)}
-            >
-              Continue
-            </button>
-          </div>
-        </section>
-      ) : null}
+        {errorMessage ? <p className="mt-4 text-sm text-playful">{errorMessage}</p> : null}
+      </div>
 
-      {step === 3 ? (
-        <section className="flex min-h-0 flex-1 flex-col">
-          <h1 className="font-display text-4xl">Choose your avatar</h1>
-          <p className="mt-2 text-sm text-text-2">
-            Tap your avatar to add a photo, or finish with your initial.
-          </p>
-
-          <div className="mt-6 flex justify-center">
-            <ProfileAvatarField
-              displayName={displayName.trim() || 'You'}
-              imageUrl={null}
-              fallbackInitial={initial}
-              size="lg"
-              onImageReady={(blob) => {
-                setAvatarBlob(blob)
-                setErrorMessage(null)
-              }}
-            />
-          </div>
-
-          {errorMessage ? <p className="mt-3 text-sm text-playful">{errorMessage}</p> : null}
-
-          <div className="mt-auto flex gap-3 pt-4">
-            <button
-              type="button"
-              className="flex-1 rounded-full bg-surface-2 px-7 py-3.5 text-sm font-medium text-text-2"
-              onClick={() => setStep(2)}
-              disabled={submitting}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className="btn-primary flex-1 rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={() => void handleComplete()}
-              disabled={submitting || !canComplete}
-            >
-              {submitting ? 'Saving...' : 'Finish'}
-            </button>
-          </div>
-        </section>
-      ) : null}
+      <div className="shrink-0 pt-4">
+        <button
+          type="button"
+          className="btn-primary w-full rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => void handleComplete()}
+          disabled={submitting || !canComplete}
+        >
+          {submitting ? 'Saving...' : 'Finish'}
+        </button>
+      </div>
     </main>
   )
 }
