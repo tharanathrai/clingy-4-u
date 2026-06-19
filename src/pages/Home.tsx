@@ -131,8 +131,8 @@ export default function Home() {
         {!error && connectionsCount > 0 && sortedPieces.length === 0 ? (
           <EmptyState
             variant="gum"
-            headline="Nothing sticky yet."
-            subline="Who do you want to make a memory with?"
+            headline="Pristine in here."
+            subline="Let's make a new memory."
             cta={{ label: 'New plan', to: '/piece/new' }}
           />
         ) : null}
