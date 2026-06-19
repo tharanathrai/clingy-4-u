@@ -35,10 +35,10 @@ const MAX_SPD = 0.5
 const PAD = 20
 
 // viscous-blob deformation: one damped spring per blob drives trail + swish + jiggle
-const SPRING_STIFF = 0.22 // pull toward true position
-const SPRING_DAMP = 0.76 // <1 = wobble; lower = more jiggle
-const DEFORM_GAIN = 0.012 // spring-vel (px/frame) -> stretch
-const DEFORM_MAX = 0.34 // cap stretch so it never tears
+const SPRING_STIFF = 0.17 // pull toward true position
+const SPRING_DAMP = 0.83 // <1 = wobble; lower = more jiggle
+const DEFORM_GAIN = 0.009 // spring-vel (px/frame) -> stretch
+const DEFORM_MAX = 0.22 // cap stretch so it never tears
 
 export default function Landing() {
   const { user, loading, signInWithGoogle } = useAuth()
@@ -200,7 +200,7 @@ export default function Landing() {
             const sp = Math.hypot(b.svx, b.svy)
             const stretch = Math.min(sp * DEFORM_GAIN, DEFORM_MAX)
             const ang = Math.atan2(b.svy, b.svx)
-            deform = `rotate(${ang}rad) scale(${1 + stretch}, ${1 - stretch * 0.6}) rotate(${-ang}rad)`
+            deform = `rotate(${ang}rad) scale(${1 + stretch}, ${1 - stretch * 0.5}) rotate(${-ang}rad)`
           }
           return (
             <div
