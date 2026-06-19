@@ -19,6 +19,10 @@ vi.mock('../hooks/useFeed.ts', () => ({
   useFeed: () => mockUseFeed(),
 }))
 
+vi.mock('../hooks/useConnectionsCount.ts', () => ({
+  useConnectionsCount: () => ({ connectionsCount: 1, loading: false }),
+}))
+
 vi.mock('../hooks/usePaginatedItems.ts', () => ({
   usePaginatedItems: (items: unknown[]) => ({
     visibleItems: items,

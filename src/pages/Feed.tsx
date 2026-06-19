@@ -8,6 +8,7 @@ import { Layout } from '../components/layout/Layout.tsx'
 import { EmptyState } from '../components/EmptyState.tsx'
 import { ErrorState } from '../components/ErrorState.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
+import { useConnectionsCount } from '../hooks/useConnectionsCount.ts'
 import { useFeed, type FeedPost } from '../hooks/useFeed.ts'
 import type { PostQueryResult } from '../hooks/usePost.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
@@ -25,6 +26,7 @@ export default function Feed() {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const { posts, loading, error, refetch } = useFeed()
+  const { connectionsCount } = useConnectionsCount()
   const navigate = useNavigate()
   const location = useLocation()
   const restorePostIdFromState = (location.state as AppLocationState | null)?.restorePostId
@@ -188,12 +190,21 @@ export default function Feed() {
         ) : null}
 
         {!error && localPosts.length === 0 ? (
-          <EmptyState
-            variant="bridge"
-            headline="Nothing here yet."
-            subline="Your feed fills up when your people stick plans together."
-            cta={{ label: 'Make a plan', to: '/piece/new' }}
-          />
+          connectionsCount === 0 ? (
+            <EmptyState
+              variant="bridge"
+              headline="Nothing here yet."
+              subline="Add someone first — your feed fills up once your people stick plans together."
+              cta={{ label: 'Add someone', to: '/add' }}
+            />
+          ) : (
+            <EmptyState
+              variant="bridge"
+              headline="Nothing here yet."
+              subline="Your feed fills up when your people stick plans together."
+              cta={{ label: 'Make a plan', to: '/piece/new' }}
+            />
+          )
         ) : null}
 
         {!error && localPosts.length > 0 ? (

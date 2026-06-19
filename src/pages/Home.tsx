@@ -1,45 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
 import { CategoryShelf } from '../components/gum/CategoryShelf.tsx'
 import { EmptyState } from '../components/EmptyState.tsx'
 import { ErrorState } from '../components/ErrorState.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
+import { useConnectionsCount } from '../hooks/useConnectionsCount.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import type { GumPiece } from '../hooks/useGumPieces.ts'
-import { queryKeys } from '../lib/queryKeys.ts'
-import { isInitialQueryLoading } from '../lib/queryLoading.ts'
-import { supabase } from '../lib/supabase.ts'
-
-async function fetchConnectionsCount(userId: string): Promise<number> {
-  const { count } = await supabase
-    .from('connections')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'active')
-    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
-  return count ?? 0
-}
 
 export default function Home() {
-  const { user, loading: authLoading } = useAuth()
-  const userId = user?.id ?? null
+  const { user } = useAuth()
   const { pieces, loading, error, refetch } = useGumPieces()
   const navigate = useNavigate()
   const location = useLocation()
   const [toast, setToast] = useState<string | null>(null)
   const pocketFull = pieces.length >= 25
 
-  const { data: connectionsCount = 0, isPending: connectionsPending } = useQuery({
-    queryKey: queryKeys.connectionsCount(userId),
-    queryFn: () => fetchConnectionsCount(userId!),
-    enabled: !authLoading && userId !== null,
-    staleTime: Infinity,
-  })
-  const loadingConnections = isInitialQueryLoading(authLoading, userId, connectionsPending)
+  const { connectionsCount, loading: loadingConnections } = useConnectionsCount()
 
   useEffect(() => {
     if (!toast) {

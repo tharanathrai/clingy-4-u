@@ -1,10 +1,8 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pageShellCentered } from '../components/layout/pageShell.ts'
-import { resolvePostAuthPath } from '../lib/recoveryPath.ts'
+import { postAuthReturnToKey, resolvePostAuthPath } from '../lib/recoveryPath.ts'
 import { supabase } from '../lib/supabase.ts'
-
-const postAuthReturnToKey = 'postAuthReturnTo'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -14,7 +12,6 @@ export default function AuthCallback() {
 
     const handleCallback = async () => {
       const storedReturnTo = sessionStorage.getItem(postAuthReturnToKey)
-      sessionStorage.removeItem(postAuthReturnToKey)
 
       try {
         const { data: authData, error: authError } = await supabase.auth.getUser()
@@ -40,13 +37,14 @@ export default function AuthCallback() {
         }
 
         if (!cancelled) {
-          navigate(
-            resolvePostAuthPath(Boolean(profile), storedReturnTo),
-            {
-              replace: true,
-              state: !profile && storedReturnTo ? { returnTo: storedReturnTo } : undefined,
-            },
-          )
+          const hasProfile = Boolean(profile)
+          // Existing users go straight to their return target — the key has done its job.
+          // New users land on /welcome; keep the key in sessionStorage so onboarding can
+          // resume the connect flow instead of relying on (strippable) router state.
+          if (hasProfile) {
+            sessionStorage.removeItem(postAuthReturnToKey)
+          }
+          navigate(resolvePostAuthPath(hasProfile, storedReturnTo), { replace: true })
         }
       } catch (error) {
         console.error('[AuthCallback]', error)

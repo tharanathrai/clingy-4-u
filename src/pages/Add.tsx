@@ -22,7 +22,7 @@ const functionsBaseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
 const publishableKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const QR_CACHE_KEY = 'qr_token_cache'
 const MIN_REMAINING_SECONDS = 2
-const QR_TTL_MS = 60_000
+const QR_TTL_MS = 180_000
 const HEAD_LOCK_MS = 1_000
 
 function getRemainingSeconds(expiresAt: string): number {
@@ -31,6 +31,15 @@ function getRemainingSeconds(expiresAt: string): number {
 
 function getRemainingMs(expiresAt: string): number {
   return Math.max(0, new Date(expiresAt).getTime() - Date.now())
+}
+
+function formatRemaining(totalSeconds: number): string {
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`
+  }
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
 function readCachedToken(): CachedQrToken | null {
@@ -193,6 +202,7 @@ export default function Add() {
   }, [expiresAt, remainingMs])
 
   const remainingSeconds = Math.ceil(remainingMs / 1000)
+  const remainingLabel = formatRemaining(remainingSeconds)
 
   const ringDeg = remainingFraction * 360
 
@@ -246,8 +256,7 @@ export default function Add() {
 
         {/* Countdown + inline refresh */}
         <div className="mt-5 flex items-center gap-2">
-          <span className="font-display text-3xl text-text">{remainingSeconds}</span>
-          <span className="text-sm text-text-3">s</span>
+          <span className="font-display text-3xl text-text">{remainingLabel}</span>
           <button
             type="button"
             onClick={() => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -7,14 +7,18 @@ import { uploadAvatar } from '../hooks/useAvatarUpload.ts'
 import { markProfileReady } from '../hooks/useProfileReady.ts'
 import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
+import { postAuthReturnToKey } from '../lib/recoveryPath.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
   const navigate = useNavigate()
-  const location = useLocation()
   const queryClient = useQueryClient()
   const { user, loading } = useAuth()
-  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo ?? null
+  // Captured once on mount; survives the /welcome redirect because it lives in sessionStorage,
+  // not router state. Cleared when onboarding completes.
+  const [returnTo] = useState<string | null>(() =>
+    sessionStorage.getItem(postAuthReturnToKey),
+  )
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [displayName, setDisplayName] = useState('')
@@ -101,6 +105,8 @@ export default function Welcome() {
       }
 
       markProfileReady(user.id, queryClient)
+      // Connect intent consumed — clear it so a later unrelated sign-in can't resume it.
+      sessionStorage.removeItem(postAuthReturnToKey)
       navigate(
         returnTo && /^\/connect(\?|$)/.test(returnTo) ? returnTo : '/add',
         { replace: true, state: returnTo ? undefined : { fromOnboarding: true } },

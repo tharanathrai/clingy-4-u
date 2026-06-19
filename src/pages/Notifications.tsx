@@ -11,6 +11,7 @@ import { ErrorState } from '../components/ErrorState.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { ConnectionRequestSheet } from '../components/connections/ConnectionRequestSheet.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
+import { useConnectionsCount } from '../hooks/useConnectionsCount.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
 import { useScrollRestore } from '../hooks/useScrollRestore.ts'
@@ -24,6 +25,7 @@ export default function Notifications() {
   const queryClient = useQueryClient()
   const { notifications, unreadCount, markAsRead, markAllAsRead, dismissNotification, loading, error } =
     useNotifications()
+  const { connectionsCount } = useConnectionsCount()
   const [toast, setToast] = useState<string | null>(null)
   const [activeConnectionRequest, setActiveConnectionRequest] = useState<{
     connectionId: string
@@ -138,12 +140,21 @@ export default function Notifications() {
         ) : null}
 
         {!error && notifications.length === 0 ? (
-          <EmptyState
-            variant="gum"
-            headline="All caught up."
-            subline="Stick a new plan together and your people will hear about it here."
-            cta={{ label: 'New plan', to: '/piece/new' }}
-          />
+          connectionsCount === 0 ? (
+            <EmptyState
+              variant="gum"
+              headline="All caught up."
+              subline="Add someone first — then their replies and plans show up here."
+              cta={{ label: 'Add someone', to: '/add' }}
+            />
+          ) : (
+            <EmptyState
+              variant="gum"
+              headline="All caught up."
+              subline="Stick a new plan together and your people will hear about it here."
+              cta={{ label: 'New plan', to: '/piece/new' }}
+            />
+          )
         ) : null}
 
         {!error && notifications.length > 0 ? (

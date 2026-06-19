@@ -87,7 +87,7 @@ Deno.serve(async (request) => {
       .delete()
       .eq('user_id', authData.user.id)
 
-    const expiresAt = new Date(now.getTime() + 60 * 1000).toISOString()
+    const expiresAt = new Date(now.getTime() + 180 * 1000).toISOString()
     const token = createRandomToken(32)
 
     const { error: insertError } = await serviceClient.from('rotating_qr_tokens').insert({

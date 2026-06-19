@@ -5,6 +5,7 @@ import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellJourneyScroll } from '../components/layout/pageShell.ts'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
+import { postAuthReturnToKey } from '../lib/recoveryPath.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
   type ValidateQrIssue,
@@ -18,8 +19,6 @@ interface ConnectIssue {
   type: ValidateQrIssue['type']
   connectedUser?: ValidateQrUser
 }
-
-const postAuthReturnToKey = 'postAuthReturnTo'
 
 export default function Connect() {
   const { user, loading, signInWithGoogle } = useAuth()
@@ -167,7 +166,7 @@ export default function Connect() {
           </button>
 
           <p className="mt-4 max-w-xs text-xs text-text-3">
-            This link expires in 60 s. If it expires, ask your friend for a fresh code.
+            This link expires in 3 min. If it expires, ask your friend for a fresh code.
           </p>
         </div>
       </main>

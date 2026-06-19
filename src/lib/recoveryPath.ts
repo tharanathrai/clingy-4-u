@@ -1,3 +1,10 @@
+/**
+ * sessionStorage key holding the post-auth return target (e.g. `/connect?token=...`).
+ * Written before OAuth, consumed after sign-in. Kept durable through onboarding so a new
+ * user's connect intent survives the `/welcome` redirect instead of riding volatile router state.
+ */
+export const postAuthReturnToKey = 'postAuthReturnTo'
+
 export function resolveRecoveryPath(options: {
   hasUser: boolean
   profileReady: boolean | null
