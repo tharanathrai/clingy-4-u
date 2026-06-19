@@ -9,6 +9,7 @@ import { sectionHeadingClass } from '../lib/typography.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { invalidateProfileFlow } from '../lib/invalidate.ts'
+import { getAnalyticsConsent, setAnalyticsConsent } from '../lib/analytics.ts'
 
 export default function Settings() {
   const { user, loading: authLoading, signOut } = useAuth()
@@ -18,12 +19,14 @@ export default function Settings() {
   const [isEditing, setIsEditing] = useState(false)
   const [inviteEmailNotif, setInviteEmailNotif] = useState(true)
   const [expiryEmailNotif, setExpiryEmailNotif] = useState(true)
+  const [analyticsConsent, setAnalyticsConsentState] = useState(true)
 
   useEffect(() => {
     const inviteValue = window.localStorage.getItem('notif_email_invite')
     const expiryValue = window.localStorage.getItem('notif_email_expiry')
     setInviteEmailNotif(inviteValue !== 'false')
     setExpiryEmailNotif(expiryValue !== 'false')
+    setAnalyticsConsentState(getAnalyticsConsent())
   }, [])
 
   const canEditProfile = Boolean(profile)
@@ -52,6 +55,12 @@ export default function Settings() {
     const nextValue = !expiryEmailNotif
     setExpiryEmailNotif(nextValue)
     window.localStorage.setItem('notif_email_expiry', String(nextValue))
+  }
+
+  const handleAnalyticsToggle = () => {
+    const nextValue = !analyticsConsent
+    setAnalyticsConsentState(nextValue)
+    setAnalyticsConsent(nextValue)
   }
 
   return (
@@ -111,6 +120,21 @@ export default function Settings() {
             onToggle={handleExpiryToggle}
           />
         </div>
+      </section>
+
+      <section className="mt-4 rounded-lg bg-surface p-5">
+        <h2 className={sectionHeadingClass}>Privacy</h2>
+        <div className="mt-4 space-y-3">
+          <NotificationToggleRow
+            label="Share anonymous usage data"
+            enabled={analyticsConsent}
+            onToggle={handleAnalyticsToggle}
+          />
+        </div>
+        <p className="mt-3 text-xs text-text-3">
+          Helps us improve Sticky Bridges. No names, messages, or plan details are ever
+          collected — only anonymous, aggregated taps and screens.
+        </p>
       </section>
 
       <section className="mt-4 rounded-lg bg-surface p-5">

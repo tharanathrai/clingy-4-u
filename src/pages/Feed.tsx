@@ -16,6 +16,7 @@ import { useScrollRestore } from '../hooks/useScrollRestore.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { supabase } from '../lib/supabase.ts'
+import { track } from '../lib/analytics.ts'
 import {
   type AppLocationState,
   canNavigateToProfile,
@@ -38,6 +39,14 @@ export default function Feed() {
   const [animatedPostIds, setAnimatedPostIds] = useState<Set<string>>(new Set())
   const knownPostIdsRef = useRef<Set<string>>(new Set())
   const hasPostDetailHistoryEntryRef = useRef(false)
+  const feedEnteredAtRef = useRef<number>(Date.now())
+
+  useEffect(() => {
+    feedEnteredAtRef.current = Date.now()
+    return () => {
+      track('feed_dwell', { dwell_ms: Date.now() - feedEnteredAtRef.current }, 'feed')
+    }
+  }, [])
   const {
     visibleItems: visiblePosts,
     hasMore,

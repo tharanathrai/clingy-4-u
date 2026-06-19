@@ -8,6 +8,7 @@ import { markProfileReady } from '../hooks/useProfileReady.ts'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { postAuthReturnToKey } from '../lib/recoveryPath.ts'
+import { track } from '../lib/analytics.ts'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
@@ -103,6 +104,7 @@ export default function Welcome() {
         throw insertError
       }
 
+      track('onboarding_step', { step: 'profile_complete' }, 'welcome')
       markProfileReady(user.id, queryClient)
       // Don't clear the connect key here — AuthGuard reads it on the same render to pick the
       // same target (this navigate and AuthGuard's redirect can race). Connect clears it on send.

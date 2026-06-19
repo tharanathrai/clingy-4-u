@@ -17,6 +17,7 @@ import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { buildDraftPostBody } from '../lib/draftPostBody.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { supabase } from '../lib/supabase.ts'
+import { track } from '../lib/analytics.ts'
 import type { Bridge } from '../types/index.ts'
 
 interface GumPiece {
@@ -44,6 +45,16 @@ export default function PieceConfirm() {
   const [suggestedPostBody, setSuggestedPostBody] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [acceptedMembers, setAcceptedMembers] = useState<AcceptedMember[]>([])
+
+  useEffect(() => {
+    track('confirm_enter', undefined, 'piece_confirm')
+  }, [])
+
+  useEffect(() => {
+    if (flowState === 'bridge_formed') {
+      track('confirm_success', { members: acceptedMembers.length }, 'piece_confirm')
+    }
+  }, [flowState, acceptedMembers.length])
 
   const handleSessionDeleted = useCallback(async () => {
     if (!id || !userId) return
@@ -281,7 +292,10 @@ export default function PieceConfirm() {
         }}
         onSessionExpired={() => setFlowState('expired')}
         onStartOver={handleStartOver}
-        onNotReady={() => navigate('/home', { replace: true })}
+        onNotReady={() => {
+          track('confirm_abandon', { stage: 'waiting' }, 'piece_confirm')
+          navigate('/home', { replace: true })
+        }}
       />
     )
   }
@@ -291,7 +305,10 @@ export default function PieceConfirm() {
       <div className="mb-2">
         <button
           type="button"
-          onClick={() => navigate('/home', { replace: true })}
+          onClick={() => {
+            track('confirm_abandon', { stage: 'intro' }, 'piece_confirm')
+            navigate('/home', { replace: true })
+          }}
           className={iconButtonClassName}
           aria-label="Not ready"
         >

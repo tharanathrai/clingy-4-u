@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import type { CategorySlug } from '../lib/constants.ts'
 import { supabase } from '../lib/supabase.ts'
+import { track } from '../lib/analytics.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { withAvatarSize } from '../utils/avatar.ts'
 
@@ -295,6 +296,11 @@ export default function PieceNew() {
 
   const handleSubmit = () => {
     if (!canSubmit) return
+    track(
+      'piece_create_submit',
+      { recipients: selectedIds.size, category: resolvedCategory ?? 'none' },
+      'piece_new',
+    )
     createPieceMutation.mutate({
       recipientIds: Array.from(selectedIds),
       title: title.trim(),

@@ -11,6 +11,13 @@ For Sticky Bridges, also read before implementing:
 - `.cursor/rules` — quality bar and coding standards
 - `RALPH_PROMPT.md` — Ralph loop workflow
 
+## Analytics insight loop
+
+Anonymized usage analytics live in `supabase/migrations/2026061910*/2026061911*`, the
+`track-events` edge function, and `src/lib/analytics.ts`. To turn data into prioritized
+backlog items (harness-agnostic), follow `docs/ANALYTICS_LOOP.md` and
+`specs/analytics-insight-loop.md`.
+
 ## Cursor workflow (no CLI)
 
 | Step | Command |

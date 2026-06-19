@@ -4,6 +4,7 @@ import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfileReady } from '../hooks/useProfileReady.ts'
+import { track } from '../lib/analytics.ts'
 import type { CategorySlug } from '../lib/constants.ts'
 
 interface BlobState {
@@ -164,6 +165,7 @@ export default function Landing() {
   }
 
   const handleGoogleSignIn = async () => {
+    track('auth_start', { provider: 'google' }, 'landing')
     setErrorMessage(null)
     setSubmitting(true)
     try {

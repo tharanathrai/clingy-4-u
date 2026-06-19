@@ -3,6 +3,15 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/layout/AuthGuard.tsx'
 import { RouteErrorBoundary } from './components/layout/RouteErrorBoundary.tsx'
 import { FullScreenSpinner } from './components/Spinner.tsx'
+import { track } from './lib/analytics.ts'
+
+// Collapse dynamic segments so no id / username ever lands in analytics.
+function normalizeSurface(pathname: string): string {
+  return pathname
+    .replace(/\/piece\/[^/]+/, '/piece/:id')
+    .replace(/\/profile\/(?!me$)[^/]+/, '/profile/:username')
+    .replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi, ':id')
+}
 
 const LandingPage = lazy(() => import('./pages/Landing.tsx'))
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallback.tsx'))
@@ -31,6 +40,10 @@ function App() {
   const transitionClassName = tabRoots.some((path) => location.pathname.startsWith(path))
     ? 'app-route-transition-fade'
     : 'app-route-transition-slide-up'
+
+  useEffect(() => {
+    track('screen_view', undefined, normalizeSurface(location.pathname))
+  }, [location.pathname])
 
   useEffect(() => {
     if (typeof document === 'undefined') {

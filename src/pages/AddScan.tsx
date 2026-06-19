@@ -7,6 +7,7 @@ import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellJourneyScroll } from '../components/layout/pageShell.ts'
 import { extractQrToken } from '../lib/extractQrToken.ts'
 import { supabase } from '../lib/supabase.ts'
+import { track } from '../lib/analytics.ts'
 import {
   type ValidateQrIssue,
   type ValidateQrUser,
@@ -85,6 +86,7 @@ export default function AddScan() {
   }, [clearScanState])
 
   const validateScannedToken = useCallback(async (token: string) => {
+    track('qr_scan_attempt', undefined, 'add_scan')
     setValidating(true)
     setScanIssue(null)
     setScanError(null)
@@ -110,13 +112,16 @@ export default function AddScan() {
       })
 
       if (!result.success) {
+        track('qr_scan_failure', { reason: 'invalid' }, 'add_scan')
         setScanIssue(toScanIssue(mapValidateQrIssue(result.error)))
         setValidating(false)
         return
       }
 
+      track('qr_scan_success', undefined, 'add_scan')
       setValidatedUser(result.user)
     } catch {
+      track('qr_scan_failure', { reason: 'network' }, 'add_scan')
       setScanIssue({
         message: 'Something went wrong — try again.',
         type: 'network',
