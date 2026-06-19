@@ -1,13 +1,17 @@
-# Sticky Bridges — Design System
-**Version:** 0.2  
+# clingy — Design System
+**Version:** 0.3  
 **Status:** Living document — updated alongside PRD and DEVDOC  
-**Last updated:** 2026-06-11 (MVP shipped)
+**Last updated:** 2026-06-18 (reconciled with shipped code)
+
+> Formerly "Sticky Bridges." The product name is **clingy**; tagline **"make plans that stick."**
 
 ---
 
 ## 1. Design Philosophy
 
-Sticky Bridges should feel like something you want to open. Dark, glossy, alive. The gum metaphor isn't decoration — every design decision should make the app feel tactile, physical, and slightly chaotic in the best way.
+clingy should feel like something you want to open. Dark, glossy, alive. The gum metaphor isn't decoration — every design decision should make the app feel tactile, physical, and slightly chaotic in the best way.
+
+**The metaphor:** gum holds memory. Every plan is a piece of gum. When participants go through the confirmation ceremony, the gum gets *chewed* — it stretches into a **bridge** between them, a lasting memory of the activity. Gum, stickiness, clinginess, stretch — these tactile feelings run through the whole app, from copy ("make one stick," "they stretch into shape") to motion (blobs morph, bridges stretch).
 
 Three principles drive every decision:
 
@@ -98,7 +102,7 @@ Body:     'DM Sans', sans-serif         /* Google Fonts — free */
 
 Import in `index.html`:
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 ```
 
 ### Scale
@@ -115,9 +119,14 @@ Import in `index.html`:
 
 ### Rules
 
-- Bagel Fat One is display only — screen titles, the app name, empty state headlines, the confirmation ceremony title. Never for body copy or UI labels.
-- DM Sans handles everything else. Weight 400 for body, 500 for emphasis and button labels.
-- Sentence case always. No ALL CAPS except for the 10px label style.
+- Bagel Fat One is display only — screen titles, the app name, section headers, empty state headlines, the confirmation ceremony title. Never for body copy or UI labels.
+- DM Sans handles everything else. Weight 400 for body, 500 for emphasis and button labels, 600 (semibold) for the rare heavier label.
+- **Casing convention:**
+  - **Display page titles are lowercase** — a deliberate brand voice ("your pocket", "the feed", "updates", "your bridges", "add someone"). This is the one intentional exception to sentence case.
+  - **Everything else is sentence case** — buttons, body, toasts, empty-state headlines, section headers ("Add someone", "New plan", "Try again", "Nothing sticky yet.").
+  - The only ALL CAPS is the 10px label / category-chip style (`tracking-label`).
+- Canonical class strings live in `src/lib/typography.ts` (`sectionHeadingClass`, `fieldLabelClass`).
+- Text on dark: always use `--color-text-primary` or `--color-text-secondary`. Never hardcode colors.
 - Text on dark: always use `--color-text-primary` or `--color-text-secondary`. Never hardcode colors.
 - Text on category colors: use white at 90% opacity. The colors are mid-saturation — white reads cleanly on all of them.
 
@@ -165,10 +174,11 @@ Everything is rounded. The language is organic, not geometric.
 
 ### Bottom tab bar
 
-5 tabs: Pocket, Network, Feed, Notifications, Profile.
+5 tabs: **Pocket, Bridges, Feed, Updates, Profile** (labels echo the casual screen titles — "your bridges" → Bridges, "updates" → Updates).
 - Background: `--color-surface` with a top border at `--color-border`
-- Active tab: category accent color icon + label. Inactive: `--color-text-tertiary`.
-- Notification badge: `--color-accent` dot, 8px, top-right of icon.
+- Active tab: `--color-accent` icon + label, plus a short accent underline pill. Inactive: `--color-text-tertiary`.
+- Notification badge: `--color-accent` dot, 8px, top-right of the Updates icon.
+- Mounted once in `AuthGuard` (hidden on `/welcome` and while a modal scroll-lock is active).
 - Height: 56px + safe area inset.
 
 ### Cards (gum pieces in pocket)
@@ -201,7 +211,7 @@ Destructive (delete, turn down confirmed):
 - Text: `--color-error`
 - Border: `--color-error` at 40% opacity
 
-The "new gum" CTA is the only blob-shaped button — morphing border-radius animation, `--color-accent` fill.
+The "new gum" CTA (`.new-gum-fab`) is the signature button — a circular 64px `--color-accent` gum-drop with a glossy top highlight, an inner shadow, a slow sweeping shimmer, and a breathing glow pulse. It holds a `Plus` icon and floats bottom-right of the pocket. (User-facing create CTAs are labelled "New plan"; "new gum" survives as flavor in the aria-label and the `/piece/new` page title.)
 
 ### Inputs
 
@@ -222,11 +232,13 @@ The "new gum" CTA is the only blob-shaped button — morphing border-radius anim
 
 ### Tags / category chips
 
-- Background: category color at 15% opacity
-- Text: category color at full opacity, DM Sans 500, 11px, uppercase
-- Dot: 6px circle, category color, sits left of label
-- Radius: `--radius-full`
-- Padding: 4px 10px
+Shipped as `CategoryChip.tsx`.
+- Background: category color at 15% opacity — use the `--tint-{category}` tokens (e.g. `bg-tint-intimate`), not ad-hoc `/20`.
+- Text: category color at full opacity, DM Sans 500, 11px, uppercase, `tracking-label` (0.08em).
+- Dot: 6px circle, category color, sits left of label.
+- Radius: `--radius-full`. Sizes: `sm` (px-2.5 py-1) and `md` (px-3.5 py-1.5).
+
+**Status pills** (awaiting, change pending) follow the same tint-by-context rule: tint background + matching token text — `bg-tint-intimate`/`text-accent` for awaiting, `bg-tint-savor`/`text-savor` for change pending.
 
 ### Notification items
 
@@ -308,7 +320,14 @@ Below it: `"chewed gum with N people"` in DM Sans 400, `--color-text-secondary`.
 - Both participants
 
 **Share / export:**
-Social-first **Bridge Constellation Card** at **1080×1350 (4:5)**. Pipeline: capture graph canvas at 2× (`captureGraphBitmap`) → compose branded card (`composeSocialShareCard` in `src/lib/socialShareCard.ts`) with dominant-category radial glow, grain overlay, and footer band (`my bridges`, `{N} people · {M} bridges`, Sticky Bridges wordmark, *time spent together* tagline). Share button is visible whenever the network graph has loaded (does not require selecting a node). Export always uses the chalk-spoke view; active selection is cleared briefly during capture so thick gummy lines do not replace spokes in the PNG. Export-only pass: zoom-to-fit with extra padding, +25% node/label scale, first names on up to five highest-bridge connections — restored after capture. Header share button opens a menu: native share sheet (image) when supported, plus Save image. Filename: `my-bridges-[date].png`. Header actions menu combines Add someone and Requests (badge on menu when pending requests > 0). Connection requests page uses the standard Back control (not “Back to network”).
+Social-first **Bridge Constellation Card** at **1080×1080 (square)** — composed entirely in code by `composeSocialShareCard` (`src/lib/socialShareCard.ts`), not a capture of the live graph. Composition:
+- Deep `#080612` background with two dominant-category radial glows + grain overlay.
+- "You" node centred with a category-coloured ring and glow halo; friend nodes orbit in a band, sized by shared-bridge count, each ringed in its top category color, connected by quadratic **strands** (glow + individual strokes + white highlight) — count badge on friends with >1 bridge.
+- Top band: user name (left) + **clingy** wordmark in Bagel Fat One (right); below that a **tier** label (Seed → Spark → Connector → Weaver → Architect, by bridge count) + date; then an **archetype** title in the dominant category color ("The Wanderer", "The Seeker", …).
+- Bottom band: big Bagel Fat One stat columns — **{N} BRIDGES** and **{N} PEOPLE** — plus a **TOP VIBE** category chip on the right.
+- Avatars are loaded `crossOrigin`; the card waits on `document.fonts.ready` before drawing.
+
+Share button is visible whenever the network graph has loaded (does not require selecting a node). Header share button opens a menu: native share sheet (image) when supported, plus Save image. Filename: `my-bridges-[date].png`. Header actions menu combines Add someone and Requests (badge on menu when pending requests > 0). Connection requests page uses the standard Back control.
 
 ---
 
@@ -379,20 +398,34 @@ Always wrap continuous animations in:
 
 ---
 
-## 13. Empty States
+## 13. Loading, Empty & Error States
 
-Every empty state follows the same structure: a centered illustration (simple SVG, on-brand), a Bagel Fat One headline, a DM Sans subline, and a single CTA button.
+These three states share one design language and are built from shared components — never re-implemented per screen.
+
+### Loading — one branded spinner, always centered
+
+`Spinner` / `FullScreenSpinner` (`src/components/Spinner.tsx`): an accent gum-lilac ring (`border-t-accent`), `role="status"`. `FullScreenSpinner` centers it in a full `safe-screen-height` frame and is the canonical route/page loading state — every page early-returns it while loading. In-content loads (a list inside a form, a bottom sheet) use the bare `Spinner`, centered.
+
+**No skeletons.** The shimmer/skeleton pattern has been retired so loading reads identically everywhere.
+
+### Error — `ErrorState`
+
+`ErrorState` (`src/components/ErrorState.tsx`): warm one-line copy in `--color-text-secondary` (never a raw system error, never error-red for a load failure) + a single **Try again** button. `framed` (surface card) by default; `framed={false}` to sit over a custom backdrop (e.g. the network graph).
+
+### Empty — `EmptyState`
+
+`EmptyState` (`src/components/EmptyState.tsx`): branded illustration (`EmptyStateIllustration`, `gum` or `bridge` variant) → Bagel Fat One headline (`text-3xl`) → DM Sans subline → a single **nudge CTA** that moves the user toward filling the state. `framed` card by default; `framed={false}` for overlays.
 
 | Screen | Headline | Subline | CTA |
 |---|---|---|---|
-| Empty pocket (new user) | "Your pocket is empty." | "Make a plan with someone you love." | Add someone |
-| Empty pocket (has connections) | "Nothing brewing yet." | "Who do you want to do something with?" | New gum |
-| Empty network | "No bridges yet." | "They form when you actually show up." | Add someone |
-| Empty feed | "Nothing here yet." | "Your feed fills up when your people do things together." | — |
-| Empty graveyard | "Nothing here." | "Keep it that way." | — |
-| Empty notifications | "All caught up." | — | — |
+| Empty pocket (new user) | "Your pocket is empty." | "Make a plan with someone you love — it sticks once you both show up." | Add someone |
+| Empty pocket (has connections) | "Nothing sticky yet." | "Who do you want to make a memory with?" | New plan |
+| Empty network | "No bridges yet." | "They stretch into shape when you actually show up." | Add someone |
+| Empty feed | "Nothing here yet." | "Your feed fills up when your people stick plans together." | Make a plan |
+| Empty notifications | "All caught up." | "Stick a new plan together and your people will hear about it here." | New plan |
+| Empty graveyard | "Nothing here." | "Keep it that way." | — (terminal good state) |
 
-Empty state copy is written in the app's voice — warm, slightly dry, never hollow.
+Copy is written in the app's voice — warm, slightly dry, tactile (sticky / stretch / chew / memory), never hollow. Every empty state nudges except the graveyard, where empty is the desired outcome.
 
 ---
 
@@ -413,6 +446,7 @@ The app has a personality. Copy should feel like a friend wrote it, not a produc
 - Warm and direct. Never corporate.
 - Slightly dry humor is fine. Never sarcastic.
 - Humanize everything: "11 months left" not "335 days remaining." "A Tuesday in March" not "2025-03-11."
+- **Lean on the gum lexicon** — sticky, stretch, chew, hold, memory. "Make one stick," "they stretch into shape," "make plans that stick." A plan is a piece of gum; a confirmed plan is a stretched bridge / a memory.
 - Avoid: "complete your profile," "no items found," "an error occurred."
 - Use: "add your name," "nothing here yet," "something went wrong — try again."
 
@@ -427,10 +461,10 @@ Derived from top 2 categories. Generated server-side on profile load.
 
 **Tailwind CSS v4** — tokens in `tailwind.config.js`; entry via `@config "../tailwind.config.js"` and `@import "tailwindcss"` in `src/index.css`.
 
-Design tokens (colors, fonts, radii, shadows) match the config below. CSS custom properties for safe-area and browser chrome live in `:root` (`--app-safe-top`, `--app-safe-bottom`, `--browser-top-inset`, `--browser-bottom-inset`).
+Design tokens (colors, fonts, radii, shadows) match the config below. CSS custom properties for safe-area and browser chrome live in `:root` (`--app-safe-top`, `--app-safe-bottom`, `--browser-top-inset`, `--browser-bottom-inset`). The snippet below is abridged — see `tailwind.config.js` for the full set, which also includes the deeper surfaces (`bg-deep`, `surface-3`), border ramp (`border-mid`, `border-strong`), `accent-strong`, semantic colors (`success`/`warning`/`error`/`info`), the `tint-{category}` chip backgrounds, `letterSpacing.label/otp`, the `e1/e2/e3` + gloss shadows, and `fontWeight` up to `semibold` (600).
 
 ```js
-// tailwind.config.js (ESM export)
+// tailwind.config.js (ESM export) — abridged
 export default {
   theme: {
     extend: {
@@ -449,15 +483,19 @@ export default {
         savor: '#F0A84A',
         support: '#E89AA8',
         accent: '#CF8EE8',
+        // + tint-{category} (15% chip backgrounds), accent-strong, semantic, bg-deep, surface-3, border-mid/strong
       },
       fontFamily: {
         display: ['"Bagel Fat One"', 'cursive'],
         body: ['"DM Sans"', 'sans-serif'],
       },
-      borderRadius: { sm: '8px', md: '14px', lg: '20px', xl: '28px' },
+      borderRadius: { sm: '8px', md: '14px', lg: '20px', xl: '28px', full: '9999px' },
+      fontWeight: { light: '300', normal: '400', medium: '500', semibold: '600' },
+      letterSpacing: { label: '0.08em', otp: '0.2em' },
       boxShadow: {
         card: '0 4px 24px rgba(0,0,0,0.3)',
         glow: '0 0 40px rgba(207,142,232,0.15)',
+        // + e1/e2/e3, gloss-gum, gloss-button, glow-accent
       },
     },
   },
@@ -474,8 +512,12 @@ export default {
 | Gum piece shapes (v2) | SVG assets (Figma → `/src/assets/gum/`) | Deferred |
 | Gumball blob | Built in code (`Gumball.tsx` — SVG patches) | ✅ Shipped |
 | Network graph | `react-force-graph-2d` canvas + `graphSnapshot.ts` export | ✅ Shipped |
-| Category chips / tags | Tailwind (`CategoryChip.tsx`) | ✅ Shipped |
-| Empty state copy | Inline per §13 (no illustration assets yet) | ✅ Shipped |
+| Category chips / tags | Tailwind (`CategoryChip.tsx`) + `tint-{category}` tokens | ✅ Shipped |
+| Social share card | Code-composed canvas (`socialShareCard.ts`, 1080² square) | ✅ Shipped |
+| Loading state | `Spinner` / `FullScreenSpinner` (branded ring) — skeletons retired | ✅ Shipped |
+| Error state | `ErrorState.tsx` (warm copy + Try again) | ✅ Shipped |
+| Empty state | `EmptyState.tsx` + `EmptyStateIllustration.tsx` (gum/bridge SVG) | ✅ Shipped |
+| Shared typography classes | `src/lib/typography.ts` | ✅ Shipped |
 | App icon | PNG (`public/icon-192.png`, `icon-512.png`) | ✅ Shipped |
 | Grain texture | CSS (`.grain-overlay` in `index.html`) | ✅ Shipped |
 | Animations | CSS keyframes + Tailwind | ✅ Shipped |
