@@ -162,10 +162,12 @@ export function BridgeFormation({
       position: 'absolute', inset: 0,
       background: 'var(--color-bg)', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center',
+      paddingLeft: 20, paddingRight: 20, paddingBottom: 288,
     }}>
 
       {/* Plan title */}
-      <div style={{ padding: '52px 28px 0', textAlign: 'center', flexShrink: 0, zIndex: 5 }}>
+      <div style={{ textAlign: 'center', zIndex: 5 }}>
         <p style={{ margin: 0, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--color-text-tertiary)' }}>
           your new bridge
         </p>
@@ -180,67 +182,65 @@ export function BridgeFormation({
         </h1>
       </div>
 
-      {/* Hub scene — centered in remaining space */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
-        <div style={{ position: 'relative', width: SZ, height: SZ }}>
-          {/* Ambient glow */}
-          <div style={{
-            position: 'absolute', left: '50%', top: '50%',
-            width: 270, height: 270,
-            transform: 'translate(-50%,-50%)',
-            borderRadius: '50%',
-            background: `radial-gradient(circle, ${catHex}55 0%, transparent 68%)`,
-            opacity: formed ? 0.55 : 0.12 + (prog[0] ?? 0) * 0.28,
-            transition: 'opacity 0.6s ease',
-            pointerEvents: 'none',
-          }} />
+      {/* Hub scene */}
+      <div style={{ position: 'relative', width: SZ, height: SZ, zIndex: 2, margin: '28px 0' }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%',
+          width: 270, height: 270,
+          transform: 'translate(-50%,-50%)',
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${catHex}55 0%, transparent 68%)`,
+          opacity: formed ? 0.55 : 0.12 + (prog[0] ?? 0) * 0.28,
+          transition: 'opacity 0.6s ease',
+          pointerEvents: 'none',
+        }} />
 
-          {/* Strands */}
-          <svg viewBox={`0 0 ${SZ} ${SZ}`} width={SZ} height={SZ} style={{ position: 'absolute', inset: 0 }}>
-            {nodes.map((n, i) => (
-              <Strand key={n.id} to={n} progress={prog[i] ?? 0} catHex={catHex} t={t} idx={i} />
-            ))}
-          </svg>
+        {/* Strands */}
+        <svg viewBox={`0 0 ${SZ} ${SZ}`} width={SZ} height={SZ} style={{ position: 'absolute', inset: 0 }}>
+          {nodes.map((n, i) => (
+            <Strand key={n.id} to={n} progress={prog[i] ?? 0} catHex={catHex} t={t} idx={i} />
+          ))}
+        </svg>
 
-          {/* Centre gum blob */}
-          <div style={{
-            position: 'absolute', left: '50%', top: '50%',
-            transform: `translate(-50%,-50%) scale(${formed ? 1.06 : 1})`,
-            transition: 'transform 0.5s cubic-bezier(0.34,1.2,0.64,1)',
-            zIndex: 2,
-          }}>
-            <GumBlob category={category} size={74} />
-          </div>
-
-          {/* Member avatars */}
-          {nodes.map((n, i) => {
-            const initial = n.name.trim().slice(0, 1).toUpperCase() || '?'
-            return (
-              <div key={n.id} style={{
-                position: 'absolute', left: n.x, top: n.y, zIndex: 3,
-                transform: 'translate(-50%,-50%)',
-                animation: formed ? `avatar-settle 0.5s cubic-bezier(0.34,1.2,0.64,1) ${i * 60}ms both` : 'none',
-              }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: '50%',
-                  overflow: 'hidden',
-                  backgroundColor: 'var(--color-surface-2)',
-                  border: `2px solid ${catHex}55`,
-                  display: 'grid', placeItems: 'center',
-                  fontSize: 18, color: 'var(--color-text-primary)', fontWeight: 500,
-                }}>
-                  {n.avatarUrl ? (
-                    <img src={n.avatarUrl} alt={n.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : initial}
-                </div>
-              </div>
-            )
-          })}
+        {/* Centre gum blob */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%',
+          transform: `translate(-50%,-50%) scale(${formed ? 1.06 : 1})`,
+          transition: 'transform 0.5s cubic-bezier(0.34,1.2,0.64,1)',
+          zIndex: 2,
+        }}>
+          <GumBlob category={category} size={74} />
         </div>
+
+        {/* Member avatars */}
+        {nodes.map((n, i) => {
+          const initial = n.name.trim().slice(0, 1).toUpperCase() || '?'
+          return (
+            <div key={n.id} style={{
+              position: 'absolute', left: n.x, top: n.y, zIndex: 3,
+              transform: 'translate(-50%,-50%)',
+              animation: formed ? `avatar-settle 0.5s cubic-bezier(0.34,1.2,0.64,1) ${i * 60}ms both` : 'none',
+            }}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                overflow: 'hidden',
+                backgroundColor: 'var(--color-surface-2)',
+                border: `2px solid ${catHex}55`,
+                display: 'grid', placeItems: 'center',
+                fontSize: 18, color: 'var(--color-text-primary)', fontWeight: 500,
+              }}>
+                {n.avatarUrl ? (
+                  <img src={n.avatarUrl} alt={n.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : initial}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {/* Status text */}
-      <div style={{ padding: '16px 28px 32px', textAlign: 'center', flexShrink: 0, zIndex: 5 }}>
+      <div style={{ textAlign: 'center', zIndex: 5 }}>
         {!formed ? (
           <p style={{ margin: 0, fontSize: 16, color: 'var(--color-text-secondary)' }}>stretching your bridge…</p>
         ) : (
@@ -250,27 +250,15 @@ export function BridgeFormation({
         )}
       </div>
 
-      {/* Share modal — bottom sheet */}
+      {/* Share prompt — fixed bottom panel */}
       {stage === 'modal' && !showShare && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end' }}>
-          <div
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', animation: 'backdrop-in 0.25s ease' }}
-            onClick={() => onComplete()}
-          />
-          <div style={{
-            position: 'relative', width: '100%',
-            background: 'var(--color-surface)',
-            borderRadius: '28px 28px 0 0',
-            padding: '10px 28px 40px',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
-            animation: 'sheet-up 0.32s cubic-bezier(0.34,1.2,0.64,1)',
-          }}>
-            <div style={{ width: 38, height: 4, borderRadius: 99, background: 'var(--color-border-mid, rgba(255,255,255,0.12))', margin: '0 auto 20px' }} />
+        <div className="app-fixed-frame safe-bottom-24 px-5" style={{ zIndex: 80 }}>
+          <div className="app-fixed-frame-inner rounded-xl border border-white/10 bg-surface p-4 shadow-card sheet-slide-up">
 
             {/* Avatar preview row */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
               <div style={{
-                display: 'flex', padding: '10px 16px', borderRadius: 99,
+                display: 'flex', padding: '8px 14px', borderRadius: 99,
                 background: `${catHex}1f`, boxShadow: `0 0 22px ${catHex}33`,
               }}>
                 {members.map((m, i) => {
@@ -295,19 +283,19 @@ export function BridgeFormation({
               </div>
             </div>
 
-            <h2 style={{ margin: '0 0 6px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 26, color: 'var(--color-text-primary)' }}>
+            <h2 style={{ margin: '0 0 6px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 24, color: 'var(--color-text-primary)' }}>
               share this bridge?
             </h2>
-            <p style={{ margin: '0 0 24px', textAlign: 'center', fontSize: 14, lineHeight: 1.5, color: 'var(--color-text-secondary)' }}>
+            <p style={{ margin: '0 0 20px', textAlign: 'center', fontSize: 14, lineHeight: 1.5, color: 'var(--color-text-secondary)' }}>
               let your people see that you {members.length > 2 ? 'all' : `and ${members.find(m => m.id !== members[0]?.id)?.name ?? 'them'}`} actually showed up.
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
                 type="button"
                 onClick={() => setShowShare(true)}
                 style={{
-                  width: '100%', padding: '14px', borderRadius: 999,
+                  width: '100%', padding: '13px', borderRadius: 999,
                   border: 'none', background: catHex,
                   color: '#fff', fontSize: 15, fontWeight: 600,
                   fontFamily: 'var(--font-body)',
@@ -336,17 +324,8 @@ export function BridgeFormation({
 
       {/* Share textarea panel */}
       {stage === 'modal' && showShare && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 80, display: 'flex', alignItems: 'flex-end' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
-          <div style={{
-            position: 'relative', width: '100%',
-            background: 'var(--color-surface)',
-            borderRadius: '28px 28px 0 0',
-            padding: '10px 24px 40px',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
-            animation: 'sheet-up 0.28s cubic-bezier(0.34,1.2,0.64,1)',
-          }}>
-            <div style={{ width: 38, height: 4, borderRadius: 99, background: 'var(--color-border-mid, rgba(255,255,255,0.12))', margin: '0 auto 20px' }} />
+        <div className="app-fixed-frame safe-bottom-24 px-5" style={{ zIndex: 80 }}>
+          <div className="app-fixed-frame-inner rounded-xl border border-white/10 bg-surface p-4 shadow-card sheet-slide-up">
             <h2 style={{ margin: '0 0 12px', fontFamily: 'var(--font-display)', fontWeight: 400, fontSize: 22, color: 'var(--color-text-primary)' }}>
               Share this?
             </h2>
@@ -354,14 +333,13 @@ export function BridgeFormation({
               value={postBody}
               onChange={e => setPostBody(e.target.value)}
               maxLength={500}
-              className="post-optin-textarea"
-              style={{ width: '100%', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'var(--color-surface-2)', padding: '10px 12px', fontSize: 14, color: 'var(--color-text-primary)', fontFamily: 'var(--font-body)', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+              className="post-optin-textarea mt-3 w-full rounded-md border border-white/10 bg-surface-2 px-3 py-2 text-sm text-text placeholder:text-text-3 focus:outline-none"
               placeholder="Write your post…"
               rows={4}
             />
-            <p style={{ margin: '4px 0 16px', textAlign: 'right', fontSize: 12, color: 'var(--color-text-tertiary)' }}>{postBody.length} / 500</p>
+            <p style={{ margin: '4px 0 12px', textAlign: 'right', fontSize: 12, color: 'var(--color-text-tertiary)' }}>{postBody.length} / 500</p>
             {error ? <p style={{ margin: '0 0 12px', fontSize: 14, color: 'var(--color-playful, #f07868)' }}>{error}</p> : null}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button
                 type="button"
                 onClick={() => void handlePost()}
