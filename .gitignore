@@ -39,5 +39,6 @@ Sticky Bridges Design System.zip
 
 # Supabase — schema and project identifiers
 supabase/migrations/
+supabase/scripts/
 supabase/*.sql
 supabase/.temp/

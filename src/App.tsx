@@ -46,17 +46,23 @@ function App() {
         return
       }
 
-      const topInset = Math.max(0, viewport.offsetTop)
       const viewportBottomGap = Math.max(
         0,
         window.innerHeight - viewport.height - viewport.offsetTop,
       )
-      // Ignore software keyboard height. We only want browser chrome/safe-area insets.
+      // Software keyboard open: the visual viewport scrolls/resizes on every keystroke as the
+      // browser keeps the focused field in view. Recomputing insets here churns the
+      // --browser-*-inset vars, so safe-screen-height / safe-content-top reflow on each tick
+      // and the page visibly bounces while typing. Freeze insets until the keyboard closes;
+      // they only describe browser chrome (URL bar) anyway, not the keyboard.
       const keyboardLikelyOpen = viewportBottomGap > 120
-      const bottomInset = keyboardLikelyOpen ? 0 : viewportBottomGap
+      if (keyboardLikelyOpen) {
+        return
+      }
 
+      const topInset = Math.max(0, viewport.offsetTop)
       root.style.setProperty('--browser-top-inset', `${topInset}px`)
-      root.style.setProperty('--browser-bottom-inset', `${bottomInset}px`)
+      root.style.setProperty('--browser-bottom-inset', `${viewportBottomGap}px`)
     }
 
     setInsets()
