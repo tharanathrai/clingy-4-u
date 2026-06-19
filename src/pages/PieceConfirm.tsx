@@ -112,6 +112,21 @@ export default function PieceConfirm() {
       return
     }
 
+    if (pieceRow.status === 'confirmed') {
+      // Bridge already formed — skip the ceremony and show the bridge directly
+      setPiece(pieceRow as GumPiece)
+      const bridgeRow = await loadBridgeForPiece(id, userId)
+      if (bridgeRow) {
+        const draftPost = await loadDraftPostForBridge(bridgeRow.id, userId)
+        setDraftPostId(draftPost?.id ?? null)
+        setSuggestedPostBody(draftPost?.body ?? null)
+        setBridge(bridgeRow)
+        setFlowState('bridge_formed')
+      } else {
+        setError('Your bridge was formed — head back home to see it.')
+      }
+      return
+    }
     if (pieceRow.status !== 'active') {
       setError('This plan cannot be confirmed anymore.')
       return

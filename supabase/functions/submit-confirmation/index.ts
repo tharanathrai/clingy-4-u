@@ -31,6 +31,8 @@ interface GumPieceRow {
 
 interface BridgeRow {
   id: string
+  user_a_id: string
+  user_b_id: string
   activity_title: string
   category: string
   color_hex: string
@@ -173,7 +175,7 @@ Deno.serve(async (request) => {
     // Check if bridges already formed for this piece
     const { data: existingBridges, error: existingBridgesError } = await serviceClient
       .from('bridges')
-      .select('id, activity_title, category, color_hex, formed_at')
+      .select('id, user_a_id, user_b_id, activity_title, category, color_hex, formed_at')
       .eq('gum_piece_id', piece.id)
 
     if (existingBridgesError) {
@@ -213,13 +215,13 @@ Deno.serve(async (request) => {
       const { data: createdBridges, error: createBridgesError } = await serviceClient
         .from('bridges')
         .insert(bridgeRows)
-        .select('id, activity_title, category, color_hex, formed_at')
+        .select('id, user_a_id, user_b_id, activity_title, category, color_hex, formed_at')
 
       if (createBridgesError || !createdBridges) {
         // Retry read in case of race condition
         const retry = await serviceClient
           .from('bridges')
-          .select('id, activity_title, category, color_hex, formed_at')
+          .select('id, user_a_id, user_b_id, activity_title, category, color_hex, formed_at')
           .eq('gum_piece_id', piece.id)
 
         if (retry.error || !retry.data || retry.data.length === 0) {
@@ -263,11 +265,9 @@ Deno.serve(async (request) => {
       })
     }
 
-    // Find the bridge between the caller and another member (for the draft post response)
+    // Find the bridge that involves the calling user
     const callerBridge = (bridges ?? []).find(
-      (b) => b.id && (
-        (acceptedMemberIds.includes(userId))
-      )
+      (b) => b.user_a_id === userId || b.user_b_id === userId
     ) ?? bridges?.[0]
 
     const { error: deleteSessionError } = await serviceClient
