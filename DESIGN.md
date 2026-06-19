@@ -123,7 +123,7 @@ Import in `index.html`:
 - DM Sans handles everything else. Weight 400 for body, 500 for emphasis and button labels, 600 (semibold) for the rare heavier label.
 - **Casing convention:**
   - **Display page titles are lowercase** — a deliberate brand voice ("your pocket", "the feed", "updates", "your bridges", "add someone"). This is the one intentional exception to sentence case.
-  - **Everything else is sentence case** — buttons, body, toasts, empty-state headlines, section headers ("Add someone", "New plan", "Try again", "Nothing sticky yet.").
+  - **Everything else is sentence case** — buttons, body, toasts, empty-state headlines, section headers ("Add someone", "New plan", "Try again", "Pristine in here.").
   - The only ALL CAPS is the 10px label / category-chip style (`tracking-label`).
 - Canonical class strings live in `src/lib/typography.ts` (`sectionHeadingClass`, `fieldLabelClass`).
 - Text on dark: always use `--color-text-primary` or `--color-text-secondary`. Never hardcode colors.
