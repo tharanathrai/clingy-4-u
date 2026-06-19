@@ -34,7 +34,7 @@ export function EmptyStateIllustration({
         <span
           aria-hidden
           className="relative w-full h-full overflow-hidden gum-morph-base gum-morph-42"
-          style={{ background: 'rgba(255, 255, 255, 0.15)' }}
+          style={{ background: 'rgba(255, 255, 255, 0.05)' }}
         />
       </span>
     </div>
