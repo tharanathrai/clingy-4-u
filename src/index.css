@@ -929,9 +929,18 @@ body.modal-scroll-lock .post-detail-viewport {
   to { filter: hue-rotate(360deg); }
 }
 
+@keyframes es-blob-shimmer {
+  0%   { left: -55%; }
+  60%  { left: 130%; }
+  100% { left: 130%; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .es-blob-hue-spin {
     animation: es-hue-spin 12s linear infinite;
+  }
+  .es-blob-shimmer {
+    animation: es-blob-shimmer 3.8s ease-in-out infinite;
   }
 }
 
