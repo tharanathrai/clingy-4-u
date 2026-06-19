@@ -273,7 +273,7 @@ export default function Add() {
           <Camera size={16} strokeWidth={1.75} />
           Scan their code instead
         </Link>
-        {typeof navigator.share === 'function' && token ? (
+        {false && typeof navigator.share === 'function' && token ? (
           <button
             type="button"
             onClick={() => {
