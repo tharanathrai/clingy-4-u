@@ -18,6 +18,7 @@ import { getExportLabelNodeIds, getFirstName } from '../../lib/networkShareStats
 import { getMajorityBridgeColor, getPairLinkDistance } from '../../lib/networkPairSummary.ts'
 import { syncGraphCanvasRef } from '../../lib/syncGraphCanvasRef.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
+import { FullScreenSpinner } from '../Spinner'
 
 type GraphLinkKind = 'chalk' | 'bridge'
 
@@ -652,17 +653,7 @@ export function NetworkGraph({
   const hasConnections = nodes.some((node) => !node.isSelf)
 
   if (loading) {
-    return (
-      <div ref={graphContainerRef} className="flex h-full w-full items-center justify-center">
-        <div className="relative h-32 w-32">
-          <span className="network-node-pulse absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/40" />
-          <span className="network-node-pulse network-node-delay-1 absolute left-4 top-7 h-8 w-8 rounded-full bg-explore/50" />
-          <span className="network-node-pulse network-node-delay-2 absolute right-4 top-9 h-7 w-7 rounded-full bg-active/50" />
-          <span className="network-node-pulse network-node-delay-3 absolute bottom-4 left-8 h-7 w-7 rounded-full bg-playful/50" />
-          <span className="network-node-pulse network-node-delay-4 absolute bottom-6 right-7 h-9 w-9 rounded-full bg-intimate/50" />
-        </div>
-      </div>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!hasConnections) {
