@@ -11,6 +11,7 @@ import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { sectionHeadingClass } from '../lib/typography.ts'
 import { invalidateProfileFlow } from '../lib/invalidate.ts'
 import { supabase } from '../lib/supabase.ts'
 
@@ -129,7 +130,7 @@ export default function ProfileMe() {
 
       {bridgeCount > 0 ? (
         <section className="mt-8">
-          <h2 className="font-display text-2xl text-text">category breakdown</h2>
+          <h2 className={sectionHeadingClass}>category breakdown</h2>
           <div className="mt-3 space-y-3">
             {categoriesWithBridges.map((category) => (
               <CategoryBreakdownRow

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { profileNewGumReturnState } from '../../lib/navigationContext.ts'
+import { sectionHeadingClass } from '../../lib/typography.ts'
 import { BridgeListItem } from './BridgeListItem.tsx'
 import type { Bridge, User } from '../../types/index.ts'
 
@@ -27,9 +28,9 @@ export function SharedBridgesSection({
   if (bridges.length === 0) {
     return (
       <section className="mt-8">
-        <h2 className="font-display text-xl text-text">your bridges together</h2>
+        <h2 className={sectionHeadingClass}>your bridges together</h2>
         <div className="mt-3 flex flex-col items-center rounded-lg border border-white/10 bg-surface p-5 text-center">
-          <p className="text-sm text-text-2">No bridges yet. Make a plan.</p>
+          <p className="text-sm text-text-2">No bridges yet — make one stick.</p>
           <button
             type="button"
             className="btn-primary mt-4 rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
@@ -39,7 +40,7 @@ export function SharedBridgesSection({
               })
             }}
           >
-            New gum
+            New plan
           </button>
         </div>
       </section>

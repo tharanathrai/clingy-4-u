@@ -22,9 +22,9 @@ interface TabConfig {
 
 const tabs: TabConfig[] = [
   { to: '/home', label: 'Pocket', icon: Home },
-  { to: '/network', label: 'Network', icon: Waypoints },
+  { to: '/network', label: 'Bridges', icon: Waypoints },
   { to: '/feed', label: 'Feed', icon: Newspaper },
-  { to: '/notifications', label: 'Notifications', icon: Bell, hasBadge: true },
+  { to: '/notifications', label: 'Updates', icon: Bell, hasBadge: true },
   { to: '/profile/me', label: 'Profile', icon: CircleUserRound },
 ]
 

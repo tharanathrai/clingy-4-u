@@ -57,7 +57,7 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
               </span>
             ) : null}
             {hasPendingEdit ? (
-              <span className="flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-savor">
+              <span className="flex items-center gap-1 rounded-full bg-tint-savor px-2 py-0.5 text-[10px] text-savor">
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-savor" />
                 change pending
               </span>

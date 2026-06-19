@@ -5,6 +5,7 @@ import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
+import { sectionHeadingClass } from '../lib/typography.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { invalidateProfileFlow } from '../lib/invalidate.ts'
@@ -59,7 +60,7 @@ export default function Settings() {
       <h1 className="app-page-title mt-4">settings</h1>
 
       <section className="mt-6 rounded-lg bg-surface p-5">
-        <h2 className="text-xs uppercase text-text-3">Account</h2>
+        <h2 className={sectionHeadingClass}>Account</h2>
         <div className="mt-4 flex items-center gap-3">
           {profile?.avatar_url ? (
             <img
@@ -97,7 +98,7 @@ export default function Settings() {
       </section>
 
       <section className="mt-4 rounded-lg bg-surface p-5">
-        <h2 className="text-xs uppercase text-text-3">Notifications</h2>
+        <h2 className={sectionHeadingClass}>Notifications</h2>
         <div className="mt-4 space-y-3">
           <NotificationToggleRow
             label="Email me when someone invites me"
@@ -113,7 +114,7 @@ export default function Settings() {
       </section>
 
       <section className="mt-4 rounded-lg bg-surface p-5">
-        <h2 className="text-xs uppercase text-text-3">About</h2>
+        <h2 className={sectionHeadingClass}>About</h2>
         <p className="mt-3 text-sm text-text">Version 0.1.0</p>
         <p className="mt-1 text-sm text-text-3">Built with ☁️ and gum.</p>
       </section>

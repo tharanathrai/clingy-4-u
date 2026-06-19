@@ -7,13 +7,13 @@ interface CategoryChipProps {
 }
 
 const chipClassByCategory: Record<CategorySlug, string> = {
-  intimate: 'bg-intimate/20 text-intimate',
-  active: 'bg-active/20 text-active',
-  playful: 'bg-playful/20 text-playful',
-  explore: 'bg-explore/20 text-explore',
-  recharge: 'bg-recharge/20 text-recharge',
-  savor: 'bg-savor/20 text-savor',
-  support: 'bg-support/20 text-support',
+  intimate: 'bg-tint-intimate text-intimate',
+  active: 'bg-tint-active text-active',
+  playful: 'bg-tint-playful text-playful',
+  explore: 'bg-tint-explore text-explore',
+  recharge: 'bg-tint-recharge text-recharge',
+  savor: 'bg-tint-savor text-savor',
+  support: 'bg-tint-support text-support',
 }
 
 const dotClassByCategory: Record<CategorySlug, string> = {
@@ -27,14 +27,14 @@ const dotClassByCategory: Record<CategorySlug, string> = {
 }
 
 const sizeClassMap = {
-  sm: 'px-2.5 py-1 text-xs',
-  md: 'px-3.5 py-1.5 text-xs',
+  sm: 'px-2.5 py-1 text-[11px]',
+  md: 'px-3.5 py-1.5 text-[11px]',
 } as const
 
 export function CategoryChip({ category, size = 'md' }: CategoryChipProps) {
   return (
     <span
-      className={`inline-flex w-fit items-center rounded-full font-body font-medium uppercase tracking-wide ${chipClassByCategory[category]} ${sizeClassMap[size]}`}
+      className={`inline-flex w-fit items-center rounded-full font-body font-medium uppercase tracking-label ${chipClassByCategory[category]} ${sizeClassMap[size]}`}
     >
       <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${dotClassByCategory[category]}`} />
       {CATEGORIES[category].label}

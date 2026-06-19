@@ -42,7 +42,7 @@ describe('SharedBridgesSection', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'New gum' }))
+    await user.click(screen.getByRole('button', { name: 'New plan' }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/piece/new', {
       state: {
