@@ -105,8 +105,8 @@ export default function Welcome() {
       }
 
       markProfileReady(user.id, queryClient)
-      // Connect intent consumed — clear it so a later unrelated sign-in can't resume it.
-      sessionStorage.removeItem(postAuthReturnToKey)
+      // Don't clear the connect key here — AuthGuard reads it on the same render to pick the
+      // same target (this navigate and AuthGuard's redirect can race). Connect clears it on send.
       navigate(
         returnTo && /^\/connect(\?|$)/.test(returnTo) ? returnTo : '/add',
         { replace: true, state: returnTo ? undefined : { fromOnboarding: true } },

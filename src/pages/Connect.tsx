@@ -44,6 +44,9 @@ export default function Connect() {
     let cancelled = false
     const submitToken = async () => {
       hasSubmittedRef.current = true
+      // We've arrived at the authenticated submit — routing is done, so the durable connect
+      // key has served its purpose. Clear it so a later unrelated sign-in can't resume it.
+      sessionStorage.removeItem(postAuthReturnToKey)
       setSubmitting(true)
       try {
         const { data: sessionData } = await supabase.auth.getSession()
