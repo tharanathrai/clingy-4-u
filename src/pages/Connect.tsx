@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ConnectionRequestSentModal } from '../components/connections/ConnectionRequestSentModal.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
-import { pageShellCentered, pageShellJourneyScroll } from '../components/layout/pageShell.ts'
+import { pageShellJourneyScroll } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { supabase } from '../lib/supabase.ts'
 import {
@@ -117,11 +118,7 @@ export default function Connect() {
   }
 
   if (loading) {
-    return (
-      <main className={pageShellCentered}>
-        <p className="text-sm text-text-2">Loading...</p>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!token) {

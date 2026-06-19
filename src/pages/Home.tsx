@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Layout } from '../components/layout/Layout.tsx'
 import { CategoryShelf } from '../components/gum/CategoryShelf.tsx'
-import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { ErrorState } from '../components/ErrorState.tsx'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useGumPieces } from '../hooks/useGumPieces.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -94,11 +96,15 @@ export default function Home() {
     }
 
     if (connectionsCount < 1) {
-      setToast('add someone first')
+      setToast('Add someone first')
       return
     }
 
     void navigate('/piece/new')
+  }
+
+  if (loading || loadingConnections) {
+    return <FullScreenSpinner />
   }
 
   return (
@@ -106,65 +112,32 @@ export default function Home() {
       <main>
         <header className="flex items-end justify-between">
           <h1 className="app-page-title">your pocket</h1>
-          {!loading && !loadingConnections ? (
-            <p className="text-xs text-text-3 pb-1">{pieces.length} / 25</p>
-          ) : null}
+          <p className="text-xs text-text-3 pb-1">{pieces.length} / 25</p>
         </header>
 
-        {loading || loadingConnections ? (
-          <section className="mt-8 space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="skeleton h-24 rounded-lg" />
-            ))}
-          </section>
+        {error ? (
+          <ErrorState message="Couldn't load your pocket." onRetry={() => void refetch()} />
         ) : null}
 
-        {!loading && !loadingConnections && error ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Couldn&apos;t load your pocket.</p>
-            <button
-              type="button"
-              onClick={() => {
-                void refetch()
-              }}
-              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
-            >
-              Retry
-            </button>
-          </section>
+        {!error && connectionsCount === 0 ? (
+          <EmptyState
+            variant="gum"
+            headline="Your pocket is empty."
+            subline="Make a plan with someone you love — it sticks once you both show up."
+            cta={{ label: 'Add someone', to: '/add' }}
+          />
         ) : null}
 
-        {!loading && !loadingConnections && !error && connectionsCount === 0 ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <EmptyStateIllustration />
-            <h2 className="font-display text-2xl text-text">Your pocket is empty.</h2>
-            <p className="mt-2 text-sm text-text-2">
-              Make a plan with someone you love.
-            </p>
-            <Link
-              to="/add"
-              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
-            >
-              Add someone
-            </Link>
-          </section>
+        {!error && connectionsCount > 0 && sortedPieces.length === 0 ? (
+          <EmptyState
+            variant="gum"
+            headline="Nothing sticky yet."
+            subline="Who do you want to make a memory with?"
+            cta={{ label: 'New plan', to: '/piece/new' }}
+          />
         ) : null}
 
-        {!loading && !loadingConnections && !error && connectionsCount > 0 && sortedPieces.length === 0 ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <EmptyStateIllustration />
-            <h2 className="font-display text-2xl text-text">Nothing brewing yet.</h2>
-            <p className="mt-2 text-sm text-text-2">Who do you want to do something with?</p>
-            <Link
-              to="/piece/new"
-              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
-            >
-              New plan
-            </Link>
-          </section>
-        ) : null}
-
-        {!loading && !loadingConnections && !error && sortedPieces.length > 0 ? (
+        {!error && sortedPieces.length > 0 ? (
           <div className="mt-6 space-y-6 pb-24">
             {(Object.keys(CATEGORIES) as CategorySlug[])
               .filter((cat) => groupedByCategory[cat]?.length)

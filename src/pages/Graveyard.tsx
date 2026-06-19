@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
-import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -97,27 +98,20 @@ export default function Graveyard() {
     6,
   )
 
+  if (loading) {
+    return <FullScreenSpinner />
+  }
+
   return (
     <main className={pageShellScroll}>
       <BackHeader to="/profile/me" />
       <h1 className="app-page-title mt-4">graveyard</h1>
       <p className="mt-3 text-sm text-text-2">Plans that didn&apos;t happen.</p>
 
-      {loading ? (
-        <section className="mt-8 space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="skeleton h-24 rounded-lg" />
-          ))}
-        </section>
-      ) : null}
       {error ? <p className="mt-8 text-sm text-playful">{error}</p> : null}
 
       {empty ? (
-        <section className="mt-10 rounded-lg bg-surface p-6 text-center">
-          <EmptyStateIllustration />
-          <p className="font-display text-2xl text-text">Nothing here.</p>
-          <p className="mt-2 text-sm text-text-2">Keep it that way.</p>
-        </section>
+        <EmptyState variant="gum" headline="Nothing here." subline="Keep it that way." />
       ) : null}
 
       <section className="mt-8 space-y-3 pb-10">

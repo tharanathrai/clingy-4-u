@@ -6,6 +6,7 @@ import { FriendshipMenu } from '../components/profile/FriendshipMenu.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
 import { SharedBridgesSection } from '../components/profile/SharedBridgesSection.tsx'
 import { pageShellTab } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -53,19 +54,7 @@ export default function ProfileUser() {
   }
 
   if (authLoading || loading) {
-    return (
-      <main className={pageShellTab}>
-        <BackHeader onBack={handleBack} className="mb-4" />
-        <section className="flex flex-col items-center">
-          <div className="skeleton h-20 w-20 rounded-full" />
-          <div className="skeleton mt-4 h-7 w-44 rounded-full" />
-          <div className="skeleton mt-2 h-4 w-28 rounded-full" />
-        </section>
-        <section className="mt-8 flex flex-col items-center">
-          <div className="skeleton h-40 w-40 rounded-full" />
-        </section>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user) {

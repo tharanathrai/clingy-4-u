@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { BridgeDetailSheet } from '../components/network/BridgeDetailSheet.tsx'
 import { GraphShareButton } from '../components/network/GraphShareButton.tsx'
 import { NetworkHeaderMenu } from '../components/network/NetworkHeaderMenu.tsx'
 import { NetworkGraph } from '../components/network/NetworkGraph.tsx'
 import { NodeProfileSheet } from '../components/network/NodeProfileSheet.tsx'
 import { RecenterGraphButton } from '../components/network/RecenterGraphButton.tsx'
-import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { ErrorState } from '../components/ErrorState.tsx'
 import { getNetworkShareStats } from '../lib/networkShareStats.ts'
 import { useNetworkGraph } from '../hooks/useNetworkGraph.ts'
 import { usePendingRequestCount } from '../hooks/usePendingRequestCount.ts'
@@ -84,18 +85,15 @@ export default function Network() {
 
       <main className="h-full w-full">
         {!graphState.loading && graphState.error ? (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg px-8 text-center">
-            <p className="text-sm text-playful">Couldn&apos;t load your network.</p>
-            <button
-              type="button"
-              onClick={() => {
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-bg px-8">
+            <ErrorState
+              framed={false}
+              message="Couldn't load your network."
+              onRetry={() => {
                 setGraphState((s) => ({ ...s, error: null }))
                 refetchGraph()
               }}
-              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
-            >
-              Retry
-            </button>
+            />
           </div>
         ) : null}
         <NetworkGraph
@@ -124,17 +122,13 @@ export default function Network() {
         {!graphState.loading && !graphState.hasConnections ? (
           <section className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-8 text-center">
             <div className="pointer-events-auto">
-              <EmptyStateIllustration variant="bridge" />
-              <h2 className="font-display text-3xl text-text">No bridges yet.</h2>
-              <p className="mt-3 text-sm text-text-2">
-                They form when you actually show up.
-              </p>
-              <Link
-                to="/add"
-                className="btn-primary mt-5 inline-flex rounded-full bg-accent px-5 py-3 text-sm font-medium text-white"
-              >
-                Add someone
-              </Link>
+              <EmptyState
+                framed={false}
+                variant="bridge"
+                headline="No bridges yet."
+                subline="They stretch into shape when you actually show up."
+                cta={{ label: 'Add someone', to: '/add' }}
+              />
             </div>
           </section>
         ) : null}

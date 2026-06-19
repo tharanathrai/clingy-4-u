@@ -89,11 +89,11 @@ describe('ProfileUser back navigation', () => {
   it('shows back header when viewing another user profile', () => {
     renderProfile()
 
-    expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
     expect(screen.getByText('Jordan')).toBeInTheDocument()
   })
 
-  it('shows back header while loading', () => {
+  it('shows the branded spinner while loading', () => {
     mockUseProfile.mockReturnValue({
       ...defaultProfileState,
       profile: null,
@@ -102,7 +102,7 @@ describe('ProfileUser back navigation', () => {
 
     renderProfile()
 
-    expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
   })
 
   it('shows back header on profile not found', () => {
@@ -115,7 +115,7 @@ describe('ProfileUser back navigation', () => {
 
     renderProfile()
 
-    expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
     expect(screen.getByText('Profile not found.')).toBeInTheDocument()
   })
 
@@ -123,7 +123,7 @@ describe('ProfileUser back navigation', () => {
     const user = userEvent.setup()
     renderProfile()
 
-    await user.click(screen.getByRole('button', { name: 'back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(mockNavigate).toHaveBeenCalledWith(-1)
   })
@@ -145,7 +145,7 @@ describe('ProfileUser back navigation', () => {
       </QueryClientProvider>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/feed', {
       state: { restorePostId: 'post-1' },
@@ -169,7 +169,7 @@ describe('ProfileUser back navigation', () => {
       </QueryClientProvider>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/network', {
       state: { selectUserId: 'user-2' },
@@ -184,7 +184,7 @@ describe('ProfileUser back navigation', () => {
     const user = userEvent.setup()
     renderProfile()
 
-    await user.click(screen.getByRole('button', { name: 'back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
 
     expect(mockNavigate).toHaveBeenCalledWith('/home')
   })

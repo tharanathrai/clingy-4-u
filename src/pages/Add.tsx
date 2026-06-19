@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Camera, RefreshCcw } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
+import { Spinner } from '../components/Spinner.tsx'
 import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -230,8 +231,8 @@ export default function Add() {
         >
           <div className="bg-white p-5" style={{ borderRadius: '17px' }}>
             {loading ? (
-              <div className="flex h-[220px] w-[220px] items-center justify-center text-sm text-black/40">
-                Loading...
+              <div className="flex h-[220px] w-[220px] items-center justify-center">
+                <Spinner size={28} />
               </div>
             ) : token ? (
               <QRCodeSVG value={qrValue} size={220} />
@@ -256,7 +257,7 @@ export default function Add() {
             className="ml-2 flex items-center gap-1.5 text-sm text-text-3 transition-colors active:text-text-2"
           >
             <RefreshCcw size={14} strokeWidth={1.75} />
-            refresh
+            Refresh
           </button>
         </div>
 

@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll, toastFrameClass } from '../components/layout/pageShell.ts'
+import { Spinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import type { CategorySlug } from '../lib/constants.ts'
@@ -334,10 +335,8 @@ export default function PieceNew() {
       <h1 className="app-page-title">new gum</h1>
 
       {connectionsLoading ? (
-        <section className="mt-6 space-y-2">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="skeleton h-12 rounded-lg" />
-          ))}
+        <section className="mt-6 flex justify-center py-10">
+          <Spinner />
         </section>
       ) : (
         <section className="mt-6">

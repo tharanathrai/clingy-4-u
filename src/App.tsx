@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthGuard } from './components/layout/AuthGuard.tsx'
 import { RouteErrorBoundary } from './components/layout/RouteErrorBoundary.tsx'
+import { FullScreenSpinner } from './components/Spinner.tsx'
 
 const LandingPage = lazy(() => import('./pages/Landing.tsx'))
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallback.tsx'))
@@ -79,13 +80,7 @@ function App() {
       <div className="app-device-screen">
         <div className="grain-overlay" aria-hidden="true" />
         <RouteErrorBoundary>
-        <Suspense
-          fallback={
-            <div className="safe-screen-height flex items-center justify-center bg-bg">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-accent" />
-            </div>
-          }
-        >
+        <Suspense fallback={<FullScreenSpinner />}>
           <div key={location.pathname} className={transitionClassName}>
             <Routes location={location}>
               <Route path="/" element={<LandingPage />} />

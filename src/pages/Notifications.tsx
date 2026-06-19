@@ -6,7 +6,9 @@ import { iconButtonClassName } from '../lib/iconButton.ts'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { NotificationItem } from '../components/notifications/NotificationItem.tsx'
-import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { ErrorState } from '../components/ErrorState.tsx'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { ConnectionRequestSheet } from '../components/connections/ConnectionRequestSheet.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
@@ -107,6 +109,10 @@ export default function Notifications() {
     }
   }
 
+  if (loading) {
+    return <FullScreenSpinner />
+  }
+
   return (
     <Layout>
       <main>
@@ -124,35 +130,23 @@ export default function Notifications() {
           ) : null}
         </div>
 
-        {loading ? (
-          <section className="mt-6 space-y-2">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="skeleton h-14 rounded-lg" />
-            ))}
-          </section>
+        {error ? (
+          <ErrorState
+            message="Couldn't load your updates."
+            onRetry={() => invalidateNotifications(user?.id, queryClient)}
+          />
         ) : null}
 
-        {!loading && error ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-playful">{error}</p>
-            <button
-              type="button"
-              onClick={() => { invalidateNotifications(user?.id, queryClient) }}
-              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
-            >
-              Retry
-            </button>
-          </section>
+        {!error && notifications.length === 0 ? (
+          <EmptyState
+            variant="gum"
+            headline="All caught up."
+            subline="Stick a new plan together and your people will hear about it here."
+            cta={{ label: 'New plan', to: '/piece/new' }}
+          />
         ) : null}
 
-        {!loading && !error && notifications.length === 0 ? (
-          <section className="mt-8 text-center">
-            <EmptyStateIllustration />
-            <p className="font-display text-2xl text-text">All caught up.</p>
-          </section>
-        ) : null}
-
-        {!loading && !error && notifications.length > 0 ? (
+        {!error && notifications.length > 0 ? (
           <ul className="mt-6 space-y-2">
             {visibleNotifications.map((notification) => (
               <li key={notification.id}>

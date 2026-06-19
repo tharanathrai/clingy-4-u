@@ -5,7 +5,8 @@ import { ProfileAvatarField } from '../components/profile/ProfileAvatarField.tsx
 import { useAuth } from '../hooks/useAuth.ts'
 import { uploadAvatar } from '../hooks/useAvatarUpload.ts'
 import { markProfileReady } from '../hooks/useProfileReady.ts'
-import { pageShellCentered, pageShellPinnedFooter } from '../components/layout/pageShell.ts'
+import { pageShellPinnedFooter } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { supabase } from '../lib/supabase.ts'
 
 export default function Welcome() {
@@ -111,11 +112,7 @@ export default function Welcome() {
   }
 
   if (loading) {
-    return (
-      <main className={pageShellCentered}>
-        <p className="text-sm text-text-2">Loading...</p>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user) {

@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth.ts'
 import { useProfileReady } from '../../hooks/useProfileReady.ts'
 import { queryKeys } from '../../lib/queryKeys.ts'
 import { BottomTabBar } from './BottomTabBar.tsx'
+import { FullScreenSpinner } from '../Spinner.tsx'
 
 interface AuthGuardProps {
   children: ReactNode
@@ -21,11 +22,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     queryClient.getQueryData(queryKeys.profileReady(user.id)) !== undefined
 
   if (loading && !user) {
-    return (
-      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
-        <p className="text-sm text-text-2">Checking your session...</p>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user) {
@@ -33,11 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (profileLoading && !hasCachedProfileReady) {
-    return (
-      <main className="safe-screen-height flex items-center justify-center bg-bg px-5 text-text">
-        <p className="text-sm text-text-2">Loading your account...</p>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!profileReady && location.pathname !== '/welcome') {

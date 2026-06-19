@@ -5,8 +5,9 @@ import { CategoryBreakdownRow } from '../components/profile/CategoryBreakdownRow
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { Gumball } from '../components/profile/Gumball.tsx'
-import { ProfileMeHeader, ProfileMeHeaderSkeleton } from '../components/profile/ProfileMeHeader.tsx'
+import { ProfileMeHeader } from '../components/profile/ProfileMeHeader.tsx'
 import { pageShellTab, toastFrameClass } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfile } from '../hooks/useProfile.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -61,22 +62,7 @@ export default function ProfileMe() {
   }, [categoryBreakdown])
 
   if (loading || profileLoading) {
-    return (
-      <main className={pageShellTab}>
-        <ProfileMeHeaderSkeleton />
-        <section className="mt-2 flex flex-col items-center text-center">
-          <div className="skeleton h-20 w-20 rounded-full" />
-          <div className="skeleton mt-3 h-7 w-36 rounded" />
-          <div className="skeleton mt-1 h-4 w-24 rounded" />
-          <div className="skeleton mt-3 h-4 w-48 rounded" />
-          <div className="skeleton mt-4 h-9 w-28 rounded-full" />
-        </section>
-        <section className="mt-8 flex flex-col items-center">
-          <div className="skeleton h-40 w-40 rounded-full" />
-          <div className="skeleton mt-4 h-4 w-40 rounded" />
-        </section>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user) {

@@ -14,7 +14,7 @@ const backControlClassName =
 export function BackHeader({
   to,
   onBack,
-  label = 'back',
+  label = 'Back',
   className = '',
 }: BackHeaderProps) {
   const classNames = `${backControlClassName} ${className}`.trim()

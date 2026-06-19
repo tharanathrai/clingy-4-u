@@ -3,7 +3,8 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { CategoryChip } from '../components/gum/CategoryChip.tsx'
-import { pageShellCentered, pageShellScroll } from '../components/layout/pageShell.ts'
+import { pageShellScroll } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { OTPDisplay, type AcceptedMember } from '../components/confirmation/OTPDisplay.tsx'
 import { BridgeFormation } from '../components/confirmation/BridgeFormation.tsx'
 import { iconButtonClassName } from '../lib/iconButton.ts'
@@ -228,15 +229,7 @@ export default function PieceConfirm() {
   if (!id) return <Navigate to="/home" replace />
 
   if (authLoading || flowState === 'loading' || sessionLoading) {
-    return (
-      <main className={`${pageShellCentered} px-5`}>
-        <div className="skeleton h-24 w-24 rounded-full" />
-        <div className="skeleton mt-6 h-8 w-48 rounded" />
-        <div className="skeleton mt-3 h-4 w-32 rounded-full" />
-        <div className="mt-10 skeleton h-24 w-48 rounded-xl" />
-        <div className="skeleton mt-6 h-12 w-full rounded-full" />
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user || !piece) return <Navigate to="/home" replace />

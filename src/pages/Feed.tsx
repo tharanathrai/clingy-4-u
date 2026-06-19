@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toastFrameClass } from '../components/layout/pageShell.ts'
 import { FeedPostCard } from '../components/feed/FeedPostCard.tsx'
 import { PostDetailSheet } from '../components/feed/PostDetailSheet.tsx'
 import { Layout } from '../components/layout/Layout.tsx'
-import { EmptyStateIllustration } from '../components/EmptyStateIllustration.tsx'
+import { EmptyState } from '../components/EmptyState.tsx'
+import { ErrorState } from '../components/ErrorState.tsx'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useFeed, type FeedPost } from '../hooks/useFeed.ts'
 import type { PostQueryResult } from '../hooks/usePost.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
@@ -172,49 +174,29 @@ export default function Feed() {
     setSelectedPostId(postId)
   }
 
+  if (loading) {
+    return <FullScreenSpinner />
+  }
+
   return (
     <Layout>
       <main>
         <h1 className="app-page-title">the feed</h1>
 
-        {loading ? (
-          <section className="mt-8 space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="skeleton h-44 rounded-lg" />
-            ))}
-          </section>
+        {error ? (
+          <ErrorState message="Couldn't load your feed." onRetry={() => void refetch()} />
         ) : null}
 
-        {!loading && error ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <p className="text-sm text-text-2">Couldn&apos;t load your feed. Try again.</p>
-            <button
-              type="button"
-              onClick={() => void refetch()}
-              className="mt-4 rounded-full bg-surface-2 px-5 py-2 text-sm text-text-2"
-            >
-              Retry
-            </button>
-          </section>
+        {!error && localPosts.length === 0 ? (
+          <EmptyState
+            variant="bridge"
+            headline="Nothing here yet."
+            subline="Your feed fills up when your people stick plans together."
+            cta={{ label: 'Make a plan', to: '/piece/new' }}
+          />
         ) : null}
 
-        {!loading && !error && localPosts.length === 0 ? (
-          <section className="mt-8 rounded-lg bg-surface p-6 text-center">
-            <EmptyStateIllustration variant="bridge" />
-            <h2 className="font-display text-2xl text-text">Nothing here yet.</h2>
-            <p className="mt-2 text-sm text-text-2">
-              Your feed fills up when your people do things together.
-            </p>
-            <Link
-              to="/piece/new"
-              className="btn-primary mt-5 inline-block rounded-full bg-accent px-7 py-3.5 text-sm font-medium text-white"
-            >
-              Make a plan
-            </Link>
-          </section>
-        ) : null}
-
-        {!loading && !error && localPosts.length > 0 ? (
+        {!error && localPosts.length > 0 ? (
           <ul className="mt-5 space-y-3">
             {visiblePosts.map((post) => (
               <li

@@ -2,6 +2,7 @@ import { Send, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
+import { Spinner } from '../Spinner.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { type CommentWithUser, type PostQueryResult, usePost } from '../../hooks/usePost.ts'
 import {
@@ -270,7 +271,11 @@ export function PostDetailSheet({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col px-5 pb-3">
-          {loading ? <p className="text-sm text-text-2">Loading post...</p> : null}
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <Spinner />
+            </div>
+          ) : null}
           {!loading && error ? <p className="text-sm text-playful">{error}</p> : null}
 
           {!loading && !error && post ? (

@@ -8,6 +8,7 @@ import { CategoryPicker } from '../components/gum/CategoryPicker.tsx'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellCentered, pageShellScroll, toastFrameClass } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
@@ -389,18 +390,7 @@ export default function PieceDetail() {
   if (!id) return <Navigate to="/home" replace />
 
   if (loading) {
-    return (
-      <main className={pageShellScroll}>
-        <div className="skeleton mb-2 h-11 w-16 rounded" />
-        <div className="mx-auto skeleton h-24 w-24 rounded-full" />
-        <div className="mx-auto mt-4 skeleton h-8 w-48 rounded" />
-        <div className="mx-auto mt-3 skeleton h-5 w-24 rounded-full" />
-        <div className="mt-10 space-y-3">
-          <div className="skeleton h-12 w-full rounded-full" />
-          <div className="skeleton h-12 w-full rounded-full" />
-        </div>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (error || !piece || !userId) {

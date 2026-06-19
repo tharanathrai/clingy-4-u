@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
 import { pageShellScroll } from '../components/layout/pageShell.ts'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { invalidateConnectionFlow } from '../lib/invalidate.ts'
 import { usePaginatedItems } from '../hooks/usePaginatedItems.ts'
@@ -128,16 +129,7 @@ export default function ConnectionRequests() {
   }
 
   if (loading || fetching) {
-    return (
-      <main className={`${pageShellScroll} safe-content-bottom py-8`}>
-        <div className="skeleton mb-6 h-8 w-48 rounded" />
-        <ul className="space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <li key={index} className="skeleton h-24 rounded-lg" />
-          ))}
-        </ul>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (!user) {

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Spinner } from '../Spinner.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { supabase } from '../../lib/supabase.ts'
 import { withAvatarSize } from '../../utils/avatar.ts'
@@ -246,7 +247,11 @@ export function ConnectionRequestSheet({
 
         <h2 className="font-display text-2xl text-text">Connection request</h2>
 
-        {loading ? <p className="mt-4 text-sm text-text-2">Loading request...</p> : null}
+        {loading ? (
+          <div className="mt-6 flex justify-center">
+            <Spinner />
+          </div>
+        ) : null}
 
         {!loading && error ? (
           <div className="mt-4 rounded-lg bg-surface-2 p-4">

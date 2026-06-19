@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
+import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useProfileReady } from '../hooks/useProfileReady.ts'
 import type { CategorySlug } from '../lib/constants.ts'
@@ -134,11 +135,7 @@ export default function Landing() {
   }, [])
 
   if (loading || (user && (profileLoading || profileReady === null))) {
-    return (
-      <main className="safe-screen-height mx-auto w-full max-w-md bg-bg flex items-center justify-center">
-        <p className="text-sm text-text-2">Loading...</p>
-      </main>
-    )
+    return <FullScreenSpinner />
   }
 
   if (user) {
@@ -250,7 +247,7 @@ export default function Landing() {
             <path fill="#4A90E2" d="M6.8 14.5c-.2-.6-.3-1.2-.3-1.8s.1-1.2.3-1.8V8.5H3.5C2.9 9.8 2.5 11.3 2.5 12.7s.4 2.9 1 4.2l3.3-2.4z" />
             <path fill="#FBBC05" d="M12 5.1c1.4 0 2.6.5 3.6 1.3l2.7-2.7C16.6 2.1 14.5 1 12 1 8.2 1 5 3.2 3.5 6.1l3.3 2.4c.7-2.2 2.8-3.4 5.2-3.4z" />
           </svg>
-          <span>{submitting ? 'Signing in...' : 'continue with Google'}</span>
+          <span>{submitting ? 'Signing in...' : 'Continue with Google'}</span>
         </button>
 
         {errorMessage ? (
