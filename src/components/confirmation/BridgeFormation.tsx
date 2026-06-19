@@ -183,7 +183,7 @@ export function BridgeFormation({
       </div>
 
       {/* Hub scene */}
-      <div style={{ position: 'relative', width: SZ, height: SZ, zIndex: 2, margin: '28px 0' }}>
+      <div style={{ position: 'relative', width: SZ, height: SZ, zIndex: 2, marginTop: 28 }}>
         {/* Ambient glow */}
         <div style={{
           position: 'absolute', left: '50%', top: '50%',
@@ -237,17 +237,6 @@ export function BridgeFormation({
             </div>
           )
         })}
-      </div>
-
-      {/* Status text */}
-      <div style={{ textAlign: 'center', zIndex: 5 }}>
-        {!formed ? (
-          <p style={{ margin: 0, fontSize: 16, color: 'var(--color-text-secondary)' }}>stretching your bridge…</p>
-        ) : (
-          <p style={{ margin: 0, fontWeight: 600, fontSize: 26, color: catHex, animation: 'formed-title-anim 0.5s ease-out' }}>
-            bridge formed
-          </p>
-        )}
       </div>
 
       {/* Share prompt — fixed bottom panel */}
