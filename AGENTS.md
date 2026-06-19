@@ -4,7 +4,7 @@
 
 That file is your source of truth for this project.
 
-For Sticky Bridges, also read before implementing:
+For clingy, also read before implementing:
 - `PRD.md` — product requirements
 - `DESIGN.md` — design system and copy
 - `DEVDOC.md` — flow status and regression surface

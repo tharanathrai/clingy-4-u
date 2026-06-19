@@ -1,4 +1,4 @@
-# clingy 4 u (Sticky Bridges)
+# clingy
 
 Mobile-first PWA for making real-life plans with people you care about. Every plan is a piece of gum; every completed plan forms a permanent bridge in your network graph.
 

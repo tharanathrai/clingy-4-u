@@ -1,6 +1,8 @@
-# Sticky Bridges — Developer Documentation
-**Version:** 0.11 (Contextual state & navigation audit)
-**Last updated:** 2026-06-12 — spec `015` feed profile navigation (C-04 stretch, F-01–F-05)
+# clingy — Developer Documentation
+**Version:** 0.12 (Group plans, plan edits, friendship management, analytics)
+**Last updated:** 2026-06-19 — group plans, `edit-gum-piece`, friendship snooze/remove, analytics pipeline, v2 landing/ceremony
+
+> Formerly "Sticky Bridges." Product name is **clingy**.
 
 ### Status vocabulary
 - `Verified (automated)` — covered by a passing unit or E2E test in this repo
@@ -212,6 +214,38 @@ Spec: `specs/015-feed-profile-navigation`
 
 ---
 
+### Group Plans
+**Status: Shipped** — audit 🟡 (migrations applied; multi-member flows pending-live)
+- What works: `create-gum-piece` accepts `recipient_ids[]`; inserts `gum_piece_members` (creator `accepted`, invitees `pending`); first invitee accept flips placeholder → active; per-member accept/decline via `respond-gum-piece`; creator cancel turns whole plan down + notifies all other members; per-pair slot count evaluated across membership rows; RLS scopes visibility to members. Atomic confirmed-member append RPC backs confirmation (`20260618000000`–`20260618000002`).
+- Migrations: `20260617000000_group_plans.sql`, `20260617400000_fix_gum_pieces_rls_for_group_plans.sql`, `20260619000000_enable_gum_piece_members_rls.sql`
+- Components / fns: `supabase/functions/create-gum-piece`, `supabase/functions/respond-gum-piece`, `src/pages/PieceNew.tsx`, `src/pages/PieceDetail.tsx`
+
+---
+
+### Plan Edit
+**Status: Shipped** — audit 🟡 (edge fn validated by code review; live multi-member accept pending)
+- What works: `edit-gum-piece` with `propose` / `accept_edit` / `decline_edit`; placeholder edits apply immediately (creator only); active edits stage in `gum_pieces.pending_edit` (one at a time) and apply when every other accepted member accepts; `planned_date` change recomputes `expires_at`; category change re-derives `color_hex`; validation (title 1–60, valid slug, date within [yesterday, +1yr], ≥1 change); notifications `plan_edit_proposed` (+ email) / `plan_edit_accepted` / `plan_edit_declined`.
+- Migrations: `20260617200000_add_pending_edit.sql`
+- Components / fns: `supabase/functions/edit-gum-piece`, `src/pages/PieceDetail.tsx`
+
+---
+
+### Friendship Management
+**Status: Shipped** — audit 🟡 (snooze/remove live-verify pending)
+- What works: `FriendshipMenu` on other-user profile → `useFriendshipActions` → RPCs `snooze_friend` / `unsnooze_friend` / `remove_friend`; snooze sets per-side `snoozed_by_a/b` flags (mutes feed for snoozer only); remove sets connection `status = removed`; cache invalidation of profile/feed (+network on remove); `validate-qr-token` handles past-friend reconnect; snooze reminder dismiss persisted in localStorage (`clingy:snooze-reminder-dismissed`).
+- Migrations: `20260618100000_friendship_management.sql`, `20260618200000_connections_replica_identity.sql`
+- Components / hooks: `src/components/profile/FriendshipMenu.tsx`, `src/hooks/useFriendshipActions.ts`, `src/hooks/useConnectionsCount.ts`
+
+---
+
+### Analytics (anonymized, opt-out)
+**Status: Shipped (deploy pending)** — `analytics.test.ts` ✓; needs `ANALYTICS_SALT` secret + `track-events` deploy + `db push`
+- What works: `analytics.*` views over domain tables (onboarding/piece-lifecycle/confirmation/category/engagement/retention); `analytics_events` table (HMAC pseudonym, RLS on with no client policies, freetext-guard trigger); `track-events` edge fn (allowlist + sanitizer + HMAC in `_shared/analytics.ts`); client `analytics.ts` (`AnalyticsSink` seam, `SupabaseSink` ships / `PostHogSink` stub; buffered flush; DNT + opt-out honored; never throws into UI); `useTracker`; Settings "Share anonymous usage data" toggle (default on); rage-tap detector. Loop: `insight-pack.sql` → `BACKLOG.md`.
+- Migrations: `20260619100000_analytics_views.sql`, `20260619110000_analytics_events.sql`
+- Components / fns: `src/lib/analytics.ts`, `src/hooks/useTracker.ts`, `supabase/functions/track-events`, `supabase/functions/_shared/analytics.ts`, `supabase/scripts/insight-pack.sql`, `docs/ANALYTICS_LOOP.md`
+
+---
+
 ## Post-MVP audit (spec 008)
 
 Full plan: [`IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md). Symbols: ✅ automated | 🟡 stale manual | 🔶 partial | ⬜ v2 deferred | 🔧 fixed in 007, verify via 010.
@@ -255,7 +289,7 @@ Every `postgres_changes` subscription uses `subscribePostgresChannel()` from `sr
 - `useConfirmationSession`: INSERT/UPDATE call `setQueryData` directly; DELETE fires `onBridgeFormed` callback + clears cache
 
 ### 4. `verify_jwt = false` in `supabase/config.toml`
-All 13 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)` (or service-role bearer for cron/email). Intentional for error message flexibility.
+All 15 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)` (or service-role bearer for cron/email/analytics). Intentional for error message flexibility. **Config drift:** `config.toml` registers only 13 — `edit-gum-piece` and `track-events` still need `[functions.*]` entries.
 
 ### 5. Category logic duplicated client + server
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
@@ -300,6 +334,21 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 **Loading semantics:** Hooks expose `loading: true` only when `isPending` with no cached data. Auth loading blocks hooks only when `userId` is still unknown. Tab roots render cached content immediately on revisit.
 
 **Deviation from `.cursor/rules`:** Feed/gum/network/post use debounced `invalidateQueries` instead of full `setQueryData` patches — documented here; notifications and confirmation session use direct patches per rules.
+
+### 14. Group membership in `gum_piece_members`, not just creator/recipient
+`gum_pieces.recipient_id` remains as a legacy 1:1 pointer, but membership and per-member state (role, pending/accepted/declined) live in `gum_piece_members`. All accept/decline/edit/confirm logic keys off membership rows, not `recipient_id`. Existing pieces were backfilled (creator + recipient) in `20260617000000_group_plans.sql`.
+
+### 15. Plan edits staged in `pending_edit` JSONB
+Active-plan edits are not applied directly — they sit in `gum_pieces.pending_edit` (`{title?, category?, planned_date?, proposed_by, proposed_at, accepted_by[]}`) until every other accepted member accepts. One proposal at a time (`edit_already_pending`). Placeholder edits bypass this and apply immediately (creator only). Server is canonical; clients call `edit-gum-piece`.
+
+### 16. `planned_date` drives `expires_at`
+When a plan has a `planned_date`, an active piece expires at `planned_date + 1 day`; without one it falls back to `accepted_at + 1yr`. Edits to `planned_date` on active pieces recompute `expires_at`. `run-expiry` reads `expires_at` only — it does not special-case `planned_date`.
+
+### 17. Friendship state on `connections` (status + per-side snooze)
+`connections.status` gained `removed`; `snoozed_by_a` / `snoozed_by_b` mute a friend for one side only. Mutations go through SECURITY DEFINER RPCs (`snooze_friend` / `unsnooze_friend` / `remove_friend`) using `auth.uid()`, not direct table writes. Feed/network queries must respect snooze + removed.
+
+### 18. Analytics is a provider-seam pipeline, write-only from clients
+`src/lib/analytics.ts` exposes `track()` behind an `AnalyticsSink` interface (`SupabaseSink` now, `PostHogSink` stub) so call sites never change when a provider is swapped. Events are buffered and flushed (interval + visibilitychange + pagehide), best-effort, and never throw into UI. Server side, `track-events` is the only writer; `analytics_events` has RLS on with no client policies (service-role only) plus a freetext-reject trigger. Pseudonym is HMAC(user_id|install_id, `ANALYTICS_SALT`) — set the secret before deploy or inserts fail.
 
 ---
 
