@@ -14,6 +14,10 @@ interface BlobState {
   y: number
   vx: number
   vy: number
+  sx: number
+  sy: number
+  svx: number
+  svy: number
 }
 
 const SEED: BlobState[] = [
@@ -30,6 +34,12 @@ const MIN_SPD = 0.10
 const MAX_SPD = 0.5
 const PAD = 20
 
+// viscous-blob deformation: one damped spring per blob drives trail + swish + jiggle
+const SPRING_STIFF = 0.22 // pull toward true position
+const SPRING_DAMP = 0.76 // <1 = wobble; lower = more jiggle
+const DEFORM_GAIN = 0.012 // spring-vel (px/frame) -> stretch
+const DEFORM_MAX = 0.34 // cap stretch so it never tears
+
 export default function Landing() {
   const { user, loading, signInWithGoogle } = useAuth()
   const { profileReady, isLoading: profileLoading } = useProfileReady(user?.id ?? null)
@@ -37,7 +47,10 @@ export default function Landing() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const stageRef = useRef<HTMLDivElement>(null)
-  const blobsRef = useRef<BlobState[]>(SEED.map(b => ({ ...b })))
+  const blobsRef = useRef<BlobState[]>(SEED.map(b => ({ ...b, sx: b.x, sy: b.y, svx: 0, svy: 0 })))
+  const reduceMotion = useRef(
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  ).current
   const heldRef = useRef<{
     id: number
     pid: number
@@ -111,22 +124,30 @@ export default function Landing() {
       const H = stage?.clientHeight ?? 780
       const heldNow = heldRef.current?.id ?? null
       for (const b of blobsRef.current) {
-        if (b.id === heldNow) continue
-        b.vx += (Math.random() - 0.5) * 0.012
-        b.vy += (Math.random() - 0.5) * 0.012
-        b.vx *= 0.995; b.vy *= 0.995
-        let spd = Math.hypot(b.vx, b.vy)
-        if (spd < MIN_SPD) {
-          const a = Math.atan2(b.vy || 0.001, b.vx || 0.001)
-          b.vx = Math.cos(a) * MIN_SPD; b.vy = Math.sin(a) * MIN_SPD; spd = MIN_SPD
+        if (b.id !== heldNow) {
+          b.vx += (Math.random() - 0.5) * 0.012
+          b.vy += (Math.random() - 0.5) * 0.012
+          b.vx *= 0.995; b.vy *= 0.995
+          let spd = Math.hypot(b.vx, b.vy)
+          if (spd < MIN_SPD) {
+            const a = Math.atan2(b.vy || 0.001, b.vx || 0.001)
+            b.vx = Math.cos(a) * MIN_SPD; b.vy = Math.sin(a) * MIN_SPD; spd = MIN_SPD
+          }
+          if (spd > MAX_SPD) { b.vx *= MAX_SPD / spd; b.vy *= MAX_SPD / spd }
+          b.x += b.vx; b.y += b.vy
+          const r = b.size / 2 + PAD
+          if (b.x < r) { b.x = r; b.vx = Math.abs(b.vx) * 0.8 }
+          if (b.x > W - r) { b.x = W - r; b.vx = -Math.abs(b.vx) * 0.8 }
+          if (b.y < r) { b.y = r; b.vy = Math.abs(b.vy) * 0.8 }
+          if (b.y > H - r) { b.y = H - r; b.vy = -Math.abs(b.vy) * 0.8 }
         }
-        if (spd > MAX_SPD) { b.vx *= MAX_SPD / spd; b.vy *= MAX_SPD / spd }
-        b.x += b.vx; b.y += b.vy
-        const r = b.size / 2 + PAD
-        if (b.x < r) { b.x = r; b.vx = Math.abs(b.vx) * 0.8 }
-        if (b.x > W - r) { b.x = W - r; b.vx = -Math.abs(b.vx) * 0.8 }
-        if (b.y < r) { b.y = r; b.vy = Math.abs(b.vy) * 0.8 }
-        if (b.y > H - r) { b.y = H - r; b.vy = -Math.abs(b.vy) * 0.8 }
+        // visual spring lags toward true position -> trail + swish + release jiggle
+        const ax = (b.x - b.sx) * SPRING_STIFF
+        const ay = (b.y - b.sy) * SPRING_STIFF
+        b.svx = (b.svx + ax) * SPRING_DAMP
+        b.svy = (b.svy + ay) * SPRING_DAMP
+        b.sx += b.svx
+        b.sy += b.svy
       }
       setTick(t => t + 1)
     }
@@ -172,6 +193,15 @@ export default function Landing() {
       <div className="absolute inset-0 z-[1]">
         {blobsRef.current.map(b => {
           const held = heldId === b.id
+          const px = reduceMotion ? b.x : b.sx
+          const py = reduceMotion ? b.y : b.sy
+          let deform = 'none'
+          if (!reduceMotion) {
+            const sp = Math.hypot(b.svx, b.svy)
+            const stretch = Math.min(sp * DEFORM_GAIN, DEFORM_MAX)
+            const ang = Math.atan2(b.svy, b.svx)
+            deform = `rotate(${ang}rad) scale(${1 + stretch}, ${1 - stretch * 0.6}) rotate(${-ang}rad)`
+          }
           return (
             <div
               key={b.id}
@@ -180,22 +210,23 @@ export default function Landing() {
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                transform: `translate(${b.x - b.size / 2}px, ${b.y - b.size / 2}px)`,
+                transform: `translate(${px - b.size / 2}px, ${py - b.size / 2}px)`,
                 cursor: held ? 'grabbing' : 'grab',
                 touchAction: 'none',
                 zIndex: held ? 30 : 5,
                 willChange: 'transform',
               }}
             >
-              <div
-                style={{
-                  transform: `scale(${held ? 1.2 : 1})`,
-                  transition: 'transform 0.22s cubic-bezier(0.34,1.4,0.64,1)',
-                  filter: held ? 'drop-shadow(0 8px 24px rgba(0,0,0,0.45))' : 'none',
-                  animation: held ? 'wiggle 0.5s ease-in-out infinite' : 'none',
-                }}
-              >
-                <GumBlob category={b.cat} size={b.size} morphSeed={b.id} />
+              <div style={{ transform: deform, willChange: 'transform' }}>
+                <div
+                  style={{
+                    transform: `scale(${held ? 1.2 : 1})`,
+                    transition: 'transform 0.22s cubic-bezier(0.34,1.4,0.64,1)',
+                    filter: held ? 'drop-shadow(0 8px 24px rgba(0,0,0,0.45))' : 'none',
+                  }}
+                >
+                  <GumBlob category={b.cat} size={b.size} morphSeed={b.id} />
+                </div>
               </div>
             </div>
           )
