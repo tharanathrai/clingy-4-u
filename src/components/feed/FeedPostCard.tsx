@@ -124,7 +124,7 @@ export function FeedPostCard({
               <button
                 type="button"
                 onClick={onComment}
-                className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
                 aria-label="Open comments"
               >
                 <MessageCircle size={16} strokeWidth={1.75} />
@@ -133,7 +133,7 @@ export function FeedPostCard({
               <button
                 type="button"
                 onClick={onReact}
-                className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
                 aria-label="Toggle reaction"
               >
                 <Heart
@@ -149,7 +149,7 @@ export function FeedPostCard({
             <button
               type="button"
               onClick={onReact}
-              className="inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-2 py-1.5 text-sm text-text-2 transition-opacity active:opacity-80"
               aria-label="Toggle reaction"
             >
               <Heart

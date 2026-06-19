@@ -22,12 +22,3 @@ export function ProfileMeHeader() {
     </div>
   )
 }
-
-export function ProfileMeHeaderSkeleton() {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="skeleton h-11 w-11 rounded-full" />
-      <div className="skeleton h-11 w-11 rounded-full" />
-    </div>
-  )
-}

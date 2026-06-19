@@ -254,7 +254,7 @@ export default function Add() {
               clearCachedToken()
               void fetchToken({ force: true, showLoading: false })
             }}
-            className="ml-2 flex items-center gap-1.5 text-sm text-text-3 transition-colors active:text-text-2"
+            className="ml-2 flex min-h-11 items-center gap-1.5 text-sm text-text-3 transition-colors active:text-text-2"
           >
             <RefreshCcw size={14} strokeWidth={1.75} />
             Refresh

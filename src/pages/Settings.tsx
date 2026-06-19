@@ -150,6 +150,9 @@ function NotificationToggleRow({
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label={label}
       onClick={onToggle}
       className="flex min-h-11 w-full items-center justify-between rounded-lg bg-surface-2 px-4 py-3 text-left"
     >

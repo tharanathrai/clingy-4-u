@@ -460,7 +460,7 @@ function ScanResultBanner({
       <button
         type="button"
         onClick={onDismiss}
-        className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-text-2 transition hover:bg-surface hover:text-text active:scale-95"
+        className="absolute right-2 top-2 flex min-h-11 min-w-11 items-center justify-center rounded-full text-text-2 transition hover:bg-surface hover:text-text active:scale-95"
         aria-label="Dismiss"
       >
         <X size={18} strokeWidth={1.75} />

@@ -82,7 +82,7 @@ export function ConnectionRequestSentModal({
         <button
           type="button"
           onClick={() => dismiss()}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
+          className="absolute right-3 top-3 flex min-h-11 min-w-11 items-center justify-center rounded-full text-text-2 transition hover:bg-surface-2 hover:text-text active:scale-95"
           aria-label="Close"
         >
           <X size={18} strokeWidth={1.75} />

@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { ProfileMeHeader, ProfileMeHeaderSkeleton } from '../components/profile/ProfileMeHeader.tsx'
+import { ProfileMeHeader } from '../components/profile/ProfileMeHeader.tsx'
 
 describe('ProfileMeHeader', () => {
   it('links to graveyard from the top-left icon button', () => {
@@ -28,12 +28,5 @@ describe('ProfileMeHeader', () => {
 
     const settingsLink = screen.getByRole('link', { name: 'Settings' })
     expect(settingsLink).toHaveAttribute('href', '/settings')
-  })
-})
-
-describe('ProfileMeHeaderSkeleton', () => {
-  it('renders two icon button placeholders', () => {
-    const { container } = render(<ProfileMeHeaderSkeleton />)
-    expect(container.querySelectorAll('.skeleton')).toHaveLength(2)
   })
 })
