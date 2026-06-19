@@ -925,6 +925,16 @@ body.modal-scroll-lock .post-detail-viewport {
   50%       { transform: rotate(5deg); }
 }
 
+@keyframes es-hue-spin {
+  to { filter: hue-rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .es-blob-hue-spin {
+    animation: es-hue-spin 12s linear infinite;
+  }
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
