@@ -7,7 +7,7 @@ const BG = '#080612'
 const S = 3 // scale: 360 viewBox → 1080 canvas
 const CX = 180 * S // 540 — centre X
 const CY = 190 * S // 570 — centre Y
-const YOU_R = 20 * S // 60 — centre avatar radius
+const YOU_R = 22 * S // 66 — centre avatar radius (larger than any friend node)
 const BAND_Y_MIN = 150 * S // 450
 const BAND_Y_MAX = 250 * S // 750
 const GAP = 10 * S // 30 — inter-node gap
@@ -110,7 +110,7 @@ function computeLayout(people: ShareCardPerson[], userName: string): NodeLayout[
     const rad = ((94 + rnd() * 44) - depth * 22) * S
     const x = CX + Math.cos(ang) * rad * 1.15
     const y = CY + Math.sin(ang) * rad * 0.5
-    const r = ((30 + p.sharedCount * 3.4) / 2 + 9) * S
+    const r = (14 + p.sharedCount * 1.0) * S
     return { x, y, r, seed: rnd(), person: p }
   })
 
@@ -442,7 +442,7 @@ export const composeSocialShareCard = async (
   nodes.forEach((nd, i) => {
     const p = nd.person
     const col = CATEGORIES[p.topCat].color_hex
-    const avatarR = ((30 + p.sharedCount * 3.4) / 2) * S
+    const avatarR = (7 + p.sharedCount * 1.0) * S
 
     drawRing(ctx, nd.x, nd.y, avatarR + 5 * S, BG, 6 * S)
     drawRing(ctx, nd.x, nd.y, avatarR + 1.5 * S, col, 3 * S)
