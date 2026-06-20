@@ -60,8 +60,10 @@ export default function PieceNew() {
   const [plannedDate, setPlannedDate] = useState('')
   const [toast, setToast] = useState<string | null>(null)
 
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const maxDateStr = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const localDateStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const todayStr = localDateStr(new Date())
+  const maxDateStr = localDateStr(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000))
 
   const locationState = location.state as LocationState | null
 

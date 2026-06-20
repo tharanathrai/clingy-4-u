@@ -301,7 +301,8 @@ function resolvePlannedDate(raw?: string): string | null {
     return null
   }
   const todayMs = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z').getTime()
-  if (parsed.getTime() < todayMs) {
+  if (parsed.getTime() < todayMs - 86400000) {
+    // Allow ±1 day of slack so the client's local "today" passes regardless of timezone offset.
     return null
   }
   return raw

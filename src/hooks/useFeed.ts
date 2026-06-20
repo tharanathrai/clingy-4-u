@@ -66,6 +66,32 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
     throw new Error(ownPostsError.message)
   }
 
+  // Bridges the user participates in — they should see every post on these,
+  // regardless of author or is_public (drafts on a shared bridge included).
+  const { data: myBridgesData, error: myBridgesError } = await supabase
+    .from('bridges')
+    .select('id')
+    .or(`user_a_id.eq.${userId},user_b_id.eq.${userId}`)
+
+  if (myBridgesError) {
+    throw new Error(myBridgesError.message)
+  }
+
+  const myBridgeIds = (myBridgesData ?? []).map((b) => b.id as string)
+
+  let participationPosts: Post[] = []
+  if (myBridgeIds.length > 0) {
+    const { data: participationPostsData, error: participationPostsError } = await supabase
+      .from('posts')
+      .select('*')
+      .in('bridge_id', myBridgeIds)
+
+    if (participationPostsError) {
+      throw new Error(participationPostsError.message)
+    }
+    participationPosts = (participationPostsData ?? []) as Post[]
+  }
+
   let networkPosts: Post[] = []
   if (connectedUserIds.length > 0) {
     const { data: networkPostsData, error: networkPostsError } = await supabase
@@ -82,7 +108,7 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
 
   const dedupedPosts = Array.from(
     new Map(
-      ([...((ownPostsData ?? []) as Post[]), ...networkPosts]).map((post) => [post.id, post]),
+      ([...((ownPostsData ?? []) as Post[]), ...participationPosts, ...networkPosts]).map((post) => [post.id, post]),
     ).values(),
   ).sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),

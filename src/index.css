@@ -184,6 +184,8 @@ body {
 }
 
 .app-device-frame {
+  min-height: 100vh;
+  height: 100vh;
   min-height: 100dvh;
   height: 100dvh;
   display: flex;
@@ -193,6 +195,8 @@ body {
 
 .app-device-screen {
   width: min(100vw, 430px);
+  min-height: 100vh;
+  height: 100vh;
   min-height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
   height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
   background: #12101a;
@@ -349,6 +353,8 @@ body.modal-scroll-lock .post-detail-viewport {
 }
 
 .safe-screen-height {
+  min-height: 100vh;
+  height: 100vh;
   min-height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
   height: calc(100dvh - var(--browser-top-inset) - var(--browser-bottom-inset));
 }

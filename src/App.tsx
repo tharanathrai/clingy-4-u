@@ -45,54 +45,10 @@ function App() {
     track('screen_view', undefined, normalizeSurface(location.pathname))
   }, [location.pathname])
 
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return
-    }
-
-    const root = document.documentElement
-    const setInsets = () => {
-      const viewport = window.visualViewport
-      if (!viewport) {
-        root.style.setProperty('--browser-top-inset', '0px')
-        root.style.setProperty('--browser-bottom-inset', '0px')
-        return
-      }
-
-      const viewportBottomGap = Math.max(
-        0,
-        window.innerHeight - viewport.height - viewport.offsetTop,
-      )
-      // Software keyboard open: the visual viewport scrolls/resizes on every keystroke as the
-      // browser keeps the focused field in view. Recomputing insets here churns the
-      // --browser-*-inset vars, so safe-screen-height / safe-content-top reflow on each tick
-      // and the page visibly bounces while typing. Freeze insets until the keyboard closes;
-      // they only describe browser chrome (URL bar) anyway, not the keyboard.
-      const keyboardLikelyOpen = viewportBottomGap > 120
-      if (keyboardLikelyOpen) {
-        return
-      }
-
-      const topInset = Math.max(0, viewport.offsetTop)
-      root.style.setProperty('--browser-top-inset', `${topInset}px`)
-      root.style.setProperty('--browser-bottom-inset', `${viewportBottomGap}px`)
-    }
-
-    setInsets()
-
-    const viewport = window.visualViewport
-    viewport?.addEventListener('resize', setInsets)
-    viewport?.addEventListener('scroll', setInsets)
-    window.addEventListener('resize', setInsets)
-    window.addEventListener('orientationchange', setInsets)
-
-    return () => {
-      viewport?.removeEventListener('resize', setInsets)
-      viewport?.removeEventListener('scroll', setInsets)
-      window.removeEventListener('resize', setInsets)
-      window.removeEventListener('orientationchange', setInsets)
-    }
-  }, [])
+  // Browser chrome (URL bar) is handled natively by CSS `100dvh`, and notch safe-areas by
+  // `env(safe-area-inset-*)`. The old JS visualViewport hack re-subtracted the chrome that dvh
+  // already excludes (double-count → short content / layout jumps), so it has been removed.
+  // --browser-*-inset stay at their 0px defaults from index.css.
 
   return (
     <div className="app-device-frame">
