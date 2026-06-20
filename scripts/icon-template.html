@@ -1,0 +1,96 @@
+<!doctype html>
+<!-- Clingy app icon — design-system option C1 ("slime-people" mark on dark
+     radial tile) from the Claude Design project explorations/logo-people.html.
+     slimeSVG()/CHAOS_A/PAL_GRAD reproduced verbatim from that file so output
+     matches the design system. Rendered to PNG by scripts/generate-icons.mjs. -->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;padding:0}
+  /* C1 "dark tile" background */
+  .tile{width:512px;height:512px;
+    background:radial-gradient(130% 130% at 30% 20%, #221a36, #12101a 72%);
+    display:grid;place-items:center;overflow:hidden}
+  /* mark fills ~76% of the tile — like the design icon, but inside the
+     maskable 80% safe zone */
+  .mark{width:76%;display:flex;align-items:center;justify-content:center}
+  .mark svg{width:100%!important;height:auto!important;display:block;overflow:visible}
+</style>
+</head>
+<body>
+  <div class="tile"><div id="mark" class="mark"></div></div>
+<script>
+let UID = 0;
+function slimeSVG(opts){
+  const { layers, w=270, h=185, ground=150, gloss=true, reflection=false, scale=1 } = opts;
+  const gooId = 'goo'+(UID++);
+  const mid = 'refmask'+(UID++);
+  const allFigs = [];
+  let layerMarkup = '';
+  let gradDefs = '';
+  layers.forEach((L, li)=>{
+    const isGrad = Array.isArray(L.fill);
+    let fillRef = L.fill;
+    if(isGrad){
+      const gid = 'grad'+UID+'_'+li;
+      fillRef = `url(#${gid})`;
+      gradDefs += `<linearGradient id="${gid}" x1="${w*0.3}" y1="34" x2="${w*0.62}" y2="${ground}" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="${L.fill[0]}"/><stop offset="100%" stop-color="${L.fill[1]}"/></linearGradient>`;
+    }
+    let blobs = `<ellipse cx="${L.base.cx}" cy="${L.base.cy}" rx="${L.base.rx}" ry="${L.base.ry}"/>`;
+    for(const f of L.figures){
+      blobs += `<ellipse cx="${f.sx}" cy="${f.sy}" rx="${f.srx}" ry="${f.sry}"/><circle cx="${f.hx}" cy="${f.hy}" r="${f.hr}"/>`;
+      allFigs.push({...f, tier: li});
+    }
+    layerMarkup += `<g fill="${fillRef}" filter="url(#${gooId})">${blobs}</g>`;
+  });
+  let sheen = '';
+  if(gloss){
+    for(const f of allFigs){
+      const op = f.tier === layers.length-1 ? 0.42 : 0.24;
+      sheen += `<ellipse cx="${f.hx - f.hr*0.34}" cy="${f.hy - f.hr*0.42}" rx="${f.hr*0.4}" ry="${f.hr*0.28}" fill="#ffffff" opacity="${op}" transform="rotate(-22 ${f.hx} ${f.hy})"/>`;
+    }
+  }
+  const defs = `<defs>
+    <filter id="${gooId}" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5.4" result="b"/>
+      <feColorMatrix in="b" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo"/>
+      <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+    </filter>
+    ${gradDefs}
+    <linearGradient id="${mid}" x1="0" y1="${ground}" x2="0" y2="${ground+70}" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.4"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <mask id="${mid}m"><rect x="0" y="${ground}" width="${w}" height="80" fill="url(#${mid})"/></mask>
+  </defs>`;
+  const ref = reflection
+    ? `<g mask="url(#${mid}m)" opacity="0.85"><g transform="translate(0 ${ground*2}) scale(1 -1)">${layerMarkup}</g></g>`
+    : '';
+  return `<svg width="${w*scale}" height="${(h+(reflection?42:0))*scale}" viewBox="0 0 ${w} ${h+(reflection?42:0)}">${defs}${ref}${layerMarkup}${sheen}</svg>`;
+}
+function buildLayers(coords, pal){
+  return [
+    {fill: pal.back,  base: coords.backBase,  figures: coords.back},
+    {fill: pal.front, base: coords.frontBase, figures: coords.front},
+  ];
+}
+const CHAOS_A = {
+  front:[
+    {hx:108, hy:84,  hr:22, sx:106, sy:129, srx:45, sry:34},
+    {hx:208, hy:96,  hr:17, sx:203, sy:130, srx:33, sry:27},
+  ],
+  frontBase:{cx:150, cy:150, rx:104, ry:16},
+  back:[
+    {hx:50,  hy:102, hr:15, sx:54,  sy:131, srx:30, sry:26},
+    {hx:156, hy:58,  hr:13, sx:155, sy:110, srx:27, sry:30},
+  ],
+  backBase:{cx:96, cy:148, rx:92, ry:17}
+};
+const PAL_GRAD = {front:['#edcdf9','#b76fe0'], back:['#a877cf','#7a45b0']};
+function iconInner(pal){
+  return slimeSVG({layers:buildLayers(CHAOS_A, pal), w:270, h:170, ground:140, gloss:true, reflection:false, scale:0.66});
+}
+document.getElementById('mark').innerHTML = iconInner(PAL_GRAD);
+</script>
+</body>
+</html>
