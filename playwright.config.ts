@@ -22,7 +22,7 @@ export default defineConfig({
 
   webServer: {
     command:
-      'VITE_SUPABASE_URL=https://placeholder.supabase.co VITE_SUPABASE_ANON_KEY=placeholder_anon_key npm run build && npm run preview',
+      'PWA_DISABLE=true VITE_SUPABASE_URL=https://placeholder.supabase.co VITE_SUPABASE_ANON_KEY=placeholder_anon_key npm run build && npm run preview',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
