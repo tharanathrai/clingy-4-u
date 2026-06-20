@@ -132,7 +132,7 @@ export default function Settings() {
           />
         </div>
         <p className="mt-3 text-xs text-text-3">
-          Helps us improve Sticky Bridges. No names, messages, or plan details are ever
+          Helps us improve Clingy. No names, messages, or plan details are ever
           collected — only anonymous, aggregated taps and screens.
         </p>
       </section>

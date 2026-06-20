@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.stickybridges.clingy',
-  appName: 'Sticky Bridges',
+  appName: 'Clingy',
   webDir: 'dist'
 };
 
