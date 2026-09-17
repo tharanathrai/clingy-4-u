@@ -7,6 +7,8 @@ export interface PushPayload {
   body: string
   url: string
   tag: string
+  // Recipient's unread count after this notification; drives the app badge.
+  unread?: number
 }
 
 export interface PushNotificationRow {
@@ -29,11 +31,15 @@ export function buildPushTag(type: string, referenceId: string): string {
   return raw.slice(0, TOPIC_MAX_LENGTH)
 }
 
-export function buildPushPayload(row: PushNotificationRow): PushPayload {
+export function buildPushPayload(
+  row: PushNotificationRow,
+  unread?: number,
+): PushPayload {
   return {
     title: PUSH_TITLE,
     body: getNotificationCopy(row.type, row.actor_name ?? 'Someone'),
     url: PUSH_URL,
     tag: buildPushTag(row.type, row.reference_id),
+    ...(typeof unread === 'number' ? { unread } : {}),
   }
 }

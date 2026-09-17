@@ -10,7 +10,7 @@ In-app notifications (bell, `/notifications`, realtime) already exist. Users get
 Every `notifications` INSERT (except `post_reaction`, which the in-app list hides) fans out to the recipient's subscribed devices. Users opt in from **Settings → Notifications → Push notifications**; there is no unsolicited prompt.
 
 **In scope:** `push_subscriptions` table + RLS; INSERT trigger → `send-push` edge function; custom service worker (`injectManifest`) with `push` / `notificationclick`; Settings toggle with iOS install hint; shared notification copy; dropping the dead permissive `notifications` INSERT policy.
-**Out of scope:** per-type push preferences (needs a prefs table), app icon badge (`setAppBadge`), deep links per type (tap opens `/notifications`, which already routes).
+**Out of scope:** per-type push preferences (needs a prefs table), deep links per type (tap opens `/notifications`, which already routes).
 
 ### User Stories
 - As a user, I want my phone to buzz when someone invites me or a plan needs me, so I don't miss it while Clingy is closed.
@@ -62,7 +62,7 @@ Every `notifications` INSERT (except `post_reaction`, which the in-app list hide
 ## Dependencies
 - Owner ops (one-time, see `DEVDOC.md` §4 and `supabase/scripts/setup-send-push.sql`):
   1. `npx -y deno run https://raw.githubusercontent.com/negrel/webpush/master/cmd/generate-vapid-keys.ts > vapid.json` (stdout = JWK pair; stderr prints the application server key).
-  2. `npx supabase secrets set VAPID_KEYS_JSON="$(jq -c . vapid.json)" VAPID_SUBJECT="mailto:<owner>" SEND_PUSH_SECRET="$(openssl rand -hex 32)"`
+  2. `npx supabase secrets set VAPID_KEYS_JSON="$(python3 -c 'import json;print(json.dumps(json.load(open("vapid.json")),separators=(",",":")))')" VAPID_SUBJECT="mailto:<owner>" SEND_PUSH_SECRET="$(openssl rand -hex 32)"` — then confirm `npx supabase secrets list` shows `VAPID_KEYS_JSON` with a digest **other than** `e3b0c442…` (that is the SHA-256 of an empty string; happened once when `jq` wasn't installed and `$(jq …)` expanded to nothing).
   3. `npx supabase functions deploy send-push`
   4. `npx supabase db push`
   5. Run `supabase/scripts/setup-send-push.sql` with the same `SEND_PUSH_SECRET`.
@@ -80,6 +80,7 @@ Every `notifications` INSERT (except `post_reaction`, which the in-app list hide
 ## Completion Signal
 - [x] FR-1–FR-6 shipped; `npm run quality` green
 - [x] `DEVDOC.md` (Notifications flow, §4 auth, manual test 15), `docs/regression-matrix.md`, `history.md`, `completion_log/`
-- [ ] Ops steps 1–7 run by owner; live verification recorded in `docs/regression-matrix.md` row 15
+- [x] Ops steps 1–7 run by owner 2026-09-17; live: `202 {"queued":1}`, notification delivered to Android shade
+- [x] Follow-up: app icon badge via Badging API (`src/lib/appBadge.ts`, SW `setAppBadge(unread)`, `send-push` includes unread count)
 
 <!-- NR_OF_TRIES: 1 -->

@@ -2,10 +2,8 @@ import { registerSW } from 'virtual:pwa-register'
 
 // Registers the service worker built from src/sw.ts by vite-plugin-pwa. This
 // is the foundation for installability (Android "Install app" prompt + iOS
-// standalone), offline shell caching, and Web Push (src/lib/push.ts).
-//
-// DEFERRED: icon badges — `navigator.setAppBadge(count)` / `clearAppBadge()`
-// once installed.
+// standalone), offline shell caching, Web Push (src/lib/push.ts) and the
+// icon badge (src/lib/appBadge.ts).
 export function registerPwa(): void {
   if (import.meta.env.DEV) return
 

@@ -5,6 +5,7 @@ import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { isInitialQueryLoading } from '../lib/queryLoading.ts'
 import { subscribePostgresChannel } from '../lib/realtime.ts'
+import { syncAppBadge } from '../lib/appBadge.ts'
 
 export type NotificationType =
   | 'invite_received'
@@ -212,6 +213,13 @@ export function useNotifications(): UseNotificationsResult {
     () => notifications.reduce((count, n) => (n.read ? count : count + 1), 0),
     [notifications],
   )
+
+  // Keep the installed-app icon badge in step with the in-app unread count
+  // (the service worker sets it on push; reading here clears it).
+  useEffect(() => {
+    if (!userId || isPending) return
+    void syncAppBadge(unreadCount)
+  }, [userId, isPending, unreadCount])
 
   return {
     notifications,

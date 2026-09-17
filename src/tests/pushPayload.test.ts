@@ -69,6 +69,13 @@ describe('buildPushPayload', () => {
     expect(payload.body).toBe('Someone wants to connect')
   })
 
+  it('includes the unread count only when given', () => {
+    const row = { id: 'n1', type: 'bridge_formed', reference_id: REFERENCE_ID }
+    expect(buildPushPayload(row)).not.toHaveProperty('unread')
+    expect(buildPushPayload(row, 0).unread).toBe(0)
+    expect(buildPushPayload(row, 3).unread).toBe(3)
+  })
+
   it('falls back to generic copy for an unknown type', () => {
     const payload = buildPushPayload({
       id: 'n1',

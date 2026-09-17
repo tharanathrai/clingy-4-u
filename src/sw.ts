@@ -30,6 +30,7 @@ interface PushPayload {
   body: string
   url: string
   tag?: string
+  unread?: number
 }
 
 const FALLBACK_PAYLOAD: PushPayload = {
@@ -54,6 +55,7 @@ function parsePushPayload(data: PushMessageData | null): PushPayload {
         body: payload.body,
         url: typeof payload.url === 'string' ? payload.url : FALLBACK_PAYLOAD.url,
         tag: typeof payload.tag === 'string' ? payload.tag : undefined,
+        unread: typeof payload.unread === 'number' ? payload.unread : undefined,
       }
     }
   } catch {
@@ -67,15 +69,29 @@ function parsePushPayload(data: PushMessageData | null): PushPayload {
 self.addEventListener('push', (event) => {
   const payload = parsePushPayload(event.data)
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      tag: payload.tag,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      data: { url: payload.url },
-    }),
+    Promise.all([
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        tag: payload.tag,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url: payload.url },
+      }),
+      setAppBadge(payload.unread),
+    ]),
   )
 })
+
+// Icon badge (dot on Android, number on iOS 16.4+). The app re-syncs it from
+// the real unread count once opened (src/lib/appBadge.ts).
+async function setAppBadge(unread: number | undefined): Promise<void> {
+  if (typeof unread !== 'number' || !('setAppBadge' in self.navigator)) return
+  try {
+    await self.navigator.setAppBadge(unread)
+  } catch {
+    // best-effort
+  }
+}
 
 // Focus an open Clingy window if there is one, otherwise open a new one.
 // /notifications already routes each type to the right screen.

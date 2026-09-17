@@ -63,7 +63,7 @@ Statuses: **pass-automated** | **pass-code-review** | **partial** | **pending-de
 | 12 | Connection accepted real-time | partial | E2E accept from notifications; graph refresh not in E2E |
 | 13 | Notification routing per type | partial | `notifications.test.ts` 5/5; E2E `connection_request` only |
 | 14 | PostDetailSheet comment real-time | partial | `realtime.test.ts` 6/6; feed comment composer manual pending |
-| 15 | Web Push delivery (Android + iOS installed) | pending-live | `pushPayload.test.ts` 21/21, `pushSupport.test.ts` 8/8; `deno check` clean; needs ops (spec `022`) then: toggle → row → invite from 2nd account → push with app closed → tap opens `/notifications`; revoke → 410 → row deleted |
+| 15 | Web Push delivery (Android + iOS installed) | pass-live (Android) | `pushPayload.test.ts` 21/21, `pushSupport.test.ts` 8/8; `deno check` clean; live 2026-09-17: toggle → row → SQL insert → `202 {"queued":1}` → Android shade; iOS + revoke→410 cleanup + icon badge still manual |
 
 **Session outcome:** 0 fail, 2 pass-code-review, 5 partial, 3 pending-device, 4 pending-live. No new blocker specs filed.
 

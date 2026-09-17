@@ -116,11 +116,31 @@ Deno.serve(async (request) => {
       return jsonResponse(200, { sent: 0 })
     }
 
-    const payload = buildPushPayload(notification)
+    // Badge count = what the in-app bell shows (post_reaction is hidden there).
+    const { count: unreadCount } = await serviceClient
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', recipientId)
+      .eq('read', false)
+      .neq('type', 'post_reaction')
+
+    const payload = buildPushPayload(notification, unreadCount ?? undefined)
     const message = JSON.stringify(payload)
 
+    // Resolve VAPID keys before responding: a config error then surfaces as
+    // a readable 500 in net._http_response instead of killing the worker.
+    let appServer: ApplicationServer
+    try {
+      appServer = await getApplicationServer()
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      console.error('send-push VAPID setup failed', detail)
+      return jsonResponse(500, { error: 'vapid_not_configured', detail })
+    }
+
+    // Nothing in here may reject: an unhandled rejection inside waitUntil
+    // terminates the isolate and the gateway reports an empty 503.
     const work = (async () => {
-      const appServer = await getApplicationServer()
       await Promise.allSettled(
         subscriptions.map(async (subscription) => {
           try {
@@ -154,7 +174,9 @@ Deno.serve(async (request) => {
           }
         }),
       )
-    })()
+    })().catch((error: unknown) => {
+      console.error('send-push background task failed', error)
+    })
 
     EdgeRuntime.waitUntil(work)
     return jsonResponse(202, { queued: subscriptions.length })
