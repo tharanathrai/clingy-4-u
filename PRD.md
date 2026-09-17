@@ -505,7 +505,7 @@ Emails sent via `send-email` → Resend API. Requires `RESEND_API_KEY`, `RESEND_
 - All slot checks server-side in edge functions
 - RLS on all tables — policies in `supabase/week*-rls-policies.sql` and group/membership migrations; `analytics_events` has RLS on with no client policies
 - OTP codes never in URLs
-- Rotating QR tokens: single-use + 60s TTL
+- Rotating QR tokens: single-use + 60s TTL; `rotating_qr_tokens` RLS is owner-scoped only (`user_id = auth.uid()`) — edge functions access it via service role. Permissive `USING (true)` policies dropped in migration `20260917000000`.
 - No public user search — connections via QR only
 - Feed and network gated to mutual connections
 - Analytics: HMAC pseudonym (no reversible user id), no PII/freetext, opt-out + Do-Not-Track honored
