@@ -39,6 +39,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-09-17 Post-hiatus health check | All flows (audit only) | None | None (deployment audit: 15/15 ACTIVE, 13/13 migrations) | 151/151 ✓ (`npm run quality` green) | Not run | `rotating_qr_tokens` RLS `USING (true)` for authenticated — fixed by migration `20260917000000` (verified in prod); 10 npm audit vulns (fix available) |
 | 2026-09-17 Analytics view fixes (spec 020) | None (analytics schema only) | None | None (`submit-confirmation` read, not changed) | N/A — SQL dry-run against prod matches spec Success Criteria | N/A | None |
 | 2026-09-17 Plan expiry fix (spec 021) | Pocket view, Piece detail, Notifications, Graveyard | `src/lib/expiry.ts` (new) | `run-expiry` (auth: + `RUN_EXPIRY_SECRET`) | `expiry.test.ts` 9/9; 160 unit total | Not run | Cron had 401'd nightly since ≤ June; `notifications_type_check` rejected 6 of 15 types (fixed `20260917300000`) |
+| 2026-09-17 Web Push (spec 022) | Notifications, Settings, PWA shell | `src/lib/push.ts` (new), `src/lib/pushSupport.ts` (new), `src/sw.ts` (new), `src/lib/supabase.ts` (types), `_shared/notificationCopy.ts` + `_shared/pushPayload.ts` (new) | `send-push` (new) | `pushSupport.test.ts` 8/8, `pushPayload.test.ts` 21/21, `notificationCopy.test.ts` 17/17; 206 unit total | Not run (`PWA_DISABLE=true` build verified SW-free) | Ops not yet run (VAPID keys, secrets, Vault, Vercel env) — trigger is a no-op until `send_push_secret` exists |
 
 ---
 
@@ -62,6 +63,7 @@ Statuses: **pass-automated** | **pass-code-review** | **partial** | **pending-de
 | 12 | Connection accepted real-time | partial | E2E accept from notifications; graph refresh not in E2E |
 | 13 | Notification routing per type | partial | `notifications.test.ts` 5/5; E2E `connection_request` only |
 | 14 | PostDetailSheet comment real-time | partial | `realtime.test.ts` 6/6; feed comment composer manual pending |
+| 15 | Web Push delivery (Android + iOS installed) | pending-live | `pushPayload.test.ts` 21/21, `pushSupport.test.ts` 8/8; `deno check` clean; needs ops (spec `022`) then: toggle → row → invite from 2nd account → push with app closed → tap opens `/notifications`; revoke → 410 → row deleted |
 
 **Session outcome:** 0 fail, 2 pass-code-review, 5 partial, 3 pending-device, 4 pending-live. No new blocker specs filed.
 

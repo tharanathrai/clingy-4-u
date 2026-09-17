@@ -16,13 +16,15 @@ export default defineConfig({
       // Prompt the user to reload rather than swapping the SW mid-session
       // (safer for in-progress posts / QR flows). See onNeedRefresh in main.tsx.
       registerType: 'prompt',
+      // Custom worker (src/sw.ts): precache + SPA fallback as before, plus
+      // Web Push `push` / `notificationclick` handlers (spec 022).
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       // Reuse the existing public/manifest.json — single source of truth.
       manifest: false,
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'icons.svg'],
-      workbox: {
-        // SPA: unmatched navigations fall back to the app shell, matching
-        // the vercel.json rewrite (/(.*) -> /).
-        navigateFallback: '/',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),

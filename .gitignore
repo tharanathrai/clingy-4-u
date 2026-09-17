@@ -39,3 +39,7 @@ Sticky Bridges Design System.zip
 
 # Supabase — local project identifiers only (schema is versioned)
 supabase/.temp/
+# VAPID key pair generated for Web Push (spec 022) — lives in Supabase secrets
+vapid.json
+.vercel
+.env*

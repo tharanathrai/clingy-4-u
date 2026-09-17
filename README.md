@@ -37,9 +37,10 @@ Create `.env.local`:
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
+VITE_VAPID_PUBLIC_KEY=   # optional; Web Push application server key (spec 022). Omit → push toggle hidden.
 ```
 
-Supabase edge functions require secrets (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, service role key) configured in the Supabase dashboard — not in the client.
+Supabase edge functions require secrets (`RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `VAPID_KEYS_JSON`, `VAPID_SUBJECT`, `SEND_PUSH_SECRET`, service role key) configured in the Supabase dashboard — not in the client. See `DEVDOC.md` §4 (Architecture decisions) for the full list and `specs/022-web-push-notifications/spec.md` for the one-time push setup.
 
 ## Spec-driven workflow
 

@@ -489,7 +489,7 @@ Emails sent via `send-email` → Resend API. Requires `RESEND_API_KEY`, `RESEND_
 ## 18. Deferred (v2+)
 
 - Bluetooth confirmation (requires Capacitor native build)
-- Push notifications (requires Capacitor)
+- ~~Push notifications~~ — shipped as free Web Push (VAPID, no Capacitor) in spec `022`
 - Per-shape SVG gum assets (shape stored; UI uses CSS blobs today)
 - LLM-based categorization
 - Calendar / scheduling integration (planned_date is manual today)

@@ -27,7 +27,7 @@
 ## Mobile / Install
 
 5. PWA install shipped (service worker via `vite-plugin-pwa`, installable on Android + iOS, offline shell, reload prompt). Deferred follow-ups:
-   - Push notifications + icon badges layer onto the same SW (VAPID + Supabase Edge Function sender; iOS push needs installed PWA on 16.4+). Seam documented in `src/lib/registerPwa.ts`.
+   - ~~Push notifications~~ shipped as Web Push/VAPID in spec `022` (code merged; owner ops pending — see spec Dependencies). Still deferred: icon badges (`navigator.setAppBadge`), per-type push preferences (needs a server-side prefs table; the email toggles in Settings are localStorage-only no-ops).
    - Native Capacitor wrappers (`android/`, `ios/`) are **stale/unshippable**: `@capacitor/cli ^7.6.5` mismatches `@capacitor/core|android|ios ^8.3.4`, no native plugins used, nothing published to stores. Align versions before any native store path.
 
 ## Health check — 2026-09-17

@@ -36,3 +36,6 @@ verify_jwt = false
 
 [functions.validate-qr-token]
 verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false

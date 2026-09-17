@@ -157,7 +157,7 @@ Manual regression (spec `011`) may surface new P0 items — file as new specs if
 | Item | PRD §17 | Rationale |
 |------|---------|-----------|
 | Bluetooth confirmation | ✓ | Requires Capacitor native build |
-| Push notifications | ✓ | Requires Capacitor + FCM/APNs |
+| Push notifications | shipped (spec `022`) | Web Push + VAPID from a Supabase Edge Function — no Capacitor, no FCM/APNs account |
 | Per-shape SVG gum assets | ✓ | CSS blobs sufficient for MVP; shape stored server-side |
 | LLM categorization | ✓ | Rule-based categorization shipped |
 | Group plans (3+) | ✓ | Product scope v2 |
