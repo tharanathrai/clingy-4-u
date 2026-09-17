@@ -23,6 +23,7 @@ SELECT created_week,
        sessions_started,
        sessions_completed,
        sessions_expired_unconfirmed,
+       sessions_open,
        round(100.0 * sessions_expired_unconfirmed
              / nullif(sessions_started, 0), 1) AS abandon_pct
 FROM analytics.confirmation_funnel

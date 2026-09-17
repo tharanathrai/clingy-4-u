@@ -37,6 +37,7 @@ Blank rows or "verified by reading code" alone are not acceptable evidence.
 | 2026-06-12 Feed profile navigation (spec 015) | Feed, Profile | `Feed.tsx`, `PostDetailSheet.tsx`, `ProfileUser.tsx`, `navigationContext.ts` | None | `feedProfileNavigation.test.tsx` 3/3, `navigationContext.test.ts` extended, `profileUser.test.tsx` +1 | Playwright 20/20 ✓ (post detail restore F-03) | C-04 stretch shipped; own-profile tap gate F-01 |
 | 2026-06-12 Network share export (spec 016) | Network Graph | `syncGraphCanvasRef.ts`, `networkSnapshotPrep.ts`, `NetworkGraph.tsx`, `GraphShareButton.tsx` | None | `graphSnapshot.test.ts` 3/3, `graphShareButton.test.tsx` 3/3, `networkSnapshotPrep.test.ts` 2/2, `syncGraphCanvasRef.test.ts` 2/2; 135 unit total | Manual: save without node selection on device | Canvas ref rAF retry; error toast on failed capture |
 | 2026-09-17 Post-hiatus health check | All flows (audit only) | None | None (deployment audit: 15/15 ACTIVE, 13/13 migrations) | 151/151 ✓ (`npm run quality` green) | Not run | `rotating_qr_tokens` RLS `USING (true)` for authenticated — fixed by migration `20260917000000` (verified in prod); 10 npm audit vulns (fix available) |
+| 2026-09-17 Analytics view fixes (spec 020) | None (analytics schema only) | None | None (`submit-confirmation` read, not changed) | N/A — SQL dry-run against prod matches spec Success Criteria | N/A | None |
 
 ---
 
