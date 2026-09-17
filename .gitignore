@@ -37,8 +37,5 @@ blob-report/
 coverage/
 Sticky Bridges Design System.zip
 
-# Supabase — schema and project identifiers
-supabase/migrations/
-supabase/scripts/
-supabase/*.sql
+# Supabase — local project identifiers only (schema is versioned)
 supabase/.temp/
