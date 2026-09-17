@@ -89,3 +89,27 @@ Remaining `qr_tokens_*_own` / `Users can manage their own QR tokens` policies ar
 - Regression matrix items 1–14: 12 never verified live/on-device (`docs/regression-matrix.md`).
 - `016-capacitor-version-align` (`@capacitor/cli` ^7.6.5 vs core ^8.3.4), `017-avatar-storage-cleanup`, `018-graph-export-social-preset`.
 - Design v2: bridge formation animation, my-bridges share card; Claude Design project rename.
+
+## Analytics insights — 2026-09-17
+
+First run of the insight loop (`specs/analytics-insight-loop.md`). The pack's 7–14-day windows are empty because the app has been idle since 2026-06-22 (last piece created 2026-06-21; only 2 `/` screen views since, last 2026-09-13). Numbers below are **all-time** re-runs of the same views. Population is one friends-and-family cohort (11 users, week of 2026-06-15), so treat every ratio as directional, not statistical.
+
+**Funnel (all-time):** 11 signed up → 9 connected (82%) → 4 created a piece (36%) → 2 reached a confirmed piece (18%). Domain totals: 8 active connections, 13 pieces (6 active, 4 confirmed, 2 turned down, 1 placeholder), 4 bridges, 8 posts / 10 reactions / 7 comments, graveyard 0.
+
+**Behavior events:** 618 events from 20 pseudonyms (users × install ids). Screen views: `/home` 142, `/network` 67, `/notifications` 59, `/piece/:id` 52, `/feed` 48, `/profile/me` 39, `/add` 23, `/piece/:id/confirm` 13, `/add/scan` 7, `/settings` 5, `/profile/:username` 4, `/home/graveyard` 2. Confirm ceremony: 13 `confirm_enter` → 8 `confirm_success`, 4 `confirm_abandon` (31% abandon). QR: 6 attempts, 5 success, 1 failure. Median time-to-confirm for confirmed pieces: 54 s. `rage_tap`: 0. `feed_dwell`: 38 events (median unavailable — see item 4).
+
+### Items
+
+1. **[impact: high] Connected-but-never-created is the biggest drop.** 9 users connected, only 4 ever created a piece (−56%), and `/add` (23 views) got 3× the traffic of `/add/scan` (7). People finish the QR handshake and then don't know what to do next. Candidate spec: post-connection nudge — after `connection_accepted`, land on `/piece/new` pre-filled with the new friend, or a "make your first plan with {name}" card on `/home`.
+
+2. **[impact: high] Confirm ceremony abandonment 31% (4/13).** 3 `confirmation_sessions` expired with ≤1 confirmer; abandons cluster 2026-06-21/22, right after the hold-to-confirm v2 shipped (2026-06-18). Two-device sync is still unverified (regression matrix #2). Candidate spec: instrument `confirm_abandon` with a reason enum (`timeout`, `navigated_away`, `partner_never_joined`) and verify the ceremony on two physical devices before drawing conclusions.
+
+3. **[impact: high] Instrumentation bug — `analytics.confirmation_funnel.sessions_completed` is always 0.** `submit-confirmation/index.ts:275` deletes the session row on success, so the view only ever sees failures (3 started / 0 completed / 3 expired while 4 pieces are confirmed). Fix: derive completions from `gum_pieces.confirmed_at`, or soft-close sessions (`completed_at`) instead of deleting. Blocks item 2's trend line.
+
+4. **[impact: med] Instrumentation bug — `analytics.engagement_summary.posts_total` is inflated 2.5×.** `count(*)` over `posts LEFT JOIN reactions LEFT JOIN comments` multiplies rows (reports 20, table has 8). Use `count(DISTINCT po.id)`. Same migration should also fix `feed_dwell` median returning null: 38 events exist but `props ? 'dwell_ms'` matches none — check the key the client sends in `src/hooks/useTracker.ts`.
+
+5. **[impact: med] Zero week-1+ retention.** `retention_cohorts` shows only `week_offset 0` (4 active). Definition is "created a piece in week N", and nobody created one after 2026-06-21 — even though screen views continued into July. Users came back to look, not to act. Ties to item 1; also suggests `/home` needs a reason to return when the pocket is quiet (expiring-soon nudges are built — `run-expiry` cron live invoke still unverified, matrix #8).
+
+6. **[impact: low] Dead surfaces:** `/settings` 5 views, `/profile/:username` 4, `/home/graveyard` 2 (graveyard is empty, expected). `/profile/:username` being this low with 8 active connections means people rarely look at each other's profiles — the shared-bridges section there (spec 013) is barely seen. Defer; revisit with more users.
+
+**Disposition:** items 3 + 4 promoted to spec candidate *020-analytics-view-fixes* (small, unblocks the loop). Items 1, 2, 5 deferred until there is a second cohort — the current data cannot separate product friction from "friends tried it once". Item 6 deferred.
