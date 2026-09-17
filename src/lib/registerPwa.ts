@@ -13,6 +13,11 @@ export function registerPwa(): void {
     onNeedRefresh() {
       showReloadBanner(() => updateSW(true))
     },
+    // A rejected registration is otherwise invisible — surface it so
+    // "Service worker is not registered" in Settings has a cause next to it.
+    onRegisterError(error) {
+      console.error('Service worker registration failed', error)
+    },
   })
 }
 

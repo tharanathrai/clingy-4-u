@@ -12,8 +12,11 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
 // SPA: unmatched navigations fall back to the app shell, matching the
-// vercel.json rewrite (/(.*) -> /).
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/')))
+// vercel.json rewrite (/(.*) -> /). Must be the precache key ('/index.html'),
+// not '/': createHandlerBoundToURL does an exact lookup and throws
+// `non-precached-url` otherwise, which fails SW evaluation and leaves the
+// app with no service worker at all.
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
 
 // registerType: 'prompt' — the reload banner posts SKIP_WAITING on accept.
 self.addEventListener('message', (event) => {

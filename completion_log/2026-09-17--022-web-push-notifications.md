@@ -21,6 +21,10 @@
 
 - `npm run quality` pass (206 unit tests)
 
+## Follow-up fix (same day)
+
+- Prod SW failed evaluation: `createHandlerBoundToURL('/')` throws `non-precached-url` (precache key is `/index.html`). Symptom: Settings toggle → "Service worker is not registered"; also no offline shell / update banner. Fixed; `scripts/verify-sw.mjs` now runs after `vite build` and fails the build if `dist/sw.js` throws or lacks `push`/`notificationclick`/`message` listeners. Verified with headless Chromium: registration active, offline deep link served.
+
 ## Pending (owner)
 
 - VAPID keys + 3 edge secrets, `functions deploy send-push`, `db push`, `setup-send-push.sql`, Vercel `VITE_VAPID_PUBLIC_KEY` — see spec Dependencies

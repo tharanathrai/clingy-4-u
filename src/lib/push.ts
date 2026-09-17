@@ -42,12 +42,19 @@ export function detectPushSupport(): PushSupport {
   })
 }
 
+const READY_TIMEOUT_MS = 8000
+
 async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null
   // registerPwa skips registration in DEV; don't hang on `ready` there.
-  const existing = await navigator.serviceWorker.getRegistration()
-  if (!existing) return null
-  return navigator.serviceWorker.ready
+  if (import.meta.env.DEV) return null
+  // `ready` also covers a registration still in flight (registerPwa registers
+  // on window load). Bounded so a failed registration surfaces as an error
+  // instead of a toggle stuck on "busy".
+  const timeout = new Promise<null>((resolve) => {
+    window.setTimeout(() => resolve(null), READY_TIMEOUT_MS)
+  })
+  return Promise.race([navigator.serviceWorker.ready, timeout])
 }
 
 export async function getPushStatus(): Promise<PushStatus> {
@@ -73,7 +80,9 @@ export async function subscribeToPush(userId: string): Promise<void> {
 
   const registration = await getRegistration()
   if (!registration) {
-    throw new Error('Service worker is not registered.')
+    throw new Error(
+      'Service worker is not registered. Close and reopen Clingy, then try again.',
+    )
   }
 
   const subscription =
