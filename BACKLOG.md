@@ -61,7 +61,7 @@ Prod has **57 policies**; repo week-files define 16. Diff:
 | week5 `Users can view their own connections` | absent by name; equivalent `Users can see their own connections` + `connections_select_participant` present |
 | other 11 (week2 ×2, week4 ×1, week6 ×8) | present ✓ |
 
-Functionally no gap. But ~40 prod policies exist **nowhere in the repo** (`*_own`, `*_participant`, `qr_*`, `blocked_users`, `categories`, `confirmation_sessions`, `graveyard`…). Repo is not source of truth for RLS. → **Action:** `npx supabase db pull` (or `db dump --schema public` policies only) into a baseline migration, then delete `week*.sql`. Tracked as spec candidate *019-rls-baseline-migration*.
+Functionally no gap. But ~40 prod policies exist **nowhere in the repo** (`*_own`, `*_participant`, `qr_*`, `blocked_users`, `categories`, `confirmation_sessions`, `graveyard`…). Repo was not source of truth for RLS. ✅ **Fixed 2026-09-17:** `supabase/migrations/20260917100000_rls_baseline.sql` mirrors all 52 prod policies (generated from `pg_policies`, idempotent DROP+CREATE); `week*.sql` files deleted. Remaining gap: base table DDL (users, gum_pieces, bridges, …) predates the first migration and is still unversioned — `supabase db dump` needs Docker or `pg_dump`, neither on this machine. → **Action:** install `postgresql-client`, run `npx supabase db dump --linked -f supabase/schema_baseline.sql`, commit as reference (not a migration).
 
 ### ⚠️ Security finding — `rotating_qr_tokens` over-permissive policies ✅ Fixed 2026-09-17
 Migration `20260917000000_drop_permissive_qr_token_policies.sql` pushed; prod verified — only `user_id = auth.uid()` policies remain.
