@@ -289,7 +289,7 @@ Every `postgres_changes` subscription uses `subscribePostgresChannel()` from `sr
 - `useConfirmationSession`: INSERT/UPDATE call `setQueryData` directly; DELETE fires `onBridgeFormed` callback + clears cache
 
 ### 4. `verify_jwt = false` in `supabase/config.toml`
-All 15 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)` (or service-role bearer for cron/email/analytics). Intentional for error message flexibility. **Config drift:** `config.toml` registers only 13 — `edit-gum-piece` and `track-events` still need `[functions.*]` entries.
+All 15 edge functions manually validate the JWT by calling `supabase.auth.getUser(token)` (or service-role bearer for cron/email/analytics; `run-expiry` also accepts the dedicated `RUN_EXPIRY_SECRET`, which the pg_cron job reads from Vault — see `supabase/scripts/schedule-run-expiry.sql`). Intentional for error message flexibility. **Config drift:** `config.toml` registers only 13 — `edit-gum-piece` and `track-events` still need `[functions.*]` entries.
 
 ### 5. Category logic duplicated client + server
 `src/lib/categorizeTitle.ts` mirrors `supabase/functions/_shared/categorize.ts`. Client version used for live preview only. Edge function is canonical.
@@ -342,7 +342,7 @@ Every data surface is classified as **cache-first**, **patch-on-realtime**, or *
 Active-plan edits are not applied directly — they sit in `gum_pieces.pending_edit` (`{title?, category?, planned_date?, proposed_by, proposed_at, accepted_by[]}`) until every other accepted member accepts. One proposal at a time (`edit_already_pending`). Placeholder edits bypass this and apply immediately (creator only). Server is canonical; clients call `edit-gum-piece`.
 
 ### 16. `planned_date` drives `expires_at`
-When a plan has a `planned_date`, an active piece expires at `planned_date + 1 day`; without one it falls back to `accepted_at + 1yr`. Edits to `planned_date` on active pieces recompute `expires_at`. `run-expiry` reads `expires_at` only — it does not special-case `planned_date`.
+When a plan has a `planned_date`, an active piece expires at `planned_date + 1 day`; without one it falls back to `accepted_at + 1yr`. Edits to `planned_date` on active pieces recompute `expires_at`. `run-expiry` reads `expires_at` only — it does not special-case `planned_date`. The client (`src/lib/expiry.ts` `describeExpiry`) treats `expires_at <= now` as expired ahead of the nightly cron and shows planned pieces as `by MMM d` rather than a rounded distance; `planned_date` is parsed with `parseISO` (local midnight), never `+ 'T00:00:00Z'`.
 
 ### 17. Friendship state on `connections` (status + per-side snooze)
 `connections.status` gained `removed`; `snoozed_by_a` / `snoozed_by_b` mute a friend for one side only. Mutations go through SECURITY DEFINER RPCs (`snooze_friend` / `unsnooze_friend` / `remove_friend`) using `auth.uid()`, not direct table writes. Feed/network queries must respect snooze + removed.
@@ -411,7 +411,7 @@ When a plan has a `planned_date`, an active piece expires at `planned_date + 1 d
 
 7. **Graph share / export** — With no node selected, tap share → Save/Share produces `my-bridges-[YYYY-MM-DD].png` as a 4:5 social card (graph + stats footer). With a node selected, export still works and briefly shows chalk mesh in the PNG. Share opens native sheet on mobile when supported. **Status: pass** (automated); confirm native share on device manually.
 
-8. **Nightly cron expiry** — Manually call `run-expiry`. (a) Set an active piece's `expires_at` within 30 days: verify both users receive `plan_expiring_soon` once; re-run does not duplicate. (b) Set `expires_at` to the past: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user `plan_expired` notifications. **Status: partial** (`expiringSoon.test.ts` 8/8)
+8. **Nightly cron expiry** — Manually call `run-expiry`. (a) Set an active piece's `expires_at` within 30 days: verify both users receive `plan_expiring_soon` once; re-run does not duplicate. (b) Set `expires_at` to the past: placeholder expires without graveyard entry; active piece expires with graveyard entry and both-user `plan_expired` notifications. **Status: pass-live** (2026-09-17: 4 active pieces expired, 4 graveyard rows, 8 `plan_expired` notifications, 3 sessions cleaned; cron was 401ing since ≤ June until the Vault-backed secret — spec `021`)
 
 9. **Slot limits enforced server-side** — Verify that direct API calls to `create-gum-piece` beyond 25 global / 5 per-pair are blocked even without the UI restrictions. Verify RLS prevents reading other users' gum pieces. **Status: pass-code-review**
 

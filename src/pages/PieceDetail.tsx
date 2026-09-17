@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -12,6 +12,7 @@ import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { categorizeTitle } from '../lib/categorizeTitle.ts'
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
+import { describeExpiry } from '../lib/expiry.ts'
 import { supabase } from '../lib/supabase.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
 import { debouncedInvalidateQueries } from '../lib/debouncedInvalidate.ts'
@@ -345,20 +346,16 @@ export default function PieceDetail() {
       const pendingCount = members.filter((m) => m.role === 'invitee' && m.status === 'pending').length
       return pendingCount === 1 ? 'Waiting for 1 person to accept' : `Waiting for ${pendingCount} people to accept`
     }
-    if (piece.status === 'active') return `Active · ${formatDistanceToNow(new Date(piece.expires_at), { addSuffix: false })} left`
+    if (piece.status === 'active') {
+      const expiry = describeExpiry(piece)
+      return expiry.state === 'expired' ? 'Expired · clearing soon' : `Active · ${expiry.label}`
+    }
     if (piece.status === 'turned_down') return 'Turned down'
     if (piece.status === 'expired') return 'Expired'
     return 'Confirmed'
   }, [members, piece, userId])
 
-  const remainingProgress = useMemo(() => {
-    if (!piece) return 0
-    const start = new Date(piece.created_at).getTime()
-    const end = new Date(piece.expires_at).getTime()
-    if (end <= start) return 0
-    const remainingMs = Math.max(0, end - Date.now())
-    return Math.round((remainingMs / (end - start)) * 100)
-  }, [piece])
+  const remainingProgress = useMemo(() => (piece ? describeExpiry(piece).progress : 0), [piece])
 
   const fillClass = useMemo(() => {
     if (category === 'intimate') return 'bg-intimate'
@@ -556,7 +553,7 @@ export default function PieceDetail() {
           <p className="mt-3 text-center text-sm text-text-2">{statusLine}</p>
           {piece.planned_date ? (
             <p className="mt-1 text-center text-xs text-text-3">
-              by {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+              by {format(parseISO(piece.planned_date), 'MMM d, yyyy')}
             </p>
           ) : null}
 
@@ -610,7 +607,7 @@ export default function PieceDetail() {
                   <span className="w-12 shrink-0 text-text-3">date</span>
                   {piece.planned_date ? (
                     <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">
-                      {format(new Date(piece.planned_date + 'T00:00:00Z'), 'MMM d')}
+                      {format(parseISO(piece.planned_date), 'MMM d')}
                     </span>
                   ) : (
                     <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 line-through">none</span>
@@ -618,7 +615,7 @@ export default function PieceDetail() {
                   <span className="text-text-3">→</span>
                   {pendingEdit.planned_date ? (
                     <span className={`rounded px-2 py-0.5 ${pendingFillClass} bg-opacity-20 text-text`}>
-                      {format(new Date(pendingEdit.planned_date + 'T00:00:00Z'), 'MMM d, yyyy')}
+                      {format(parseISO(pendingEdit.planned_date), 'MMM d, yyyy')}
                     </span>
                   ) : (
                     <span className="rounded bg-surface-2 px-2 py-0.5 text-text-3 italic">cleared</span>

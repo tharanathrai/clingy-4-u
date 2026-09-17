@@ -31,7 +31,7 @@ The design principle: **more friction on creation, zero friction on connection.*
 | Graph | `react-force-graph-2d` | Canvas 2D; export via 4:5 social card snapshot |
 | OTP confirmation | Edge functions + ephemeral DB session | `start-confirmation` / `submit-confirmation` |
 | Analytics | Anonymized event pipeline (opt-out) | `analytics_events` + `analytics.*` views + `track-events`; HMAC pseudonym, no PII |
-| Scheduled jobs | `run-expiry` edge function | Intended for pg_cron; cleans placeholders, active expiry, sessions |
+| Scheduled jobs | `run-expiry` edge function | pg_cron job `nightly-expiry` (02:00 UTC), auth via Vault secret `run_expiry_secret` / `RUN_EXPIRY_SECRET`; cleans placeholders, active expiry, sessions |
 | Mobile | Capacitor 8.x scaffold | `capacitor.config.ts`; native projects gitignored |
 | Deploy | Vercel | Git-connected auto-deploy |
 | Tests | Vitest (unit) + Playwright (E2E smoke) | Quality gate: `npm run quality` |

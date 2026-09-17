@@ -1,5 +1,5 @@
-import { differenceInDays, formatDistanceToNow } from 'date-fns'
 import { CATEGORIES, type CategorySlug } from '../../lib/constants.ts'
+import { describeExpiry } from '../../lib/expiry.ts'
 import type { GumPiece } from '../../hooks/useGumPieces.ts'
 import { CategoryChip } from './CategoryChip.tsx'
 import { GumBlob } from './GumBlob.tsx'
@@ -30,9 +30,9 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
   const otherMembers = piece.members.filter((m) => m.user_id !== currentUserId)
   const withText = buildWithText(otherMembers)
 
-  const expiryDate = new Date(piece.expires_at)
-  const leftText = `${formatDistanceToNow(expiryDate, { addSuffix: false })} left`
-  const isWarning = differenceInDays(expiryDate, new Date()) < 7
+  const expiry = describeExpiry(piece)
+  const isExpired = expiry.state === 'expired'
+  const isWarning = !isExpired && expiry.state !== 'later'
 
   return (
     <button
@@ -50,7 +50,9 @@ export function GumPieceCard({ piece, currentUserId, onPress }: GumPieceCardProp
           </div>
           <p className="mt-2 text-xs text-text-2">{withText}</p>
           <div className="mt-2 flex items-center gap-2">
-            <p className={`text-xs ${isWarning ? 'text-savor' : 'text-text-2'}`}>{leftText}</p>
+            <p className={`text-xs ${isWarning ? 'text-savor' : 'text-text-2'} ${isExpired ? 'opacity-60' : ''}`}>
+              {expiry.label}
+            </p>
             {isPlaceholder ? (
               <span className="rounded-full bg-tint-intimate px-2 py-0.5 text-[10px] text-accent">
                 awaiting

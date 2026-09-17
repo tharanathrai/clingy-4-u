@@ -81,6 +81,12 @@ drop policy if exists "qr_tokens_delete_any_authenticated" on public.rotating_qr
 ```
 Remaining `qr_tokens_*_own` / `Users can manage their own QR tokens` policies are scoped to `user_id = auth.uid()` and can stay. Live QR scan on device still pending (regression matrix item 10).
 
+### Prod incident — plan expiry (spec `021`, fixed 2026-09-17)
+- `nightly-expiry` pg_cron job hit `run-expiry` with a stale bearer → **401 every night since ≤ June**; `cron.job_run_details` showed "succeeded" because the HTTP call itself worked. Nothing ever expired; cards showed "3 months left" for pieces 3 months past due (`formatDistanceToNow` is unsigned). Fixed: `RUN_EXPIRY_SECRET` (Vault-backed, `supabase/scripts/schedule-run-expiry.sql`) + `src/lib/expiry.ts`.
+- Found while running it: `notifications_type_check` allowed 9 types, code emits 15. `plan_expired`, `connection_accepted`, `confirmation_started`, `plan_edit_*` were **silently dropped** (callers treat notification insert as non-fatal). Widened in `20260917300000`. Nobody ever got a "connection accepted" or "edit proposed" notification in prod before today.
+- Planned dates rendered via `new Date(d + 'T00:00:00Z')` → off by one day west of UTC in `PieceDetail`. Now `parseISO`.
+- Follow-up: alert on cron failures — a `net._http_response.status_code <> 200` check (pg_cron job → notification/email) so the next silent 401 isn't found by a user.
+
 ### Drift from docs
 - `blocked_users` table exists in prod with RLS + policy `Users can manage their own blocks`; PRD §18 says the table is "not yet created". Update PRD or confirm table is unused.
 - Duplicate legacy/new policy pairs on `users`, `connections`, `notifications`, `posts`, `reactions`, `comments`, `bridges`, `graveyard`, `confirmation_sessions` (e.g. `Posts visible to network` + `Network members can see posts`). Harmless (permissive OR) but should collapse during the RLS baseline work.

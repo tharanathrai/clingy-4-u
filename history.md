@@ -4,6 +4,7 @@ One-line summaries appended after each completed spec.
 
 | Date | Spec | Summary |
 |------|------|---------|
+| 2026-09-17 | 021-plan-expiry-fix | Cron 401 fixed via Vault `RUN_EXPIRY_SECRET`; `describeExpiry` guards past dates + shows `by MMM d`; `notifications_type_check` widened to all 15 types; 9 unit tests |
 | 2026-09-17 | 020-analytics-view-fixes | `confirmation_funnel` completions from `gum_pieces.confirmed_at` (+`sessions_open`); `engagement_summary` distinct post counts; insight-pack updated |
 | 2026-06-12 | 016-social-share-export | 4:5 Bridge Constellation Card export with stats footer, glow, grain; export-only zoom/labels; 17 new unit tests |
 | 2026-06-12 | 016-network-share-export | Canvas ref rAF sync before `canvasReady`; share/save without node selection; error toast; 10 new unit tests |

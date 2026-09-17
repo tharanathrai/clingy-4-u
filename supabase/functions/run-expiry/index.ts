@@ -39,9 +39,16 @@ Deno.serve(async (request) => {
       return jsonResponse(500, { error: 'Supabase environment is not configured.' })
     }
 
+    // Accept the service-role key or a dedicated cron secret. The pg_cron job
+    // reads RUN_EXPIRY_SECRET from Vault (see supabase/scripts/schedule-run-expiry.sql)
+    // so key rotation does not silently break the nightly run.
+    const runExpirySecret = Deno.env.get('RUN_EXPIRY_SECRET')
     const authHeader = request.headers.get('Authorization') ?? ''
     const token = authHeader.replace(/^Bearer\s+/i, '').trim()
-    if (!token || token !== supabaseServiceRoleKey) {
+    const authorized =
+      Boolean(token) &&
+      (token === supabaseServiceRoleKey || (Boolean(runExpirySecret) && token === runExpirySecret))
+    if (!authorized) {
       return jsonResponse(401, { error: 'unauthorized' })
     }
 
