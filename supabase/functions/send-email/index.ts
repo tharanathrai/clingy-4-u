@@ -54,9 +54,11 @@ Deno.serve(async (request) => {
 
     if (!response.ok) {
       const resendBody = await response.text()
+      // Never log `to`: it is a user's email address and function logs are
+      // retained. The recipient domain is enough to debug deliverability.
       console.error('send-email resend_error', {
         status: response.status,
-        to,
+        toDomain: to.split('@')[1] ?? 'unknown',
         fromEmail,
         details: resendBody,
       })
