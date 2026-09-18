@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { GumBlob } from '../components/gum/GumBlob.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
@@ -286,6 +286,18 @@ export default function Landing() {
         {errorMessage ? (
           <p className="text-sm text-playful">{errorMessage}</p>
         ) : null}
+
+        <p className="text-xs text-text-3">
+          By continuing you agree to our{' '}
+          <Link className="underline" to="/terms">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link className="underline" to="/privacy">
+            Privacy
+          </Link>
+          .
+        </p>
       </div>
     </main>
   )

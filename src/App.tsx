@@ -33,6 +33,8 @@ const PieceNewPage = lazy(() => import('./pages/PieceNew.tsx'))
 const PieceDetailPage = lazy(() => import('./pages/PieceDetail.tsx'))
 const PieceConfirmPage = lazy(() => import('./pages/PieceConfirm.tsx'))
 const SettingsPage = lazy(() => import('./pages/Settings.tsx'))
+const PrivacyPage = lazy(() => import('./pages/Privacy.tsx'))
+const TermsPage = lazy(() => import('./pages/Terms.tsx'))
 
 function App() {
   const location = useLocation()
@@ -181,6 +183,8 @@ function App() {
                   </AuthGuard>
                 }
               />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { EditProfileSheet } from '../components/profile/EditProfileSheet.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
@@ -210,6 +210,14 @@ export default function Settings() {
         <h2 className={sectionHeadingClass}>About</h2>
         <p className="mt-3 text-sm text-text">Version 0.1.0</p>
         <p className="mt-1 text-sm text-text-3">Built with ☁️ and gum.</p>
+        <div className="mt-3 flex gap-4 text-sm text-text-2">
+          <Link className="min-h-11 items-center underline inline-flex" to="/privacy">
+            Privacy
+          </Link>
+          <Link className="min-h-11 items-center underline inline-flex" to="/terms">
+            Terms
+          </Link>
+        </div>
       </section>
 
       {profile ? (
