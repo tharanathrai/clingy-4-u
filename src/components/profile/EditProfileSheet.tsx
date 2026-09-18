@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ProfileAvatarField } from './ProfileAvatarField.tsx'
-import { uploadAvatar } from '../../hooks/useAvatarUpload.ts'
+import { removeAvatarByUrl, uploadAvatar } from '../../hooks/useAvatarUpload.ts'
+import { avatarPathFromUrl } from '../../lib/avatarCleanup.ts'
 import { supabase } from '../../lib/supabase.ts'
 import type { User } from '../../types/index.ts'
 
@@ -130,11 +131,15 @@ export function EditProfileSheet({
 
     try {
       let avatarUrl = profile.avatar_url
+      // The object the users row will stop pointing at once this save lands.
+      let supersededAvatarUrl: string | null = null
 
       if (avatarRemoved) {
         avatarUrl = null
+        supersededAvatarUrl = profile.avatar_url
       } else if (avatarBlob) {
         avatarUrl = await uploadAvatar(profile.id, avatarBlob, { upsert: true })
+        supersededAvatarUrl = profile.avatar_url
       }
 
       const updates = {
@@ -153,6 +158,13 @@ export function EditProfileSheet({
 
       if (updateError || !updatedProfile) {
         throw updateError ?? new Error('Profile update failed.')
+      }
+
+      // Only now that the row no longer references it: the bucket is public,
+      // so an object left behind stays fetchable by URL even after the user
+      // removes their photo.
+      if (avatarPathFromUrl(supersededAvatarUrl) !== avatarPathFromUrl(avatarUrl)) {
+        await removeAvatarByUrl(supersededAvatarUrl)
       }
 
       onSaved(updatedProfile as User)
