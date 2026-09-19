@@ -12,11 +12,40 @@
       href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
-    <title>clingy</title>
+    <title>clingy — make plans that stick</title>
+    <meta
+      name="description"
+      content="clingy is a small app for making plans with the friends you actually see. Connect in person by scanning a code, make a plan together, and confirm it side by side."
+    />
+    <meta property="og:title" content="clingy" />
+    <meta property="og:description" content="make plans that stick" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icon-512.png" />
   </head>
   <body>
     <div class="grain-overlay" aria-hidden="true"></div>
     <div id="root"></div>
+    <!--
+      The app is client-rendered, so crawlers that do not execute JavaScript --
+      including Google's OAuth branding review crawler -- would otherwise see an
+      empty page here. This gives them the real description of the product and
+      reachable links to the policy pages they check for.
+    -->
+    <noscript>
+      <main>
+        <h1>clingy</h1>
+        <p>make plans that stick</p>
+        <p>
+          clingy is a small app for making plans with the friends you actually see. You connect
+          in person by scanning a rotating code, make a plan together, and confirm it side by
+          side. Plans that nobody confirms quietly expire.
+        </p>
+        <p>clingy needs JavaScript enabled to run. Please turn it on and reload this page.</p>
+        <p>
+          <a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a>
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
