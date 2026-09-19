@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Bridge, Comment, Post, Reaction, User } from '../types/index.ts'
+import { indexParticipantNames, pickCounterpartName } from '../lib/feedParticipants.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
@@ -131,12 +132,10 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
   }
 
   const bridges = (bridgesData ?? []) as Bridge[]
-  const userIds = Array.from(
-    new Set([
-      ...dedupedPosts.map((post) => post.author_id),
-      ...bridges.flatMap((bridge) => [bridge.user_a_id, bridge.user_b_id]),
-    ]),
-  )
+  // Authors only. The other side of a bridge is frequently someone the viewer
+  // has no relationship with, so those rows are not readable any more -- their
+  // display name comes from get_bridge_participant_names below instead.
+  const userIds = Array.from(new Set(dedupedPosts.map((post) => post.author_id)))
 
   const { data: usersData, error: usersError } = await supabase
     .from('users')
@@ -147,11 +146,15 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
     throw new Error(usersError.message)
   }
 
-  const [{ data: reactionsData, error: reactionsError }, { data: commentsData, error: commentsError }] =
-    await Promise.all([
-      supabase.from('reactions').select('id, post_id, user_id').in('post_id', postIds),
-      supabase.from('comments').select('id, post_id').in('post_id', postIds),
-    ])
+  const [
+    { data: reactionsData, error: reactionsError },
+    { data: commentsData, error: commentsError },
+    { data: participantNamesData, error: participantNamesError },
+  ] = await Promise.all([
+    supabase.from('reactions').select('id, post_id, user_id').in('post_id', postIds),
+    supabase.from('comments').select('id, post_id').in('post_id', postIds),
+    supabase.rpc('get_bridge_participant_names', { p_bridge_ids: bridgeIds }),
+  ])
 
   if (reactionsError) {
     throw new Error(reactionsError.message)
@@ -159,8 +162,12 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
   if (commentsError) {
     throw new Error(commentsError.message)
   }
+  if (participantNamesError) {
+    throw new Error(participantNamesError.message)
+  }
 
   const usersById = new Map((usersData ?? []).map((profile) => [profile.id, profile as User]))
+  const participantNamesByBridgeId = indexParticipantNames(participantNamesData)
   const bridgesById = new Map(bridges.map((bridge) => [bridge.id, bridge]))
   const reactions = (reactionsData ?? []) as Pick<Reaction, 'id' | 'post_id' | 'user_id'>[]
   const comments = (commentsData ?? []) as Pick<Comment, 'id' | 'post_id'>[]
@@ -200,10 +207,11 @@ async function fetchFeed(userId: string): Promise<FeedPost[]> {
         }
       }
 
-      const otherParticipantId =
-        bridge.user_a_id === author.id ? bridge.user_b_id : bridge.user_a_id
-      const otherParticipantName =
-        usersById.get(otherParticipantId)?.display_name ?? 'someone'
+      const otherParticipantName = pickCounterpartName(
+        bridge,
+        author.id,
+        participantNamesByBridgeId.get(bridge.id),
+      )
 
       return {
         ...post,

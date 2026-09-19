@@ -87,12 +87,12 @@ export function EditProfileSheet({
 
     const timeoutId = window.setTimeout(() => {
       void (async () => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id')
-          .eq('username', normalizedUsername)
-          .neq('id', profile.id)
-          .maybeSingle()
+        // RPC, not a users query: the directory is not readable row-by-row any
+        // more. The function excludes the caller's own row, so keeping your own
+        // handle still reads as available -- that is what the old .neq() did.
+        const { data, error } = await supabase.rpc('is_username_available', {
+          p_username: normalizedUsername,
+        })
 
         if (error) {
           setUsernameAvailable(null)
@@ -100,7 +100,7 @@ export function EditProfileSheet({
           return
         }
 
-        setUsernameAvailable(!data)
+        setUsernameAvailable(data === true)
         setCheckingUsername(false)
       })()
     }, 400)

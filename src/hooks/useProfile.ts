@@ -20,6 +20,12 @@ interface UseProfileResult {
   sharedBridges: Bridge[]
   isConnected: boolean
   isSnoozed: boolean
+  /**
+   * False when the viewer may see only the profile header (name, handle,
+   * avatar) because they share no relationship with this person. Bio, counts
+   * and shared bridges are withheld server-side in that case.
+   */
+  isVisible: boolean
   loading: boolean
   error: string | null
   refetch: () => void
@@ -33,6 +39,7 @@ interface ProfileData {
   sharedBridges: Bridge[]
   isConnected: boolean
   isSnoozed: boolean
+  isVisible: boolean
 }
 
 const createEmptyCategoryBreakdown = (): Record<CategorySlug, number> => ({
@@ -52,24 +59,53 @@ async function fetchProfile(
   byUserId: boolean,
   viewerId: string | null,
 ): Promise<ProfileData> {
-  let profileQuery = supabase.from('users').select('*')
+  let resolvedProfile: User
+  // Strangers may see the header of a profile they hold the handle for, but a
+  // policy cannot express "an exact-username lookup" -- it is evaluated per row
+  // and never sees the filter. So the id path stays a table read (RLS covers
+  // it) and the handle path goes through the RPC, which decides per field what
+  // a non-relation is allowed to see.
+  let isVisible = true
+
   if (byUserId) {
-    profileQuery = profileQuery.eq('id', identifier)
+    const { data: profileData, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', identifier)
+      .maybeSingle()
+
+    if (profileError) {
+      throw new Error(profileError.message)
+    }
+    if (!profileData) {
+      throw new Error('Profile not found.')
+    }
+
+    resolvedProfile = profileData as User
   } else {
-    profileQuery = profileQuery.eq('username', identifier.trim().toLowerCase())
+    const { data: rows, error: profileError } = await supabase.rpc('get_user_by_username', {
+      p_username: identifier.trim().toLowerCase(),
+    })
+
+    if (profileError) {
+      throw new Error(profileError.message)
+    }
+
+    const row = rows?.[0]
+    if (!row) {
+      throw new Error('Profile not found.')
+    }
+
+    isVisible = row.is_visible
+    resolvedProfile = {
+      id: row.id,
+      display_name: row.display_name,
+      username: row.username,
+      avatar_url: row.avatar_url,
+      bio: row.bio,
+      created_at: row.created_at ?? '',
+    } as User
   }
-
-  const { data: profileData, error: profileError } = await profileQuery.maybeSingle()
-
-  if (profileError) {
-    throw new Error(profileError.message)
-  }
-
-  if (!profileData) {
-    throw new Error('Profile not found.')
-  }
-
-  const resolvedProfile = profileData as User
 
   const { data: bridgesData, error: bridgesError } = await supabase
     .from('bridges')
@@ -103,6 +139,7 @@ async function fetchProfile(
       sharedBridges: [],
       isConnected: viewerId === resolvedProfile.id,
       isSnoozed: false,
+      isVisible,
     }
   }
 
@@ -128,6 +165,7 @@ async function fetchProfile(
       sharedBridges: [],
       isConnected: false,
       isSnoozed: false,
+      isVisible,
     }
   }
 
@@ -155,6 +193,7 @@ async function fetchProfile(
     sharedBridges: (sharedBridgesData ?? []) as Bridge[],
     isConnected: true,
     isSnoozed,
+    isVisible,
   }
 }
 
@@ -192,6 +231,7 @@ export function useProfile({
     sharedBridges: data?.sharedBridges ?? [],
     isConnected: data?.isConnected ?? false,
     isSnoozed: data?.isSnoozed ?? false,
+    isVisible: data?.isVisible ?? true,
     loading: isInitialQueryLoading(authLoading, viewerId, isPending),
     error: error instanceof Error ? error.message : null,
     refetch: () => {

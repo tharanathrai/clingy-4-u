@@ -56,11 +56,12 @@ export default function Welcome() {
 
     const timeoutId = window.setTimeout(() => {
       void (async () => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id')
-          .eq('username', sanitizedUsername)
-          .maybeSingle()
+        // RPC, not a users query: the directory is not readable row-by-row any
+        // more, and a hidden row would otherwise read as "available" and fail
+        // at the insert on users_username_key.
+        const { data, error } = await supabase.rpc('is_username_available', {
+          p_username: sanitizedUsername,
+        })
 
         if (error) {
           setUsernameAvailable(null)
@@ -68,7 +69,7 @@ export default function Welcome() {
           return
         }
 
-        setUsernameAvailable(!data)
+        setUsernameAvailable(data === true)
         setUsernameChecking(false)
       })()
     }, 400)

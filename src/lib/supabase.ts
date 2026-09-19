@@ -473,6 +473,47 @@ export interface Database {
         Args: { other_user_id: string }
         Returns: void
       }
+      // Profile reads that RLS cannot express. A policy is evaluated per row and
+      // cannot see that a query filtered by username, so handle lookups live
+      // here; the second-degree reads are each gated by a resource the caller
+      // already has rights to. See 20260918120000_user_visibility_rpcs.sql.
+      is_username_available: {
+        Args: { p_username: string }
+        Returns: boolean
+      }
+      get_user_by_username: {
+        Args: { p_username: string }
+        Returns: {
+          id: string
+          display_name: string
+          username: string
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          is_visible: boolean
+        }[]
+      }
+      can_view_post: {
+        Args: { p_post_id: string }
+        Returns: boolean
+      }
+      get_post_comment_authors: {
+        Args: { p_post_id: string }
+        Returns: {
+          id: string
+          display_name: string
+          username: string
+          avatar_url: string | null
+        }[]
+      }
+      get_bridge_participant_names: {
+        Args: { p_bridge_ids: string[] }
+        Returns: {
+          bridge_id: string
+          user_a_name: string
+          user_b_name: string
+        }[]
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

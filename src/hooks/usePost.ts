@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Bridge, Comment, Post, Reaction, User } from '../types/index.ts'
+import { pickCounterpartName } from '../lib/feedParticipants.ts'
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from './useAuth.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
@@ -65,11 +66,14 @@ async function fetchPost(postId: string, userId: string): Promise<PostQueryResul
   const otherParticipantId =
     bridge.user_a_id === rawPost.author_id ? bridge.user_b_id : bridge.user_a_id
 
-  const { data: otherParticipantData } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', otherParticipantId)
-    .maybeSingle()
+  // The counterparty is often outside the viewer's first degree, so this row
+  // may legitimately come back null -- that is what keeps their name from
+  // linking anywhere. The label still needs a name, which the names-only RPC
+  // provides without exposing an id to link to.
+  const [{ data: otherParticipantData }, { data: participantNamesData }] = await Promise.all([
+    supabase.from('users').select('*').eq('id', otherParticipantId).maybeSingle(),
+    supabase.rpc('get_bridge_participant_names', { p_bridge_ids: [rawPost.bridge_id] }),
+  ])
 
   const otherParticipant = (otherParticipantData ?? null) as User | null
 
@@ -78,7 +82,9 @@ async function fetchPost(postId: string, userId: string): Promise<PostQueryResul
     author: authorData as User,
     bridge,
     otherParticipant,
-    otherParticipantName: otherParticipant?.display_name ?? 'someone',
+    otherParticipantName:
+      otherParticipant?.display_name ??
+      pickCounterpartName(bridge, rawPost.author_id, participantNamesData?.[0]),
   }
 
   const [{ data: reactionsData, error: reactionsError }, { data: commentsData, error: commentsError }] =
@@ -97,16 +103,20 @@ async function fetchPost(postId: string, userId: string): Promise<PostQueryResul
   const reactionRows = (reactionsData ?? []) as Pick<Reaction, 'id' | 'post_id' | 'user_id'>[]
   const commentRows = (commentsData ?? []) as Comment[]
 
-  const commentUserIds = Array.from(new Set(commentRows.map((c) => c.user_id)))
+  // Comment authors reach beyond the viewer's first degree, and the mapping
+  // below drops any comment whose author is missing -- so reading the users
+  // table directly would make other people's comments silently disappear from
+  // the thread. This RPC returns the authors for one post, gated by the
+  // viewer's right to that post.
   let usersById = new Map<string, User>()
-  if (commentUserIds.length > 0) {
-    const { data: relatedUsers, error: relatedUsersError } = await supabase
-      .from('users')
-      .select('*')
-      .in('id', commentUserIds)
-    if (relatedUsersError) throw new Error(relatedUsersError.message)
+  if (commentRows.length > 0) {
+    const { data: commentAuthors, error: commentAuthorsError } = await supabase.rpc(
+      'get_post_comment_authors',
+      { p_post_id: postId },
+    )
+    if (commentAuthorsError) throw new Error(commentAuthorsError.message)
     usersById = new Map(
-      (relatedUsers ?? []).map((u) => [u.id, u as User]),
+      (commentAuthors ?? []).map((u) => [u.id, u as unknown as User]),
     )
   }
 

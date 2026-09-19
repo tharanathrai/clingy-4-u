@@ -29,6 +29,7 @@ export default function ProfileUser() {
     sharedBridges,
     isConnected,
     isSnoozed,
+    isVisible,
     loading,
     error,
     refetch,
@@ -125,9 +126,17 @@ export default function ProfileUser() {
         </div>
         <h1 className="app-page-title mt-3">{profile.display_name}</h1>
         <p className="mt-1 text-sm text-text-2">@{profile.username}</p>
-        <p className="mt-3 text-sm text-text-2">
-          {profile.bio ?? 'New here — no bridges yet.'}
-        </p>
+        {isVisible ? (
+          <p className="mt-3 text-sm text-text-2">
+            {profile.bio ?? 'New here — no bridges yet.'}
+          </p>
+        ) : (
+          // Not connected: the server withholds bio and counts, so say why
+          // rather than rendering an empty profile that looks broken.
+          <p className="mt-3 text-sm text-text-3">
+            you two haven&apos;t stuck together yet.
+          </p>
+        )}
 
         {!isConnected ? (
           <Link
@@ -139,14 +148,16 @@ export default function ProfileUser() {
         ) : null}
       </section>
 
-      <section className="mt-8 flex flex-col items-center">
-        <Gumball categoryBreakdown={categoryBreakdown} size={160} />
-        <p className="mt-4 text-center text-sm text-text-2">
-          chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
-        </p>
-      </section>
+      {isVisible ? (
+        <section className="mt-8 flex flex-col items-center">
+          <Gumball categoryBreakdown={categoryBreakdown} size={160} />
+          <p className="mt-4 text-center text-sm text-text-2">
+            chewed gum with {connectionCount} {connectionCount === 1 ? 'person' : 'people'}
+          </p>
+        </section>
+      ) : null}
 
-      {bridgeCount > 0 ? (
+      {isVisible && bridgeCount > 0 ? (
         <section className="mt-8">
           <h2 className={sectionHeadingClass}>category breakdown</h2>
           <div className="mt-3 space-y-3">
