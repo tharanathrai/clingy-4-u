@@ -11,7 +11,9 @@
 --     to "directory is closed".
 --
 -- Usage:
---   npx supabase db query --linked "$(cat supabase/scripts/verify-users-rls.sql)"
+--   npx supabase db query --linked -f supabase/scripts/verify-users-rls.sql
+--
+-- (-f, not "$(cat ...)" -- the leading `--` comment lines parse as CLI flags.)
 --
 -- THE GOTCHA: migrations and psql sessions run as the table OWNER, which
 -- bypasses RLS entirely. Without `set local role authenticated` every row looks
@@ -23,6 +25,15 @@
 -- graveyard, a 3+ person group plan) are exercised automatically.
 
 begin;
+
+-- RAISE NOTICE is not surfaced by `supabase db query`, so results land in a
+-- temp table and are selected at the end. Rolled back with everything else.
+create temp table rls_check (
+  viewer   uuid,
+  visible  bigint,
+  expected bigint,
+  missing  bigint
+) on commit drop;
 
 do $$
 declare
@@ -111,6 +122,7 @@ begin
 
     reset role;
 
+    insert into rls_check values (v_viewer, v_visible, v_expected, v_missing);
     v_pairs_visible := v_pairs_visible + v_visible;
 
     -- COVERAGE: an arm is missing and some screen will render "Unknown".
@@ -134,20 +146,39 @@ begin
     raise exception 'users RLS verification FAILED:%', v_failures;
   end if;
 
-  raise notice 'COVERAGE: ok -- every viewer can still see everyone the app needs to render.';
 end $$;
+
+-- The headline numbers.
+select
+  (select count(*) from public.users)                              as users,
+  (select sum(visible) from rls_check)                             as pairs_visible,
+  (select count(*) * count(*) from public.users)                   as pairs_possible,
+  (select count(*) * count(*) from public.users)
+    - (select sum(visible) from rls_check)                         as pairs_hidden,
+  (select sum(missing) from rls_check)                             as coverage_failures,
+  case
+    when (select sum(visible) from rls_check)
+         >= (select count(*) * count(*) from public.users)
+    then 'OPEN - every user can see every user (expected before the swap, a FAILURE after)'
+    else 'CLOSED - the directory is filtered'
+  end                                                              as directory;
 
 -- RPC behaviour, measured as a real signed-in user (the first one with a handle).
 do $$
 declare
-  v_viewer   uuid;
-  v_handle   text;
-  v_stranger uuid;
-  v_taken    boolean;
-  v_free     boolean;
-  v_rows     bigint;
+  v_viewer       uuid;
+  v_handle       text;
+  v_other_handle text;
+  v_stranger     uuid;
+  v_taken        boolean;
+  v_free         boolean;
+  v_own          boolean;
+  v_rows         bigint;
 begin
   select id, username into v_viewer, v_handle from public.users order by created_at limit 1;
+  -- A handle belonging to SOMEONE ELSE, for the "taken" assertion.
+  select username into v_other_handle
+    from public.users where id <> v_viewer order by created_at limit 1;
 
   -- Someone this viewer has no relationship with, if the data contains one.
   select u.id into v_stranger
@@ -166,18 +197,23 @@ begin
   );
   set local role authenticated;
 
-  select public.is_username_available(v_handle)                 into v_taken;
+  select public.is_username_available(v_other_handle)           into v_taken;
   select public.is_username_available('zz_definitely_free_zz')  into v_free;
+  -- Your OWN handle must read as AVAILABLE -- that is what the old
+  -- .neq('id', profile.id) in EditProfileSheet did, and profile edit breaks
+  -- without it (you could never save while keeping your handle).
+  select public.is_username_available(v_handle)                 into v_own;
 
   if v_taken then
-    raise exception 'is_username_available returned true for the existing handle %', v_handle;
+    raise exception 'is_username_available returned true for the taken handle %', v_other_handle;
   end if;
   if not v_free then
     raise exception 'is_username_available returned false for an unused handle';
   end if;
+  if not v_own then
+    raise exception 'is_username_available returned false for the caller''s own handle %, which would block profile edit', v_handle;
+  end if;
 
-  -- Keeping your OWN handle must still read as available (this is what the old
-  -- .neq(id) in EditProfileSheet did; onboarding and profile edit both rely on it).
   select count(*) into v_rows from public.get_user_by_username(v_handle);
   if v_rows <> 1 then
     raise exception 'get_user_by_username returned % rows for own handle', v_rows;
