@@ -70,6 +70,11 @@ export default function Notifications() {
       void navigate(`/piece/${referenceId}/confirm`)
       return
     }
+    if (type === 'plan_expired') {
+      // The piece already lives in the graveyard; no stale-status check needed.
+      void navigate('/home/graveyard')
+      return
+    }
     if (routesToGumPiece(type)) {
       const { data: pieceRow } = await supabase
         .from('gum_pieces')

@@ -205,7 +205,23 @@ Deno.serve(async (request) => {
         return jsonResponse(500, { error: graveyardError.message })
       }
 
-      // Notify all members
+      // Notify all members. actor_name carries the *other* members' names so the copy
+      // ("Your plan with X expired") renders without the client re-reading the piece —
+      // the piece is no longer readable through RLS once it leaves the pocket.
+      const allExpiryMemberIds = Array.from(
+        new Set((expiryMembers ?? []).map((m: { user_id: string }) => m.user_id)),
+      )
+      const expiryNameById = new Map<string, string>()
+      if (allExpiryMemberIds.length > 0) {
+        const { data: expiryUsers } = await serviceClient
+          .from('users')
+          .select('id, display_name')
+          .in('id', allExpiryMemberIds)
+        for (const u of (expiryUsers ?? []) as { id: string; display_name: string }[]) {
+          expiryNameById.set(u.id, u.display_name)
+        }
+      }
+
       const notificationRows = (activeToExpire ?? []).flatMap((piece: { id: string }) => {
         const memberIds = membersByPiece.get(piece.id) ?? []
         return memberIds.map((userId) => ({
@@ -213,6 +229,10 @@ Deno.serve(async (request) => {
           type: 'plan_expired',
           reference_id: piece.id,
           read: false,
+          actor_name: memberIds
+            .filter((id) => id !== userId)
+            .map((id) => expiryNameById.get(id) ?? 'someone')
+            .join(', '),
         }))
       })
 

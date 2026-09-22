@@ -7,9 +7,9 @@ import {
 
 describe('notificationRouting', () => {
   describe('routesToGumPiece', () => {
-    it('includes plan_expiring_soon, plan_expired, and invite types', () => {
+    it('includes plan_expiring_soon and invite types, not plan_expired (graveyard route)', () => {
       expect(routesToGumPiece('plan_expiring_soon')).toBe(true)
-      expect(routesToGumPiece('plan_expired')).toBe(true)
+      expect(routesToGumPiece('plan_expired')).toBe(false)
       expect(routesToGumPiece('invite_received')).toBe(true)
       expect(routesToGumPiece('invite_accepted')).toBe(true)
       expect(routesToGumPiece('plan_turned_down')).toBe(true)
@@ -23,7 +23,7 @@ describe('notificationRouting', () => {
       expect(shouldCheckGumPieceStatus('plan_expiring_soon')).toBe(true)
       expect(shouldCheckGumPieceStatus('invite_accepted')).toBe(true)
       expect(shouldCheckGumPieceStatus('plan_turned_down')).toBe(true)
-      expect(shouldCheckGumPieceStatus('plan_expired')).toBe(true)
+      expect(shouldCheckGumPieceStatus('plan_expired')).toBe(false)
       expect(shouldCheckGumPieceStatus('bridge_formed')).toBe(false)
     })
   })
@@ -33,19 +33,6 @@ describe('notificationRouting', () => {
       expect(resolveStaleGumPieceTap('plan_expiring_soon', 'expired')).toEqual({
         dismiss: true,
         toast: 'This plan has already expired.',
-      })
-    })
-
-    it('routes plan_expired to the expired piece in the graveyard', () => {
-      expect(resolveStaleGumPieceTap('plan_expired', 'expired')).toEqual({
-        dismiss: false,
-      })
-    })
-
-    it('dismisses plan_expired when the piece was confirmed instead', () => {
-      expect(resolveStaleGumPieceTap('plan_expired', 'confirmed')).toEqual({
-        dismiss: true,
-        toast: 'This plan is already confirmed.',
       })
     })
 

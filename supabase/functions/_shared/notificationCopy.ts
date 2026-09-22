@@ -22,7 +22,7 @@ export function getNotificationCopy(type: string, name: string): string {
     return 'A plan is expiring soon'
   }
   if (type === 'plan_expired') {
-    return 'A plan expired'
+    return `Your plan with ${name} expired`
   }
   if (type === 'bridge_formed') {
     return `You formed a bridge with ${name}`

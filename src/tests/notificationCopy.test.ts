@@ -16,7 +16,7 @@ describe('getNotificationCopy', () => {
     ['plan_turned_down', 'Priya turned down a plan'],
     ['member_declined', 'Priya passed on your plan'],
     ['plan_expiring_soon', 'A plan is expiring soon'],
-    ['plan_expired', 'A plan expired'],
+    ['plan_expired', 'Your plan with Priya expired'],
     ['bridge_formed', 'You formed a bridge with Priya'],
     ['connection_request', 'Priya wants to connect'],
     ['connection_accepted', 'Priya accepted your connection request'],

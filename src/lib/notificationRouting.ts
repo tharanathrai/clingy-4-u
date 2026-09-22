@@ -17,7 +17,6 @@ const GUM_PIECE_ROUTE_TYPES: NotificationType[] = [
   'invite_rejected',
   'plan_turned_down',
   'plan_expiring_soon',
-  'plan_expired',
 ]
 
 const TERMINAL_GUM_PIECE_STATUSES = new Set(['confirmed', 'turned_down', 'expired'])
@@ -44,18 +43,6 @@ export function resolveStaleGumPieceTap(
 
   if (type === 'invite_received') {
     return { dismiss: true, toast: 'This invite has expired.' }
-  }
-
-  if (type === 'plan_expired') {
-    // An expired piece is the expected destination for this type — open it in the graveyard.
-    // Only dismiss when the piece ended some other way before the user tapped.
-    if (pieceStatus === 'expired') {
-      return { dismiss: false }
-    }
-    if (pieceStatus === 'confirmed') {
-      return { dismiss: true, toast: 'This plan is already confirmed.' }
-    }
-    return { dismiss: true, toast: 'This plan was turned down.' }
   }
 
   if (type === 'plan_expiring_soon') {
