@@ -36,10 +36,16 @@ describe('notificationRouting', () => {
       })
     })
 
-    it('dismisses stale plan_expired on expired piece (C-03)', () => {
+    it('routes plan_expired to the expired piece in the graveyard', () => {
       expect(resolveStaleGumPieceTap('plan_expired', 'expired')).toEqual({
+        dismiss: false,
+      })
+    })
+
+    it('dismisses plan_expired when the piece was confirmed instead', () => {
+      expect(resolveStaleGumPieceTap('plan_expired', 'confirmed')).toEqual({
         dismiss: true,
-        toast: 'This plan has already expired.',
+        toast: 'This plan is already confirmed.',
       })
     })
 

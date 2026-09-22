@@ -185,11 +185,12 @@ export function useNotifications(): UseNotificationsResult {
 
   const dismissMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase
+      const { error: deleteError } = await supabase
         .from('notifications')
         .delete()
         .eq('id', id)
         .eq('user_id', userId!)
+      if (deleteError) throw new Error(deleteError.message)
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: qk })

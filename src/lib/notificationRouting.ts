@@ -46,7 +46,19 @@ export function resolveStaleGumPieceTap(
     return { dismiss: true, toast: 'This invite has expired.' }
   }
 
-  if (type === 'plan_expiring_soon' || type === 'plan_expired') {
+  if (type === 'plan_expired') {
+    // An expired piece is the expected destination for this type — open it in the graveyard.
+    // Only dismiss when the piece ended some other way before the user tapped.
+    if (pieceStatus === 'expired') {
+      return { dismiss: false }
+    }
+    if (pieceStatus === 'confirmed') {
+      return { dismiss: true, toast: 'This plan is already confirmed.' }
+    }
+    return { dismiss: true, toast: 'This plan was turned down.' }
+  }
+
+  if (type === 'plan_expiring_soon') {
     return { dismiss: true, toast: 'This plan has already expired.' }
   }
 
