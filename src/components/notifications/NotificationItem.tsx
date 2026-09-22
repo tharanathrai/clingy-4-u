@@ -35,7 +35,7 @@ interface NotificationItemProps {
 
 export function NotificationItem({ notification, onPress }: NotificationItemProps) {
   const actorName = notification.actor_name ?? 'Unknown user'
-  const copy = getNotificationCopy(notification.type, actorName)
+  const copy = getNotificationCopy(notification.type, actorName, notification.actor_name)
   const timestamp = getTimestamp(notification.created_at)
   const isUnread = !notification.read
   const hideActor = notification.type === 'post_reaction'

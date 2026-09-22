@@ -2,7 +2,13 @@
 // (src/components/notifications/NotificationItem.tsx) and Web Push
 // (supabase/functions/send-push). Pure — no Deno or browser imports.
 
-export function getNotificationCopy(type: string, name: string): string {
+// `name` is the actor's display name, already resolved by the caller. For
+// `plan_expired` it is the other member's name on a two-person plan and empty
+// on a group plan (run-expiry leaves actor_name null there).
+export function getNotificationCopy(type: string, name: string, actorName?: string | null): string {
+  if (type === 'plan_expired') {
+    return actorName ? `Your plan with ${actorName} expired` : 'Your group plan expired'
+  }
   if (type === 'invite_received') {
     return `${name} wants to make a plan with you`
   }
@@ -20,9 +26,6 @@ export function getNotificationCopy(type: string, name: string): string {
   }
   if (type === 'plan_expiring_soon') {
     return 'A plan is expiring soon'
-  }
-  if (type === 'plan_expired') {
-    return `Your plan with ${name} expired`
   }
   if (type === 'bridge_formed') {
     return `You formed a bridge with ${name}`

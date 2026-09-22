@@ -16,7 +16,6 @@ describe('getNotificationCopy', () => {
     ['plan_turned_down', 'Priya turned down a plan'],
     ['member_declined', 'Priya passed on your plan'],
     ['plan_expiring_soon', 'A plan is expiring soon'],
-    ['plan_expired', 'Your plan with Priya expired'],
     ['bridge_formed', 'You formed a bridge with Priya'],
     ['connection_request', 'Priya wants to connect'],
     ['connection_accepted', 'Priya accepted your connection request'],
@@ -28,6 +27,15 @@ describe('getNotificationCopy', () => {
     ['confirmation_started', 'Priya is ready to confirm — tap to complete the plan'],
   ])('%s', (type, expected) => {
     expect(getNotificationCopy(type, 'Priya')).toBe(expected)
+  })
+
+  it('plan_expired names the other member on a two-person plan', () => {
+    expect(getNotificationCopy('plan_expired', 'Priya', 'Priya')).toBe('Your plan with Priya expired')
+  })
+
+  it('plan_expired reads as a group plan when no actor_name is stored', () => {
+    expect(getNotificationCopy('plan_expired', 'Unknown user', null)).toBe('Your group plan expired')
+    expect(getNotificationCopy('plan_expired', 'Someone', undefined)).toBe('Your group plan expired')
   })
 
   it('falls back for unknown types', () => {

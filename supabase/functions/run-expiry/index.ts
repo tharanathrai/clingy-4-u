@@ -205,9 +205,10 @@ Deno.serve(async (request) => {
         return jsonResponse(500, { error: graveyardError.message })
       }
 
-      // Notify all members. actor_name carries the *other* members' names so the copy
-      // ("Your plan with X expired") renders without the client re-reading the piece —
-      // the piece is no longer readable through RLS once it leaves the pocket.
+      // Notify all members. On a two-person plan actor_name carries the other member's
+      // name so the copy ("Your plan with X expired") renders without the client
+      // re-reading the piece — it is no longer readable through RLS once it leaves the
+      // pocket. Group plans leave it null and render as "Your group plan expired".
       const allExpiryMemberIds = Array.from(
         new Set((expiryMembers ?? []).map((m: { user_id: string }) => m.user_id)),
       )
@@ -224,16 +225,17 @@ Deno.serve(async (request) => {
 
       const notificationRows = (activeToExpire ?? []).flatMap((piece: { id: string }) => {
         const memberIds = membersByPiece.get(piece.id) ?? []
-        return memberIds.map((userId) => ({
-          user_id: userId,
-          type: 'plan_expired',
-          reference_id: piece.id,
-          read: false,
-          actor_name: memberIds
-            .filter((id) => id !== userId)
-            .map((id) => expiryNameById.get(id) ?? 'someone')
-            .join(', '),
-        }))
+        return memberIds.map((userId) => {
+          const others = memberIds.filter((id) => id !== userId)
+          return {
+            user_id: userId,
+            type: 'plan_expired',
+            reference_id: piece.id,
+            read: false,
+            actor_name:
+              others.length === 1 ? (expiryNameById.get(others[0]) ?? 'someone') : null,
+          }
+        })
       })
 
       if (notificationRows.length > 0) {

@@ -37,7 +37,7 @@ export function buildPushPayload(
 ): PushPayload {
   return {
     title: PUSH_TITLE,
-    body: getNotificationCopy(row.type, row.actor_name ?? 'Someone'),
+    body: getNotificationCopy(row.type, row.actor_name ?? 'Someone', row.actor_name),
     url: PUSH_URL,
     tag: buildPushTag(row.type, row.reference_id),
     ...(typeof unread === 'number' ? { unread } : {}),
