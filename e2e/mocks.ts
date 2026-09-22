@@ -492,6 +492,48 @@ export async function mockConnectedFriendScenario(page: Page): Promise<void> {
     })
   })
 
+  // Visibility RPCs (migration 20260918120000). Profile, feed and post detail read
+  // through these instead of the users table, so an unmocked call reaches the
+  // placeholder host and the page renders its error state.
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/rpc/get_user_by_username`, async (route) => {
+    const body = route.request().postDataJSON() as { p_username?: string } | null
+    const match = allUsers.find((u) => u.username === body?.p_username)
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(match ? [{ ...match, is_visible: true }] : []),
+    })
+  })
+
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/rpc/get_bridge_participant_names`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([
+        {
+          bridge_id: MOCK_BRIDGE.id,
+          user_a_name: MOCK_BRIDGE.user_a_id === MOCK_USER.id ? MOCK_PROFILE.display_name : MOCK_FRIEND.display_name,
+          user_b_name: MOCK_BRIDGE.user_b_id === MOCK_USER.id ? MOCK_PROFILE.display_name : MOCK_FRIEND.display_name,
+        },
+      ]),
+    })
+  })
+
+  await page.route(`${E2E_SUPABASE_URL}/rest/v1/rpc/get_post_comment_authors`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        allUsers.map((u) => ({
+          id: u.id,
+          display_name: u.display_name,
+          username: u.username,
+          avatar_url: u.avatar_url,
+        })),
+      ),
+    })
+  })
+
   await page.route(`${E2E_SUPABASE_URL}/realtime/**`, (route) => {
     void route.abort()
   })
