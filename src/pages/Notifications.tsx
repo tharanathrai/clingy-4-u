@@ -10,6 +10,7 @@ import { EmptyState } from '../components/EmptyState.tsx'
 import { ErrorState } from '../components/ErrorState.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { ConnectionRequestSheet } from '../components/connections/ConnectionRequestSheet.tsx'
+import { ExpiredPlanSheet } from '../components/notifications/ExpiredPlanSheet.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
 import { useConnectionsCount } from '../hooks/useConnectionsCount.ts'
 import { useNotifications } from '../hooks/useNotifications.ts'
@@ -31,6 +32,7 @@ export default function Notifications() {
     connectionId: string
     notificationId: string
   } | null>(null)
+  const [activeExpiredPieceId, setActiveExpiredPieceId] = useState<string | null>(null)
   const {
     visibleItems: visibleNotifications,
     hasMore,
@@ -71,8 +73,8 @@ export default function Notifications() {
       return
     }
     if (type === 'plan_expired') {
-      // The piece already lives in the graveyard; no stale-status check needed.
-      void navigate('/home/graveyard')
+      // Nothing to act on in the piece itself — offer to plan it again instead.
+      setActiveExpiredPieceId(referenceId)
       return
     }
     if (routesToGumPiece(type)) {
@@ -175,6 +177,7 @@ export default function Notifications() {
                       notification.reference_id,
                     )
                   }
+                  onDismiss={() => void dismissNotification(notification.id)}
                 />
               </li>
             ))}
@@ -201,6 +204,20 @@ export default function Notifications() {
           </div>
         ) : null}
       </main>
+      <ExpiredPlanSheet
+        pieceId={activeExpiredPieceId}
+        onClose={() => setActiveExpiredPieceId(null)}
+        onReplan={({ recipientIds, title }) => {
+          setActiveExpiredPieceId(null)
+          void navigate('/piece/new', {
+            state: { recipientIds, initialTitle: title, returnTo: '/notifications' },
+          })
+        }}
+        onViewGraveyard={() => {
+          setActiveExpiredPieceId(null)
+          void navigate('/home/graveyard', { state: { returnTo: '/notifications' } })
+        }}
+      />
       <ConnectionRequestSheet
         connectionId={activeConnectionRequest?.connectionId ?? null}
         onClose={() => setActiveConnectionRequest(null)}

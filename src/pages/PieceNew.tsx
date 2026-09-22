@@ -29,6 +29,9 @@ interface CreatePieceErrorResponse {
 
 interface LocationState {
   recipientId?: string
+  /** Several recipients at once — used when re-planning an expired plan. */
+  recipientIds?: string[]
+  initialTitle?: string
   returnTo?: string
   selectUserId?: string
 }
@@ -173,8 +176,27 @@ export default function PieceNew() {
   useEffect(() => {
     if (locationState?.recipientId) {
       setSelectedIds(new Set([locationState.recipientId]))
+    } else if (locationState?.recipientIds?.length) {
+      setSelectedIds(new Set(locationState.recipientIds))
     }
-  }, [locationState?.recipientId])
+  }, [locationState?.recipientId, locationState?.recipientIds])
+
+  useEffect(() => {
+    if (locationState?.initialTitle) {
+      setTitle(locationState.initialTitle.slice(0, 60))
+    }
+  }, [locationState?.initialTitle])
+
+  // Prefilled recipients may no longer be connections (e.g. re-planning an expired plan
+  // after unfriending). Drop them once the real list is in so the form can't submit them.
+  useEffect(() => {
+    if (connectionsLoading) return
+    setSelectedIds((current) => {
+      const valid = new Set(connections.map((c) => c.id))
+      const next = new Set(Array.from(current).filter((id) => valid.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [connections, connectionsLoading])
 
   useEffect(() => {
     if (!toast) return

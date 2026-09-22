@@ -6,6 +6,8 @@ export type AppLocationState = {
   selectUserId?: string
   restorePostId?: string
   recipientId?: string
+  recipientIds?: string[]
+  initialTitle?: string
   toast?: string
 }
 

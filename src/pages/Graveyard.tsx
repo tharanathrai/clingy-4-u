@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState.tsx'
 import { FullScreenSpinner } from '../components/Spinner.tsx'
 import { BackHeader } from '../components/layout/BackHeader.tsx'
@@ -28,6 +29,8 @@ interface UserNameRow {
 export default function Graveyard() {
   const { user, loading: authLoading } = useAuth()
   const userId = user?.id ?? null
+  const location = useLocation()
+  const backTo = (location.state as { returnTo?: string } | null)?.returnTo ?? '/profile/me'
   const [entries, setEntries] = useState<GraveyardEntry[]>([])
   const [namesById, setNamesById] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -104,7 +107,7 @@ export default function Graveyard() {
 
   return (
     <main className={pageShellScroll}>
-      <BackHeader to="/profile/me" />
+      <BackHeader to={backTo} />
       <h1 className="app-page-title mt-4">graveyard</h1>
       <p className="mt-3 text-sm text-text-2">Plans that didn&apos;t happen.</p>
 
