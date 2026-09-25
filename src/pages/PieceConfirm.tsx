@@ -16,6 +16,7 @@ import {
 import { CATEGORIES, type CategorySlug } from '../lib/constants.ts'
 import { buildDraftPostBody } from '../lib/draftPostBody.ts'
 import { queryKeys } from '../lib/queryKeys.ts'
+import { invalidateBridgeFormedFlow } from '../lib/invalidate.ts'
 import { supabase } from '../lib/supabase.ts'
 import { track } from '../lib/analytics.ts'
 import type { Bridge } from '../types/index.ts'
@@ -248,6 +249,7 @@ export default function PieceConfirm() {
   const handleComplete = (toast?: string) => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.gumPieces(userId) })
     if (id) void queryClient.invalidateQueries({ queryKey: queryKeys.pieceDetail(id, userId) })
+    invalidateBridgeFormedFlow(userId, queryClient)
     navigate('/home', { replace: true, state: toast ? { toast } : undefined })
   }
 

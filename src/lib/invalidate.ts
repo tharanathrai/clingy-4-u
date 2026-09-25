@@ -94,6 +94,21 @@ export function invalidateConnectionFlow(
 }
 
 /**
+ * Call after a bridge forms — the network graph, connection count, pair bridges
+ * and feed are all cached with long stale times and their realtime listeners
+ * only run while those views are mounted, so the confirm flow must refresh them.
+ */
+export function invalidateBridgeFormedFlow(
+  userId: string | null | undefined,
+  queryClient: QueryClient,
+): void {
+  invalidateNetworkGraph(userId, queryClient)
+  invalidateConnectionsCount(userId, queryClient)
+  invalidateBridgesPair(userId, queryClient)
+  invalidateFeed(userId, queryClient)
+}
+
+/**
  * Call after gum piece create/respond — pocket, detail, and notifications.
  * Order: piece detail → gum pieces → notifications (detail first for status redirects).
  */
